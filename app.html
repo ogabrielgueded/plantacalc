@@ -5954,13 +5954,15 @@ function renderEditor(){
  if(typeof acabOverlay==='function')o+=`<g class="acab" pointer-events="none">${acabOverlay()}</g>`;
  o+='</g>';
  const T2=(x,y,t,sz,w,col='#1d2329',anc='middle')=>`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${sz}" font-weight="${w}" fill="${col}" text-anchor="${anc}" paint-order="stroke" stroke="#fff" stroke-width="3" stroke-linejoin="round">${esc(t)}</text>`;
- if(!MF.empty&&s>0.009)(MF.roomStats||[]).forEach(r=>{const [cx,cy]=w2px((r.bb.x0+r.bb.x1)/2,(r.bb.y0+r.bb.y1)/2);o+=T2(cx,cy-4,r.rm.nome,12,700)+T2(cx,cy+11,`${nf(r.area)} m²`,11,400,'#444');});
- if(!MF.empty&&s>0.012)MF.ops.forEach(op=>{if(op.orphan)return;const p=tagPos(op,3.2/s);const [x,y]=w2px(p[0],p[1]);o+=T2(x,y+4,op.d.id,10,700,'#0b4f8a');});
- if(!MF.empty&&s>0.012)MF.equip.forEach(me=>{const [x,y]=w2px((me.r.x0+me.r.x1)/2,me.r.y0);o+=T2(x,y-5,me.e.nome,10,600,'#1f4e8c');});
- if(ed.pav===0&&s>0.009)(S.indus||[]).forEach(el=>{const T=indusTipo(el.tipo);if(ed.layers[T.cat]===false||!el.pts.length)return;const bb=polyBBox(el.pts);let cx=(bb.x0+bb.x1)/2,cy=T.geom==='pt'?bb.y0-Math.max(600,((el.v||{}).B||1)*600):(bb.y0+bb.y1)/2;if(T.geom==='ln'){const q=plPointAt(el.pts,plLen(el.pts)/2);cx=q.p[0]-Math.sin(q.ang)*1500;cy=q.p[1]+Math.cos(q.ang)*1500;}const [x,y]=w2px(cx,cy);o+=T2(x,y-4,el.nome||T.nome,10,600,T.cor);});
+ /* rótulos sem sobreposição: se um rótulo cairia em cima de outro já desenhado, ele é omitido (aparece ao aproximar) */
+ const _lb=[],kz=W<560?0.86:1;const TL=(x,y,t,sz,w,col='#1d2329',anc='middle')=>{sz=Math.max(8,Math.round(sz*kz));const tw=String(t).length*sz*0.56,x0=anc==='middle'?x-tw/2:anc==='end'?x-tw:x,bb=[x0-2,y-sz,x0+tw+2,y+3];if(_lb.some(b=>bb[0]<b[2]&&bb[2]>b[0]&&bb[1]<b[3]&&bb[3]>b[1]))return '';_lb.push(bb);return T2(x,y,t,sz,w,col,anc);};
+ if(!MF.empty&&s>0.006)(MF.roomStats||[]).forEach(r=>{const [cx,cy]=w2px((r.bb.x0+r.bb.x1)/2,(r.bb.y0+r.bb.y1)/2);o+=TL(cx,cy-4,r.rm.nome,12,700)+TL(cx,cy+11,`${nf(r.area)} m²`,11,400,'#444');});
+ if(!MF.empty&&s>0.012)MF.ops.forEach(op=>{if(op.orphan)return;const p=tagPos(op,3.2/s);const [x,y]=w2px(p[0],p[1]);o+=TL(x,y+4,op.d.id,10,700,'#0b4f8a');});
+ if(!MF.empty&&s>0.012)MF.equip.forEach(me=>{const [x,y]=w2px((me.r.x0+me.r.x1)/2,me.r.y0);o+=TL(x,y-5,me.e.nome,10,600,'#1f4e8c');});
+ if(ed.pav===0&&s>0.009)(S.indus||[]).forEach(el=>{const T=indusTipo(el.tipo);if(ed.layers[T.cat]===false||!el.pts.length)return;const bb=polyBBox(el.pts);let cx=(bb.x0+bb.x1)/2,cy=T.geom==='pt'?bb.y0-Math.max(600,((el.v||{}).B||1)*600):(bb.y0+bb.y1)/2;if(T.geom==='ln'){const q=plPointAt(el.pts,plLen(el.pts)/2);cx=q.p[0]-Math.sin(q.ang)*1500;cy=q.p[1]+Math.cos(q.ang)*1500;}const [x,y]=w2px(cx,cy);o+=TL(x,y-4,el.nome||T.nome,10,600,T.cor);});
  if((ed.tool==='impl'||ed.tool==='perfil')&&ed.impPoly&&ed.polyNext){const a=ed.impPoly[ed.impPoly.length-1],b=ed.polyNext;const [mx,my]=w2px((a[0]+b[0])/2,(a[1]+b[1])/2);o+=T2(mx,my-8,fm(Math.hypot(b[0]-a[0],b[1]-a[1])),12,700,curImpT().cor);}
- if(ed.pav===0&&s>0.006)(S.perfis||[]).forEach(pf=>{const ax=perfilEixo(S,pf);if(ax.length<2)return;const [x,y]=w2px(ax[0][0],ax[0][1]);o+=T2(x,y-10,pf.nome,10,700,'#d6336c');});
- if(S.terreno&&S.terreno.on&&s>0.009)(S.terreno.cotas||[]).forEach(c=>{const [x,y]=w2px(c.x,c.y);o+=T2(x+8,y-6,fm(c.z),10,600,'#7a3e00','start');});
+ if(ed.pav===0&&s>0.006)(S.perfis||[]).forEach(pf=>{const ax=perfilEixo(S,pf);if(ax.length<2)return;const [x,y]=w2px(ax[0][0],ax[0][1]);o+=TL(x,y-10,pf.nome,10,700,'#d6336c');});
+ if(S.terreno&&S.terreno.on&&s>0.009)(S.terreno.cotas||[]).forEach(c=>{const [x,y]=w2px(c.x,c.y);o+=TL(x+8,y-6,fm(c.z),10,600,'#7a3e00','start');});
  if(dr&&dr.k==='new'){const x=Math.min(dr.x0,dr.x1),y=Math.min(dr.y0,dr.y1),w=Math.abs(dr.x1-dr.x0),h=Math.abs(dr.y1-dr.y0);const [ax,ay]=w2px(x+w/2,y),[bx,by]=w2px(x,y+h/2);o+=T2(ax,ay-6,fm(w),12,700,'#257126')+T2(bx-6,by+4,fm(h),12,700,'#257126','end');}
  if(ed.poly&&ed.polyNext){const a=ed.poly[ed.poly.length-1],b=ed.polyNext;const [mx,my]=w2px((a[0]+b[0])/2,(a[1]+b[1])/2);o+=T2(mx,my-8,fm(Math.hypot(b[0]-a[0],b[1]-a[1])),12,700,'#257126');}
  if(ed.sel&&ed.sel.type==='room'&&ed.tool==='sel'){const rm=roomById(ed.sel.id);if(rm){const p=rm.poly;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];const len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len*s<30)continue;const [mx,my]=w2px((a[0]+b[0])/2,(a[1]+b[1])/2);const v=a[0]===b[0];o+=T2(v?mx-9:mx,v?my+4:my-7,fm(len),10,700,'#e8590c',v?'end':'middle');}}}
@@ -5974,7 +5976,7 @@ function fitView(){const W=svgEd.clientWidth||800,H=svgEd.clientHeight||600;let 
  if(!b&&S.under&&S.under.src){const u=S.under;b={x0:u.x,y0:u.y,x1:u.x+u.w*u.sc,y1:u.y+u.h*u.sc,w:u.w*u.sc,h:u.h*u.sc};}
  if(!b)b={x0:-1000,y0:-1000,x1:14000,y1:10000,w:15000,h:11000};
  if(S.terreno&&S.terreno.on&&S.terreno.poly.length>=3&&ed.pav===0){const t=polyBBox(S.terreno.poly);b={x0:Math.min(b.x0,t.x0),y0:Math.min(b.y0,t.y0),x1:Math.max(b.x1,t.x1),y1:Math.max(b.y1,t.y1)};}
- const pad=60,s=clamp(Math.min((W-2*pad)/(b.x1-b.x0+2000),(H-2*pad)/(b.y1-b.y0+2000)),0.003,0.4);ed.s=s;ed.ox=W/2-(b.x0+b.x1)/2*s;ed.oy=H/2-(b.y0+b.y1)/2*s;renderEditor();}
+ const por=W<560,cel=por||H<450,pad=cel?12:60,mg=cel?600:2000,s=clamp(Math.min((W-2*pad)/(b.x1-b.x0+mg),(H-2*pad-(por?150:cel?70:0))/(b.y1-b.y0+mg)),0.003,0.4);ed.s=s;ed.ox=W/2-(b.x0+b.x1)/2*s;ed.oy=H/2-(b.y0+b.y1)/2*s+(por?-30:cel?-25:0);renderEditor();}
 
 /* =============================== FERRAMENTAS =============================== */
 const HINTS={sel:'Toque para selecionar · arraste para mover · alças redimensionam · setas movem · Del exclui · Ctrl+D duplica · F/H invertem porta',pen:'Caneta: contorne o ambiente em um traço só (fechando perto do início). Rabisque em zigue-zague sobre um ambiente para excluí-lo. Toque curto numa parede insere a porta atual.',ret:'Arraste um retângulo, ou toque uma vez e digite "L x A" em metros (ex.: 8 x 6) e Enter.',pol:'Toque os vértices (travado em 90°). Enter, duplo toque ou tocar no 1º ponto fecha; Esc cancela.',porta:'Toque sobre uma parede. Em parede interna, o lado do toque define a abertura.',janela:'Toque sobre uma parede para inserir a janela.',equip:'Toque dentro de um ambiente para posicionar o equipamento escolhido na aba Seleção.',corteA:'Toque para posicionar a linha de corte A–A (horizontal).',corteB:'Toque para posicionar a linha de corte B–B (vertical).',terreno:'Toque os vértices do terreno; Enter ou duplo toque fecha. O terreno habilita implantação e terraplenagem.',cota:'Toque no ponto do terreno e informe a cota do terreno natural (m).',perfil:'Perfil longitudinal: toque os vértices do eixo (ângulo livre); Enter ou duplo toque conclui e abre o perfil.',impl:'Implantação: elementos pontuais = 1 toque; lineares/áreas = toque os vértices (ângulo livre), Enter ou duplo toque conclui. Escolha o tipo na aba Implant.',pan:'Arraste para mover a vista · roda do mouse ou pinça = zoom',cal:'Toque em 2 pontos da imagem e informe a distância real.'};
@@ -7212,6 +7214,96 @@ async function pjExcluir(id){try{await pjApaga(id);}catch(e){}delete PJ.locais[i
  let id=null;try{id=localStorage.getItem(PJ_KEY);}catch(e){}
  if(!id||!PJ.locais[id]){id=pjUUID();try{localStorage.setItem(PJ_KEY,id);}catch(e){}}
  PJ.atual=id;await pjSalvarLocal();pjStatus(PJ.status||'aparelho');})();
+</script>
+<script>
+/* ===================== p27 — CELULAR: topo em uma linha + menu ☰, barra inferior fora da área do navegador ===================== */
+(function(){
+const st=document.createElement('style');st.textContent=`
+@supports (height:100dvh){#app{height:100dvh}}
+#bMenu,#mMenu{display:none}
+@media (max-width:699px),(max-height:500px) and (pointer:coarse){
+ header{flex-wrap:nowrap!important;overflow:hidden!important;gap:6px!important;padding:7px 8px!important;padding-top:max(7px,env(safe-area-inset-top))!important}
+ header>*:not(.brand):not(#bProj):not(#bWiz):not(#bMenu):not(input){display:none!important}
+ header .brand{flex:none!important;font-size:15px!important;margin-right:0!important}header .brand small{display:none!important}
+ header .brand .w{display:none}
+ #bProj{flex:1 1 auto;min-width:0;max-width:none!important;padding:8px 10px!important}#bProj .pjn{font-size:14px}
+ #bWiz{flex:none;font-size:0!important;width:42px;height:38px;padding:0!important;display:flex!important;align-items:center;justify-content:center}
+ #bWiz::before{content:'★';font-size:19px}
+ #bMenu{display:flex!important;flex:none;align-items:center;justify-content:center;width:44px;height:38px;padding:0!important;font-size:22px!important;line-height:1}
+ body.simples #sBar{left:8px!important;right:8px!important;transform:none!important;max-width:none!important;justify-content:space-between;bottom:calc(10px + env(safe-area-inset-bottom))!important;padding:5px!important;border-radius:16px}
+ body.simples #sBar button{min-width:0!important;flex:1 1 0!important;height:56px!important;padding:0 1px!important;font-size:10.5px!important;letter-spacing:-.2px;white-space:nowrap}
+ body.simples #sBar .sep,body.simples #sBar button.wiz{display:none!important}
+ #sBar button svg{width:22px;height:22px}
+ body.simples #sZoom{right:8px!important;bottom:calc(84px + env(safe-area-inset-bottom))!important}
+ #sZoom button{width:44px!important;height:42px!important}
+ body.simples #sEst{top:8px!important;right:8px!important}
+ #mMenu.on{display:block;position:fixed;inset:0;z-index:90;background:rgba(10,20,10,.4)}
+ #mMenu .sh{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;max-height:86dvh;overflow:auto;padding:8px 10px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(0,0,0,.2)}
+ #mMenu .gr{width:44px;height:5px;border-radius:3px;background:#d3d9de;margin:4px auto 10px}
+ #mMenu .it{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;font:inherit;font-size:16px;color:var(--ink);padding:13px 10px;border-radius:12px;text-align:left;cursor:pointer}
+ #mMenu .it:active{background:#eef6e0}#mMenu .it i{font-style:normal;width:26px;text-align:center;font-size:19px}
+ #mMenu .it.pro{background:#fff8e1;font-weight:700;color:#5d4300}#mMenu .it .tg{margin-left:auto;font-size:11px;font-weight:700;background:#ffc107;color:#3d2c00;border-radius:6px;padding:2px 7px}
+ #mMenu .sub{margin:0 0 6px 38px;border-left:2px solid #e6ebe0;padding-left:6px;display:none}#mMenu .sub.on{display:block}
+ #mMenu .sub .it{font-size:14.5px;padding:10px}
+ #mMenu .hd{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;padding:10px 10px 4px}
+ /* assistente */
+ #mWiz{align-items:flex-end!important}
+ #mWiz .bx{width:100%!important;max-width:none!important;max-height:92dvh!important;border-radius:20px 20px 0 0!important;padding:14px 14px calc(14px + env(safe-area-inset-bottom))!important;box-sizing:border-box}
+ #mWiz .gr{grid-template-columns:1fr!important;gap:8px!important}
+ #mWiz .gr button{display:grid!important;grid-template-columns:34px 1fr;column-gap:10px;align-items:center;padding:10px 12px!important;font-size:12.5px!important;line-height:1.3}
+ #mWiz .gr button>span{grid-row:1/3}#mWiz .gr button>b{font-size:15px}
+ #mWiz .hint{font-size:13px}
+ #mWiz .wz-side{order:5!important;padding:10px!important}#mWiz .wz-side svg{max-height:150px;width:100%}#mWiz .wz-side .k{font-size:12.5px!important;padding:3px 0!important}
+ #mWiz .wz-q{font-size:18px!important;margin:8px 0 10px!important}#mWiz .wz-ops button{padding:12px 14px!important;font-size:15px!important}
+ /* meus projetos */
+ #pjOv .w{padding:12px 12px calc(30px + env(safe-area-inset-bottom))!important}
+ #pjOv .t{gap:8px!important;margin-bottom:10px!important}#pjOv .t h2{font-size:20px!important;flex:1}
+ #pjOv .t [data-pj="x"]{order:2;padding:9px 12px!important;font-size:14px!important}
+ #pjOv .t input{order:3;flex:1 1 100%!important;min-width:0!important;padding:9px 11px!important}
+ #pjOv .t [data-pj="arquivo"]{order:4;flex:1 1 100%;padding:9px 12px!important;font-size:13.5px!important}
+ #pjOv .info{padding:10px 12px!important;font-size:13px!important;gap:8px!important;margin-bottom:10px!important}#pjOv .info .bt{width:100%;padding:10px 12px!important;font-size:14px!important}#pjOv .info .sp{display:none}
+ #pjOv .novo{grid-template-columns:repeat(3,1fr)!important;gap:6px!important;margin-bottom:12px!important}
+ #pjOv .novo button{padding:12px 6px 10px!important;text-align:center!important}#pjOv .novo span{display:none}#pjOv .novo b{font-size:12.5px!important}
+ #pjOv .novo .lk{top:-9px!important;right:4px!important;font-size:10.5px!important;padding:1px 6px!important}
+ #pjOv .g{grid-template-columns:1fr!important;gap:8px!important}
+ #pjOv .c{flex-direction:row!important}#pjOv .c .mi{width:108px;flex:none;height:auto!important;min-height:96px;border-bottom:0!important;border-right:1px solid #eef0f2}#pjOv .c .mi svg{max-height:84px!important}
+ #pjOv .c .b{min-width:0;padding:9px 10px!important}#pjOv .c .ac{flex-wrap:wrap}#pjOv .c .ac button{padding:7px 8px!important}
+ /* telas cheias respeitam a área segura do iPhone */
+ #resOv,#pjOv{padding-top:env(safe-area-inset-top)}
+ #mMenu .fx{display:block;margin:8px auto 0;border:0;background:#f1f3f5;border-radius:12px;padding:12px 30px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+}
+@media (max-height:500px) and (pointer:coarse){
+ body.simples #sZoom{flex-direction:row!important;top:8px!important;left:8px!important;right:auto!important;bottom:auto!important}
+ #sZoom button{border-bottom:0!important;border-right:1px solid var(--line)!important}
+ body.simples #sBar{left:50%!important;right:auto!important;transform:translateX(-50%)!important;width:min(560px,calc(100% - 16px));bottom:calc(6px + env(safe-area-inset-bottom))!important}
+ body.simples #sBar button{height:48px!important}
+ #sEst div{padding:5px 10px!important}
+}`;document.head.appendChild(st);
+const hdr=document.querySelector('header');
+const br=hdr.querySelector('.brand');if(br&&br.firstChild&&br.firstChild.nodeType===3&&/Web/.test(br.firstChild.textContent)){br.firstChild.textContent='PlantaCalc';const w=document.createElement('span');w.className='w';w.textContent=' Web';br.insertBefore(w,br.firstChild.nextSibling);}
+const bm=document.createElement('button');bm.id='bMenu';bm.title='Menu';bm.textContent='☰';hdr.appendChild(bm);
+const mm=document.createElement('div');mm.id='mMenu';document.body.appendChild(mm);
+const vis=id=>{const e=document.getElementById(id);return e&&!e.hidden;};
+const simp=()=>typeof isSimples==='function'&&isSimples();
+const gratis=()=>typeof isPro==='function'&&!isPro();
+function abrir(){const it=(ic,txt,act,cls='')=>`<button class="it ${cls}" data-mm="${act}"><i>${ic}</i><span>${txt}</span></button>`;
+ const t=id=>{const e=document.getElementById(id);return e?e.textContent.trim():'';};
+ let h=`<div class="sh"><div class="gr"></div>`;
+ if(vis('bPro'))h+=it('⭐',gratis()?'Seja Pro — tudo liberado':'Plano Pro','bPro','pro');
+ h+=`<div class="hd">Projeto</div>`+it('★','Assistente (responder perguntas)','bWiz')+it('📁','Meus projetos','bAbrir')+it('＋','Novo projeto','bNovo')+it('💾','Salvar','bSalvar');
+ const ex=[...document.querySelectorAll('#ddExp button')];
+ if(ex.length){h+=it('⬇','Exportar arquivos','exp')+`<div class="sub" id="mmExp">${ex.map(b=>`<button class="it" data-mm="x:${b.id}"><span>${b.textContent.replace(/PRO$/,'')}</span>${gratis()?'<span class="tg">PRO</span>':''}</button>`).join('')}</div>`;}
+ if(!simp()){h+=`<div class="hd">Ferramentas</div>`;if(document.getElementById('b3D'))h+=it('🧊','Vista 3D','b3D');if(document.getElementById('bRev'))h+=it('🏷','Emitir revisão','bRev');if(document.getElementById('ptoggle'))h+=it('▤','Mostrar/ocultar o painel','ptoggle');}
+ h+=`<div class="hd">Conta e tela</div>`;
+ if(vis('bConta'))h+=it('👤',t('bConta')||'Minha conta','bConta');
+ if(vis('bModo'))h+=it('⚙',t('bModo').replace(/^[^A-Za-zÀ-ú]+/,'')||'Trocar modo','bModo');
+ h+=`<button class="fx" data-mm="x">Fechar</button></div>`;mm.innerHTML=h;mm.classList.add('on');}
+bm.onclick=abrir;
+mm.addEventListener('click',e=>{if(e.target===mm){mm.classList.remove('on');return;}const b=e.target.closest('[data-mm]');if(!b)return;const a=b.dataset.mm;
+ if(a==='exp'){$('#mmExp').classList.toggle('on');return;}
+ mm.classList.remove('on');if(a==='x')return;
+ const id=a.startsWith('x:')?a.slice(2):a;const o=document.getElementById(id);if(o)setTimeout(()=>o.click(),30);});
+})();
 </script>
 
 <script>
