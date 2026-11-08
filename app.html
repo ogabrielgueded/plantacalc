@@ -7258,9 +7258,13 @@ body.plano-pro #bPro{display:none}
 #mPro .bt small{text-align:center;color:#5b6670;font-size:12px}
 #mPro .x{float:right;border:0;background:#f1f3f5;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px}
 #mPro .msg{margin-top:10px;font-size:13px;color:#8a1c12}#mPro .aviso{background:#fff8e1;border:1px solid #ffc107;border-radius:12px;padding:10px 12px;margin:8px 0 10px;font-size:14px;font-weight:600;color:#5d4300}
-body.plano-gratis #bXlsx::after,body.plano-gratis #bCsv::after{content:'PRO';margin-left:8px;font-size:10.5px;font-weight:700;background:#ffc107;color:#3d2c00;border-radius:6px;padding:1px 6px}
+body.plano-gratis #ddExp button::after,body.plano-gratis #bSheetPdf::after,body.plano-gratis #bSheetSvg::after{content:'PRO';margin-left:8px;font-size:10.5px;font-weight:700;background:#ffc107;color:#3d2c00;border-radius:6px;padding:1px 6px}
 @media (max-width:640px){#mPro .pl{grid-template-columns:1fr}}
 /* aviso pós-exportação */
+table.q tr.pc-oculto td{color:#9aa5b1;filter:blur(2.5px);user-select:none;pointer-events:none;letter-spacing:-1px}
+table.q tr.pc-lockrow td{padding:0!important;border:0!important;background:transparent!important}
+.pc-lockbox{position:sticky;left:0;max-width:min(760px,calc(100vw - 40px));margin:14px 0;display:flex;flex-direction:column;gap:6px;align-items:flex-start;background:#fff8e1;border:2px solid #ffc107;border-radius:14px;padding:14px 16px;box-shadow:0 8px 24px rgba(0,0,0,.12);font-size:14px;color:#3d2c00;white-space:normal}
+.pc-lockbox b{font-size:16px}.pc-lockbox button{margin-top:4px;border:0;border-radius:10px;background:#1f5f20;color:#fff;font:inherit;font-weight:700;padding:10px 16px;cursor:pointer}
 #pcUp{position:fixed;right:14px;bottom:96px;z-index:70;width:min(360px,calc(100% - 28px));background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:14px 16px;display:none;font-size:13.5px}
 #pcUp.on{display:block}#pcUp b{color:#1f5f20;font-size:15px}#pcUp p{margin:6px 0 10px;color:#46515a}
 #pcUp .r{display:flex;gap:8px;justify-content:flex-end}#pcUp button{border:0;border-radius:10px;padding:9px 13px;font:inherit;font-weight:600;cursor:pointer}#pcUp .a{background:#1f5f20;color:#fff}#pcUp .c{background:#f1f3f5}
@@ -7291,14 +7295,28 @@ async function iniciarConta(){lerCache();aplicarPlano();
  try{MON.sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey);const {data}=await MON.sb.auth.getSession();MON.user=data&&data.session?data.session.user:null;await carregarPerfil(false);
   MON.sb.auth.onAuthStateChange((ev,ses)=>{const u=ses?ses.user:null;if((u&&u.id)!==(MON.user&&MON.user.id)){MON.user=u;carregarPerfil(false);}});}catch(e){console.warn('supabase',e);}}
 
-/* ---------- planilha (Excel e CSV) só no Pro ---------- */
-(function(){['bXlsx','bCsv'].forEach(id=>{const b=$('#'+id);if(!b)return;const o=b.onclick;b.onclick=function(e){if(!isPro()){const dd=$('#ddExp');if(dd)dd.classList.remove('open');abrirPlanos('A exportação da planilha (Excel e CSV) é do plano Pro.');return;}return o.call(this,e);};});})();
+/* ---------- exportar arquivos só no Pro ---------- */
+const MSG_EXP='Exportar arquivos (PDF, Excel, Word, DXF, IFC e outros) é do plano Pro. No plano gratuito você usa tudo na tela.';
+document.addEventListener('click',e=>{if(isPro())return;const b=e.target.closest('#ddExp button,#bSheetPdf,#bSheetSvg');if(!b)return;e.preventDefault();e.stopImmediatePropagation();const dd=$('#ddExp');if(dd)dd.classList.remove('open');abrirPlanos(MSG_EXP);},true);
+(function(){const _dl=download;download=function(){if(!isPro()){abrirPlanos(MSG_EXP);return;}return _dl.apply(this,arguments);};})();
+
+/* ---------- quantitativo: plano gratuito vê metade da tabela ---------- */
+function quantParcial(h){const d=document.createElement('div');d.innerHTML=h;const t=d.querySelector('table.q');if(!t||!t.tBodies[0])return h;
+ let n=t.nextSibling;while(n){const x=n.nextSibling;n.remove();n=x;}
+ const rows=[...t.tBodies[0].rows];const k=Math.min(rows.length,Math.max(3,Math.ceil(rows.length/2)));const ocultas=rows.slice(k);
+ ocultas.forEach(r=>{r.className='pc-oculto';[...r.cells].forEach(c=>{const L=(c.textContent||'').trim().length;c.textContent=L?'▆'.repeat(Math.min(16,Math.max(3,Math.round(L*0.5)))):'';});});
+ const nc=t.tHead&&t.tHead.rows[0]?t.tHead.rows[0].cells.length:10;
+ const lk=document.createElement('tr');lk.className='pc-lockrow';lk.innerHTML=`<td colspan="${nc}"><div class="pc-lockbox"><b>🔒 Você está vendo metade do quantitativo</b><span>Assine o PlantaCalc Pro para ver a tabela completa — com todos os itens, o total estimado, ambientes, pilares e fundações — e exportar em Excel e PDF.</span><button data-pcpro>Assinar o Pro e ver tudo</button></div></td>`;
+ if(ocultas.length){ocultas[0].before(lk);if(ocultas.length>12)t.tBodies[0].appendChild(lk.cloneNode(true));}else t.tBodies[0].appendChild(lk);
+ return d.innerHTML;}
+(function(){const _qh=quantHTML;quantHTML=function(){const h=_qh.apply(this,arguments);return isPro()||!temConteudo()?h:quantParcial(h);};})();
+document.addEventListener('click',e=>{if(e.target.closest('[data-pcpro]'))abrirPlanos('O quantitativo completo é do plano Pro.');});
 
 /* ---------- planos e assinatura ---------- */
 function abrirPlanos(msg){const m=$('#mPro');const P=CFG.preco;const eco=Math.round((1-P.anual/(P.mensal*12))*100);
- m.innerHTML=`<div class="bx"><button class="x" data-pp="x">✕</button><h2>PlantaCalc Pro</h2>${msg?`<div class="aviso">🔒 ${esc(msg)}</div>`:''}<p class="sub">Crie quantos projetos quiser, exporte a planilha e entregue pranchas limpas, sem anúncios nem marca d'água.</p>
- <div class="pl"><div class="pc"><h3>Gratuito</h3><div class="pr">R$ 0</div><ul><li>Todas as ferramentas, assistentes e cálculos</li><li>Pranchas, quantitativo, cronograma, memorial, 3D</li><li>Exporta PDF, Word, DXF e IFC</li><li class="n">1 projeto</li><li class="n">Sem exportar a planilha (Excel e CSV)</li><li class="n">Com anúncios</li><li class="n">Pranchas com marca d'água “versão gratuita”</li></ul></div>
- <div class="pc pro"><h3>Pro</h3><div class="pr">${brl(P.mensal)}<small> /mês</small></div><div style="font-size:13px;color:#46515a">ou ${brl(P.anual)} por ano${eco>0?` (economia de ${eco}%)`:''}</div><ul><li>Tudo do Gratuito</li><li>Projetos ilimitados, na nuvem e em qualquer aparelho</li><li>Exporta a planilha (Excel e CSV)</li><li>Sem nenhum anúncio</li><li>Pranchas e PDF sem marca d'água</li><li>Cancele quando quiser</li></ul></div></div>
+ m.innerHTML=`<div class="bx"><button class="x" data-pp="x">✕</button><h2>PlantaCalc Pro</h2>${msg?`<div class="aviso">🔒 ${esc(msg)}</div>`:''}<p class="sub">Veja o quantitativo completo, exporte PDF, Excel, Word, DXF e IFC e crie quantos projetos quiser — sem anúncios nem marca d'água.</p>
+ <div class="pl"><div class="pc"><h3>Gratuito</h3><div class="pr">R$ 0</div><ul><li>Todas as ferramentas, assistentes e cálculos</li><li>Pranchas, 3D, cronograma e memorial na tela</li><li class="n">Quantitativo parcial (metade da tabela)</li><li class="n">1 projeto</li><li class="n">Sem exportar arquivos</li><li class="n">Com anúncios</li><li class="n">Pranchas com marca d'água “versão gratuita”</li></ul></div>
+ <div class="pc pro"><h3>Pro</h3><div class="pr">${brl(P.mensal)}<small> /mês</small></div><div style="font-size:13px;color:#46515a">ou ${brl(P.anual)} por ano${eco>0?` (economia de ${eco}%)`:''}</div><ul><li>Tudo do Gratuito</li><li>Quantitativo completo</li><li>Projetos ilimitados, na nuvem e em qualquer aparelho</li><li>Exporta PDF, Excel, Word, DXF e IFC</li><li>Sem nenhum anúncio</li><li>Pranchas e PDF sem marca d'água</li><li>Cancele quando quiser</li></ul></div></div>
  ${isPro()?`<div class="bt"><small>Seu plano Pro está ativo até ${new Date(MON.validade).toLocaleDateString('pt-BR')}.</small><button class="sec" data-pp="conta">Minha conta</button></div>`:`<div class="bt"><button data-pp="anual">Assinar anual — ${brl(P.anual)}</button><button class="sec" data-pp="mensal">Assinar mensal — ${brl(P.mensal)}</button><small>Pagamento seguro pelo Mercado Pago. ${MON.user?'':'Você vai criar uma conta (ou entrar) antes de pagar.'}</small></div>`}
  <div class="msg"></div></div>`;m.classList.add('on');}
 $('#mPro').addEventListener('click',async e=>{const m=$('#mPro');if(e.target===m){m.classList.remove('on');return;}const b=e.target.closest('[data-pp]');if(!b)return;const a=b.dataset.pp;
@@ -7315,7 +7333,7 @@ function carregarAds(){if(isPro()||MON.adsLoaded||!CFG.adsense)return;MON.adsLoa
  const s=document.createElement('script');s.async=true;s.crossOrigin='anonymous';s.src=`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(CFG.adsense)}`;document.head.appendChild(s);}
 function adBox(slot){if(isPro())return null;const d=document.createElement('div');d.className='pc-ad';const id=CFG.slots[slot];
  if(CFG.adsense&&id){d.innerHTML=`<span class="lb">Publicidade</span><ins class="adsbygoogle" data-ad-client="${esc(CFG.adsense)}" data-ad-slot="${esc(id)}" data-ad-format="horizontal" data-full-width-responsive="true"></ins>`;setTimeout(()=>{try{(window.adsbygoogle=window.adsbygoogle||[]).push({});}catch(e){}},50);}
- else d.innerHTML=`<div class="pc-house"><div><b>⭐ PlantaCalc Pro</b><span>Projetos ilimitados, planilha em Excel e pranchas sem marca d'água — ${brl(CFG.preco.mensal)}/mês.</span></div><button data-hp>Conhecer o Pro</button></div>`;
+ else d.innerHTML=`<div class="pc-house"><div><b>⭐ PlantaCalc Pro</b><span>Quantitativo completo, exportação em PDF e Excel e projetos ilimitados — ${brl(CFG.preco.mensal)}/mês.</span></div><button data-hp>Conhecer o Pro</button></div>`;
  d.addEventListener('click',e=>{if(e.target.closest('[data-hp]'))abrirPlanos();});return d;}
 
 /* ---------- onde os anúncios aparecem (longe da área de desenho e dos botões de download) ---------- */
@@ -7331,7 +7349,7 @@ function adBox(slot){if(isPro())return null;const d=document.createElement('div'
  o.push({t:'tx',x:21,y:294.6,s:`Gerado com ${CFG.nome} — versão gratuita${dom?' · '+dom:''} · estudo preliminar, não substitui projeto executivo com ART`,h:2.3,col:'#8a949c',base:'auto'});}return o;};})();
 
 /* ---------- depois de exportar pranchas na versão gratuita: convite discreto ao Pro ---------- */
-document.addEventListener('click',e=>{const b=e.target.closest('#bPdf,#bSheetPdf,#bSheetSvg');if(!b||isPro())return;let vis=false;try{vis=sessionStorage.getItem('pc_up')==='1';}catch(x){}if(vis)return;
+document.addEventListener('click',e=>{const b=e.target.closest('#bPdf,#bSheetPdf,#bSheetSvg');if(!b||!isPro()||true)return;let vis=false;try{vis=sessionStorage.getItem('pc_up')==='1';}catch(x){}if(vis)return;
  setTimeout(()=>{const u=$('#pcUp');u.innerHTML=`<b>Pranchas geradas ✓</b><p>Na versão gratuita as pranchas saem com a marca d'água “versão gratuita”. Com o Pro, saem limpas para entregar.</p><div class="r"><button class="c" data-u="x">Agora não</button><button class="a" data-u="pro">Conhecer o Pro</button></div>`;u.classList.add('on');try{sessionStorage.setItem('pc_up','1');}catch(x){}},1500);},true);
 $('#pcUp').addEventListener('click',e=>{const b=e.target.closest('[data-u]');if(!b)return;$('#pcUp').classList.remove('on');if(b.dataset.u==='pro')abrirPlanos();});
 
