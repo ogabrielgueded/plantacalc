@@ -7129,7 +7129,8 @@ async function pjSalvarNuvem(){if(!pjLogado()||!PJ.atual)return;const rec=PJ.loc
  if(error){if(/LIMITE_GRATIS/.test(error.message||'')){PJ.limite=true;pjStatus('limite');}else{console.warn(error);pjStatus('offline');}return;}
  PJ.nuvem[PJ.atual]={id:PJ.atual,nome:rec.nome,miniatura:rec.mini,atualizado:pl.atualizado};rec.nuvem=pl.atualizado;pjGrava(rec).catch(()=>{});pjStatus('nuvem');}
 async function pjSalvarAgora(){clearTimeout(PJ.tSave);clearTimeout(PJ.tNuvem);await pjSalvarLocal();if(pjLogado())await pjSalvarNuvem();}
-async function pjListarNuvem(){if(!pjLogado())return;try{const {data,error}=await MON.sb.from('projetos').select('id,nome,miniatura,atualizado,tamanho').order('atualizado',{ascending:false});if(error)throw error;PJ.nuvem={};(data||[]).forEach(p=>PJ.nuvem[p.id]=p);}catch(e){console.warn('nuvem',e);}}
+async function pjListarNuvem(){if(!pjLogado())return;try{let {data,error}=await MON.sb.from('projetos').select('id,nome,miniatura,atualizado,tamanho,amb:dados->rooms,pavs:dados->pavs,cod:dados->meta->>codigo,rev:dados->meta->>rev').order('atualizado',{ascending:false});
+ if(error)({data,error}=await MON.sb.from('projetos').select('id,nome,miniatura,atualizado,tamanho').order('atualizado',{ascending:false}));if(error)throw error;PJ.nuvem={};(data||[]).forEach(p=>PJ.nuvem[p.id]=p);}catch(e){console.warn('nuvem',e);}}
 
 /* ---------- indicador no topo ---------- */
 const PJ_ST={salvando:['Salvando…','#f0ad4e'],aparelho:['Salvo neste aparelho','#8bc34a'],'nuvem-salvando':['Salvando na nuvem…','#f0ad4e'],nuvem:['Salvo na nuvem','#8bc34a'],limite:['Salvo neste aparelho (limite da nuvem)','#ffc107'],offline:['Sem internet: salvo neste aparelho','#ffc107'],erro:['Não foi possível salvar','#e57373']};
@@ -7139,29 +7140,50 @@ function pjStatus(s){PJ.status=s;const b=$('#bProj');if(!b)return;if(!PJ.atual){
 #bProj .pjn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}#bProj i{width:8px;height:8px;border-radius:50%;flex:none}#bProj small{font-size:11px;opacity:.85;white-space:nowrap}
 @media (max-width:1100px){#bProj small{display:none}}
 @media (max-width:1400px){header .brand small{display:none}}
-#pjOv{position:fixed;inset:0;z-index:63;display:none;background:#eef1f4;overflow:auto}#pjOv.on{display:block}
-#pjOv .w{width:min(1180px,100%);margin:0 auto;padding:18px 18px 50px}
-#pjOv .t{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}#pjOv .t h2{margin:0 8px 0 0;font-size:24px;color:var(--g1)}
-#pjOv .t input{font:inherit;font-size:15px;padding:10px 12px;border-radius:11px;border:1px solid var(--line);min-width:200px;flex:1}
-#pjOv .bt{border:0;border-radius:11px;padding:11px 16px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;background:#fff;color:var(--ink);border:1px solid var(--line)}
-#pjOv .bt.pri{background:var(--g1);color:#fff;border-color:var(--g1)}#pjOv .bt.am{background:#ffc107;border-color:#ffc107}
-#pjOv .info{background:#fff;border-radius:14px;padding:12px 16px;margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--mut);border:1px solid var(--line)}
-#pjOv .info b{color:var(--ink)}#pjOv .info .sp{flex:1}
-#pjOv .novo{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:18px}
-#pjOv .novo button{border:2px dashed #b9cfa4;background:#f8fbf3;border-radius:14px;padding:14px;text-align:left;cursor:pointer;font:inherit;color:var(--ink)}
-#pjOv .novo button{position:relative}#pjOv .novo .lk{position:absolute;top:8px;right:10px;font-style:normal;font-size:11.5px;font-weight:700;background:#ffc107;border-radius:8px;padding:2px 7px}#pjOv .novo button:hover{border-color:var(--g1)}#pjOv .novo b{display:block;font-size:15px}#pjOv .novo span{font-size:12.5px;color:var(--mut)}
-#pjOv .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
-#pjOv .c{background:#fff;border-radius:16px;border:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column}
-#pjOv .c.at{border:2px solid var(--g1)}
-#pjOv .c .mi{background:#fafbf8;height:130px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-bottom:1px solid #eef0f2}#pjOv .c .mi svg{max-width:90%;max-height:110px}
-#pjOv .c .b{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;flex:1}
-#pjOv .c .n{font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#pjOv .c .m{font-size:12.5px;color:var(--mut);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-#pjOv .chip{font-size:11px;padding:2px 7px;border-radius:10px;background:#eef1f4;color:#46515a}#pjOv .chip.n{background:#e6f1fb;color:#1d4f7a}#pjOv .chip.a{background:#eaf3df;color:var(--g1);font-weight:700}
-#pjOv .c .ac{display:flex;gap:5px;margin-top:auto}
-#pjOv .c .ac button{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 8px;font:inherit;font-size:12.5px;cursor:pointer;white-space:nowrap}#pjOv .c .ac .ab{flex:1}
-#pjOv .c .ac .ab{background:var(--g1);color:#fff;border-color:var(--g1);font-weight:600}#pjOv .c .ac .ex{color:#8a1c12}#pjOv .c .ac .ex.cf{background:#8a1c12;color:#fff}
-#pjOv .vz{padding:40px;text-align:center;color:var(--mut)}
+#pjOv{position:fixed;inset:0;z-index:63;display:none;background:#f3f5f2;overflow:auto;font-size:14px}#pjOv.on{display:block}
+#pjOv .top{position:sticky;top:0;z-index:2;background:var(--g1,#1f5f20);color:#fff;box-shadow:0 2px 10px rgba(0,0,0,.12)}
+#pjOv .top .in{width:min(1200px,100%);margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:10px}
+#pjOv .marca{font-weight:800;font-size:18px;letter-spacing:-.2px;margin-right:auto;display:flex;align-items:center;gap:8px}#pjOv .marca small{font-weight:500;font-size:12.5px;opacity:.8}
+#pjOv .tb{border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.1);color:#fff;border-radius:10px;padding:8px 13px;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
+#pjOv .tb:hover{background:rgba(255,255,255,.2)}#pjOv .tb.cl{background:#fff;color:var(--g1,#1f5f20);border-color:#fff}
+#pjOv .w{width:min(1200px,100%);margin:0 auto;padding:24px 20px 60px}
+#pjOv .ola{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+#pjOv .ola h2{margin:0;font-size:26px;color:#1b2733;letter-spacing:-.3px}#pjOv .ola p{margin:4px 0 0;color:#5b6670}
+#pjOv .plano{margin-left:auto;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e1e6e2;border-radius:12px;padding:8px 8px 8px 14px;color:#46515a}
+#pjOv .plano b{color:#1b2733}#pjOv .plano .pp{font-size:11px;font-weight:800;border-radius:7px;padding:2px 8px;background:#eaf3df;color:var(--g1,#1f5f20)}#pjOv .plano .pp.f{background:#eef1f4;color:#5b6670}
+#pjOv .plano button{border:0;border-radius:9px;background:#ffc107;color:#3d2c00;font:inherit;font-weight:700;padding:8px 12px;cursor:pointer}
+#pjOv h3{font-size:13px;text-transform:uppercase;letter-spacing:.7px;color:#6b7680;margin:0 0 10px;font-weight:700}
+#pjOv .novo{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px}
+#pjOv .novo button{position:relative;display:flex;gap:12px;align-items:center;text-align:left;border:1px solid #dfe6da;background:#fff;border-radius:14px;padding:14px 16px;cursor:pointer;font:inherit;color:#1b2733;transition:border-color .15s,box-shadow .15s,transform .15s}
+#pjOv .novo button:hover{border-color:var(--g1,#1f5f20);box-shadow:0 6px 18px rgba(31,95,32,.12);transform:translateY(-1px)}
+#pjOv .novo .ic{flex:none;width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;background:#eaf3df;color:var(--g1,#1f5f20)}
+#pjOv .novo .ic.a{background:#fff3cd;color:#8a5a00}#pjOv .novo .ic.e{background:#e6f1fb;color:#1d4f7a}
+#pjOv .novo b{display:block;font-size:15px}#pjOv .novo span{font-size:12.5px;color:#6b7680;line-height:1.35}
+#pjOv .novo .lk{position:absolute;top:8px;right:10px;font-style:normal;font-size:11px;font-weight:800;background:#ffc107;border-radius:7px;padding:2px 7px}
+#pjOv .barra{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}#pjOv .barra h3{margin:0 auto 0 0}
+#pjOv .busca{position:relative}#pjOv .busca input{font:inherit;padding:9px 12px 9px 34px;border-radius:10px;border:1px solid #d6dcd8;background:#fff;width:240px}
+#pjOv .busca:before{content:'⌕';position:absolute;left:11px;top:50%;transform:translateY(-52%);color:#8a949c;font-size:17px}
+#pjOv .ord{display:flex;background:#e6eae7;border-radius:10px;padding:3px}#pjOv .ord button{border:0;background:none;font:inherit;font-size:13px;font-weight:600;color:#5b6670;padding:6px 11px;border-radius:8px;cursor:pointer}#pjOv .ord button.on{background:#fff;color:#1b2733;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+#pjOv .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+#pjOv .c{position:relative;background:#fff;border-radius:16px;border:1px solid #e1e6e2;display:flex;flex-direction:column;transition:box-shadow .15s,border-color .15s}
+#pjOv .c:hover{box-shadow:0 8px 24px rgba(20,40,20,.10);border-color:#cfd8cc}#pjOv .c.at{border:2px solid var(--g1,#1f5f20)}
+#pjOv .c .mi{position:relative;height:150px;border-radius:15px 15px 0 0;background:linear-gradient(#fbfcfa,#f3f6f1);display:flex;align-items:center;justify-content:center;cursor:pointer;border-bottom:1px solid #eef1ec;overflow:hidden}
+#pjOv .c .mi svg{width:88%;height:88%}#pjOv .c .mi .st{position:absolute;left:10px;top:10px}
+#pjOv .chip{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:999px;background:#eef1f4;color:#46515a}
+#pjOv .chip.n{background:#e6f1fb;color:#1d4f7a}#pjOv .chip.a{background:var(--g1,#1f5f20);color:#fff}#pjOv .chip.l{background:#fff3cd;color:#6b4b00}
+#pjOv .c .b{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px;flex:1}
+#pjOv .c .n{font-weight:700;font-size:15px;line-height:1.3;color:#1b2733;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em}
+#pjOv .c .m{font-size:12.5px;color:#6b7680;display:flex;gap:4px 10px;flex-wrap:wrap}
+#pjOv .c .ac{display:flex;gap:8px;margin-top:8px;align-items:center}
+#pjOv .c .ab{flex:1;border:0;border-radius:10px;background:var(--g1,#1f5f20);color:#fff;font:inherit;font-weight:700;padding:9px;cursor:pointer}
+#pjOv .c .ab.cur{background:#eaf3df;color:var(--g1,#1f5f20)}
+#pjOv .c .mais{flex:none;width:38px;height:36px;border:1px solid #d6dcd8;background:#fff;border-radius:10px;font-size:18px;line-height:1;cursor:pointer;color:#46515a}
+#pjOv .mn{position:absolute;right:12px;bottom:56px;z-index:3;background:#fff;border:1px solid #dfe4e0;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.16);padding:6px;min-width:180px;display:none}
+#pjOv .mn.on{display:block}#pjOv .mn button{display:block;width:100%;text-align:left;border:0;background:none;font:inherit;padding:9px 11px;border-radius:8px;cursor:pointer;color:#1b2733}
+#pjOv .mn button:hover{background:#f1f4f1}#pjOv .mn .ex{color:#a3261a}#pjOv .mn .ex.cf{background:#a3261a;color:#fff}#pjOv .mn hr{border:0;border-top:1px solid #eef0ee;margin:4px 2px}
+#pjOv .vz{background:#fff;border:1px dashed #cfd8cc;border-radius:16px;padding:44px 20px;text-align:center;color:#6b7680}
+#pjOv .vz .i{font-size:40px;margin-bottom:6px}#pjOv .vz b{display:block;font-size:17px;color:#1b2733;margin-bottom:4px}
+@media (max-width:820px){#pjOv .novo{grid-template-columns:1fr}#pjOv .busca input{width:100%}#pjOv .busca{flex:1}#pjOv .plano{margin-left:0;width:100%}#pjOv .top .in{padding:10px 12px}#pjOv .w{padding:18px 12px 50px}#pjOv .marca small{display:none}#pjOv .tb.ar{display:none}}
 `;document.head.appendChild(st);
  const hdr=document.querySelector('header');const b=document.createElement('button');b.id='bProj';const br=hdr.querySelector('.brand');hdr.insertBefore(b,br?br.nextSibling:hdr.firstChild);b.onclick=()=>abrirProjetos();
  const ov=document.createElement('div');ov.id='pjOv';document.body.appendChild(ov);
@@ -7171,28 +7193,52 @@ function pjStatus(s){PJ.status=s;const b=$('#bProj');if(!b)return;if(!PJ.atual){
 /* ---------- tela Meus projetos ---------- */
 async function pjLerLocais(){try{(await pjTodos()).forEach(r=>{if(pjMeu(r))PJ.locais[r.id]=r;});}catch(e){}}
 async function abrirProjetos(){await pjSalvarLocal();await pjLerLocais();await pjListarNuvem();pjRender();$('#pjOv').classList.add('on');}
+const PJ_RES=new Map();
+function pjResumo(o){try{const rs=(o.rooms||[]).filter(r=>r&&r.poly&&r.poly.length>2);const a=rs.reduce((t,r)=>t+polyArea(r.poly),0)/1e6;const pv=o.pavs||1;
+ return {area:a,amb:rs.length,pav:pv,cod:(o.meta&&o.meta.codigo)||'',rev:(o.meta&&o.meta.rev)||''};}catch(e){return null;}}
+function pjInfo(p){if(p.l){const k=p.id+':'+p.l.atualizado;if(!PJ_RES.has(k)){try{PJ_RES.set(k,pjResumo(JSON.parse(p.l.dados)));}catch(e){PJ_RES.set(k,null);}}return PJ_RES.get(k);}
+ if(p.n&&p.n.amb!==undefined)return pjResumo({rooms:p.n.amb||[],pavs:p.n.pavs,meta:{codigo:p.n.cod,rev:p.n.rev}});return null;}
 function pjRender(){const ov=$('#pjOv');const ids=[...new Set([...Object.keys(PJ.locais),...Object.keys(PJ.nuvem)])];
- const it=ids.map(id=>{const l=PJ.locais[id],n=PJ.nuvem[id];const t=Math.max(l?l.atualizado:0,n?new Date(n.atualizado).getTime():0);return{id,nome:(l&&l.nome)||(n&&n.nome)||'Projeto',mini:(l&&l.mini)||(n&&n.miniatura)||'',t,l,n};})
-  .filter(p=>!PJ.busca||p.nome.toLowerCase().includes(PJ.busca.toLowerCase())).sort((a,b)=>(b.id===PJ.atual)-(a.id===PJ.atual)||b.t-a.t);
- const nN=Object.keys(PJ.nuvem).length;const online=typeof MON!=='undefined';
- let info='';if(online){if(!pjLogado())info=`<div class="info"><span>💻 Seus projetos ficam salvos <b>neste aparelho</b>. Crie uma conta grátis para guardá-los também <b>na nuvem</b> e abrir em qualquer computador ou tablet.</span><span class="sp"></span><button class="bt pri" data-pj="conta">Entrar ou criar conta</button></div>`;
-  else if(pjPro())info=`<div class="info"><span>☁ <b>Plano Pro:</b> projetos ilimitados na nuvem, em qualquer aparelho.</span></div>`;
-  else info=`<div class="info"><span>☁ Seu projeto fica <b>na nuvem</b> e abre em qualquer aparelho.</span></div>`;
-  if(!pjPro())info+=`<div class="info"><span>🔒 <b>Plano gratuito: 1 projeto.</b> Para ter vários projetos ao mesmo tempo, assine o Pro.</span><span class="sp"></span><button class="bt am" data-pj="pro">Projetos ilimitados com o Pro</button></div>`;}
+ const todos=ids.map(id=>{const l=PJ.locais[id],n=PJ.nuvem[id];const t=Math.max(l?l.atualizado:0,n?new Date(n.atualizado).getTime():0);return{id,nome:(l&&l.nome)||(n&&n.nome)||'Projeto',mini:(l&&l.mini)||(n&&n.miniatura)||'',t,l,n};});
+ const ord=PJ.ordem||'rec';
+ const it=todos.filter(p=>!PJ.busca||p.nome.toLowerCase().includes(PJ.busca.toLowerCase()))
+  .sort((a,b)=>(b.id===PJ.atual)-(a.id===PJ.atual)||(ord==='nome'?a.nome.localeCompare(b.nome,'pt-BR'):b.t-a.t));
+ const pro=pjPro(),web=PJ_WEB;const nome=(typeof MON!=='undefined'&&MON.nome)?String(MON.nome).split(' ')[0]:'';
  const trava=pjPodeCriar()?'':'<i class="lk">🔒 Pro</i>';
- const card=p=>{const at=p.id===PJ.atual;return `<div class="c${at?' at':''}"><div class="mi" data-pjo="${p.id}">${p.mini}</div><div class="b"><div class="n" title="${esc(p.nome)}">${esc(p.nome)}</div><div class="m">${at?'<span class="chip a">Aberto agora</span>':''}${p.l?'<span class="chip">💻 neste aparelho</span>':''}${p.n?'<span class="chip n">☁ na nuvem</span>':''}<span>· ${pjQuando(p.t)}</span></div>
-  <div class="ac">${at?'':`<button class="ab" data-pjo="${p.id}">${p.l?'Abrir':'Baixar e abrir'}</button>`}<button data-pjr="${p.id}">Renomear</button><button data-pjd="${p.id}">Duplicar${trava?' 🔒':''}</button><button class="ex" data-pjx="${p.id}" title="Excluir">🗑</button></div></div></div>`;};
- ov.innerHTML=`<div class="w"><div class="t"><h2>Meus projetos</h2><input id="pjBusca" placeholder="Procurar projeto…" value="${esc(PJ.busca)}"><button class="bt" data-pj="arquivo">Abrir arquivo do computador</button>${PJ_WEB?'<button class="bt" data-pj="conta">'+(pjPro()?'★ Pro · ':'')+'Minha conta</button>':''}${PJ.atual?'<button class="bt pri" data-pj="x">◀ Voltar ao projeto</button>':''}</div>${info}
- <div class="novo"><button data-pjn="branco">${trava}<b>＋ Projeto em branco</b><span>Desenhe do zero ou use uma planta de fundo.</span></button><button data-pjn="assistente">${trava}<b>★ Novo com o assistente</b><span>Responda perguntas e receba o estudo pronto.</span></button><button data-pjn="exemplo">${trava}<b>⧉ Novo a partir do exemplo</b><span>Casa de bombas com sala elétrica, para explorar.</span></button></div>
- ${it.length?`<div class="g">${it.map(card).join('')}</div>`:(PJ.busca?'<div class="vz">Nenhum projeto encontrado.</div>':'<div class="vz"><b style="font-size:17px;color:var(--ink)">Você ainda não tem nenhum projeto.</b><br>Escolha acima como quer começar: em branco, com o assistente ou a partir do exemplo.</div>')}</div>`;
- const bs=$('#pjBusca');bs.oninput=()=>{PJ.busca=bs.value;const pos=bs.selectionStart;pjRender();const nb=$('#pjBusca');nb.focus();nb.setSelectionRange(pos,pos);};}
-$('#pjOv').addEventListener('click',async e=>{const t=e.target;let b;const fechar=()=>{if(PJ.atual)$('#pjOv').classList.remove('on');};
+ const plano=web?`<div class="plano">${pro?'<span class="pp">PRO</span><span>Projetos <b>ilimitados</b> na nuvem</span>':`<span class="pp f">GRÁTIS</span><span><b>${pjTotal()} de ${PJ_LIM}</b> projeto</span><button data-pj="pro">Ilimitados com o Pro</button>`}</div>`:'';
+ const card=p=>{const at=p.id===PJ.atual,r=pjInfo(p);const det=[];
+  if(r){if(r.area>0)det.push(nf(r.area,1)+' m²');det.push(r.amb+' ambiente'+(r.amb===1?'':'s'));if(r.pav>1)det.push(r.pav+' pavimentos');}
+  const cod=r&&r.cod?`${esc(r.cod)}${r.rev!==''?' · Rev. '+esc(r.rev):''}`:'';
+  const onde=p.n?'<span class="chip n">☁ Na nuvem</span>':'<span class="chip l">💻 Só neste aparelho</span>';
+  return `<div class="c${at?' at':''}"><div class="mi" data-pjo="${p.id}" title="Abrir">${p.mini||''}<span class="st">${at?'<span class="chip a">● Aberto agora</span>':onde}</span></div>
+  <div class="b"><div class="n" title="${esc(p.nome)}">${esc(p.nome)}</div>
+  <div class="m">${det.length?`<span>${det.join(' · ')}</span>`:''}${cod?`<span>${cod}</span>`:''}</div>
+  <div class="m"><span title="${new Date(p.t).toLocaleString('pt-BR')}">Editado ${pjQuando(p.t)}</span></div>
+  <div class="ac"><button class="ab${at?' cur':''}" data-pjo="${p.id}">${at?'Continuar editando':'Abrir'}</button><button class="mais" data-pjm="${p.id}" title="Mais opções" aria-label="Mais opções">⋯</button></div></div>
+  <div class="mn" data-mn="${p.id}"><button data-pjr="${p.id}">✏️ Renomear</button><button data-pjd="${p.id}">⧉ Duplicar${trava?' 🔒':''}</button><hr><button class="ex" data-pjx="${p.id}">🗑 Excluir…</button></div></div>`;};
+ const vazio=PJ.busca?`<div class="vz"><div class="i">🔍</div><b>Nada encontrado para “${esc(PJ.busca)}”.</b>Confira o nome ou limpe a busca.</div>`
+  :`<div class="vz"><div class="i">📐</div><b>Você ainda não tem nenhum projeto.</b>Escolha acima como quer começar — em branco, com o assistente ou a partir do exemplo.</div>`;
+ const n=todos.length;
+ ov.innerHTML=`<div class="top"><div class="in"><div class="marca">PlantaCalc <small>estudo preliminar de obras civis</small></div>
+  <button class="tb ar" data-pj="arquivo" title="Abrir um arquivo .json salvo no computador">Abrir arquivo…</button>${web?`<button class="tb" data-pj="conta">${pro?'★ ':''}Minha conta</button>`:''}${PJ.atual?'<button class="tb cl" data-pj="x">◀ Voltar ao projeto</button>':''}</div></div>
+ <div class="w"><div class="ola"><div><h2>${nome?'Olá, '+esc(nome)+'!':'Meus projetos'}</h2><p>${n?`Você tem ${n} projeto${n>1?'s':''}. Continue de onde parou ou comece um novo.`:'Vamos começar o seu primeiro estudo.'}</p></div>${plano}</div>
+ <h3>Começar um projeto</h3>
+ <div class="novo"><button data-pjn="branco">${trava}<span class="ic">＋</span><div><b>Projeto em branco</b><span>Desenhe do zero ou sobre uma planta de fundo.</span></div></button>
+  <button data-pjn="assistente">${trava}<span class="ic a">★</span><div><b>Com o assistente</b><span>Responda algumas perguntas e receba o estudo pronto.</span></div></button>
+  <button data-pjn="exemplo">${trava}<span class="ic e">⧉</span><div><b>A partir do exemplo</b><span>Casa de bombas com sala elétrica, para explorar.</span></div></button></div>
+ ${n?`<div class="barra"><h3>Meus projetos (${n})</h3><div class="busca"><input id="pjBusca" placeholder="Procurar projeto…" value="${esc(PJ.busca)}"></div><div class="ord"><button data-pjord="rec" class="${ord==='rec'?'on':''}">Recentes</button><button data-pjord="nome" class="${ord==='nome'?'on':''}">Nome</button></div></div>`:''}
+ ${it.length?`<div class="g">${it.map(card).join('')}</div>`:vazio}</div>`;
+ const bs=$('#pjBusca');if(bs)bs.oninput=()=>{PJ.busca=bs.value;const pos=bs.selectionStart;pjRender();const nb=$('#pjBusca');if(nb){nb.focus();nb.setSelectionRange(pos,pos);}};}
+$('#pjOv').addEventListener('click',async e=>{const t=e.target;let b;
+ if((b=t.closest('[data-pjord]'))){PJ.ordem=b.dataset.pjord;pjRender();return;}
+ if((b=t.closest('[data-pjm]'))){const m=$(`#pjOv [data-mn="${b.dataset.pjm}"]`);const ab=m&&m.classList.contains('on');$$('#pjOv .mn.on').forEach(x=>x.classList.remove('on'));if(m&&!ab)m.classList.add('on');return;}
+ if(!t.closest('.mn'))$$('#pjOv .mn.on').forEach(x=>x.classList.remove('on'));const fechar=()=>{if(PJ.atual)$('#pjOv').classList.remove('on');};
  if((b=t.closest('[data-pj]'))){const a=b.dataset.pj;if(a==='x')fechar();else if(a==='conta')location.href='conta.html';else if(a==='pro'){fechar();if(typeof abrirPlanos==='function')abrirPlanos();}else if(a==='arquivo'){$('#fOpen').click();}return;}
  if((b=t.closest('[data-pjn]'))){if(PJ.atual)fechar();await pjNovo(b.dataset.pjn);fechar();return;}
  if((b=t.closest('[data-pjo]'))){if(PJ.atual)fechar();await pjAbrir(b.dataset.pjo);fechar();return;}
  if((b=t.closest('[data-pjr]'))){const id=b.dataset.pjr;const atual=(PJ.locais[id]||PJ.nuvem[id]||{}).nome||'';const n=prompt('Nome do projeto:',atual);if(n&&n.trim())await pjRenomear(id,n.trim());pjRender();return;}
  if((b=t.closest('[data-pjd]'))){await pjDuplicar(b.dataset.pjd);pjRender();return;}
- if((b=t.closest('[data-pjx]'))){if(!b.classList.contains('cf')){b.classList.add('cf');b.textContent='Excluir?';setTimeout(()=>{if(b.isConnected){b.classList.remove('cf');b.textContent='🗑';}},4000);return;}await pjExcluir(b.dataset.pjx);pjRender();return;}});
+ if((b=t.closest('[data-pjx]'))){if(!b.classList.contains('cf')){b.classList.add('cf');b.textContent='Confirmar exclusão (não dá para desfazer)';setTimeout(()=>{if(b.isConnected){b.classList.remove('cf');b.textContent='🗑 Excluir…';}},5000);return;}await pjExcluir(b.dataset.pjx);pjRender();return;}});
 
 /* ---------- ações ---------- */
 function pjNovoId(){clearTimeout(PJ.tSave);clearTimeout(PJ.tNuvem);pjSalvarLocal();if(pjLogado())pjSalvarNuvem();PJ.atual=pjUUID();try{localStorage.setItem(PJ_KEY,PJ.atual);}catch(e){}}
@@ -7282,18 +7328,19 @@ const st=document.createElement('style');st.textContent=`
  #mWiz .wz-side{order:5!important;padding:10px!important}#mWiz .wz-side svg{max-height:150px;width:100%}#mWiz .wz-side .k{font-size:12.5px!important;padding:3px 0!important}
  #mWiz .wz-q{font-size:18px!important;margin:8px 0 10px!important}#mWiz .wz-ops button{padding:12px 14px!important;font-size:15px!important}
  /* meus projetos */
- #pjOv .w{padding:12px 12px calc(30px + env(safe-area-inset-bottom))!important}
- #pjOv .t{gap:8px!important;margin-bottom:10px!important}#pjOv .t h2{font-size:20px!important;flex:1}
- #pjOv .t [data-pj="x"]{order:2;padding:9px 12px!important;font-size:14px!important}
- #pjOv .t input{order:3;flex:1 1 100%!important;min-width:0!important;padding:9px 11px!important}
- #pjOv .t [data-pj="arquivo"]{order:4;flex:1 1 100%;padding:9px 12px!important;font-size:13.5px!important}
- #pjOv .info{padding:10px 12px!important;font-size:13px!important;gap:8px!important;margin-bottom:10px!important}#pjOv .info .bt{width:100%;padding:10px 12px!important;font-size:14px!important}#pjOv .info .sp{display:none}
- #pjOv .novo{grid-template-columns:repeat(3,1fr)!important;gap:6px!important;margin-bottom:12px!important}
- #pjOv .novo button{padding:12px 6px 10px!important;text-align:center!important}#pjOv .novo span{display:none}#pjOv .novo b{font-size:12.5px!important}
- #pjOv .novo .lk{top:-9px!important;right:4px!important;font-size:10.5px!important;padding:1px 6px!important}
- #pjOv .g{grid-template-columns:1fr!important;gap:8px!important}
- #pjOv .c{flex-direction:row!important}#pjOv .c .mi{width:108px;flex:none;height:auto!important;min-height:96px;border-bottom:0!important;border-right:1px solid #eef0f2}#pjOv .c .mi svg{max-height:84px!important}
- #pjOv .c .b{min-width:0;padding:9px 10px!important}#pjOv .c .ac{flex-wrap:wrap}#pjOv .c .ac button{padding:7px 8px!important}
+ #pjOv .top .in{padding:8px 12px!important;gap:6px!important}#pjOv .marca{font-size:16px!important}#pjOv .marca small{display:none}
+ #pjOv .tb{padding:7px 10px!important;font-size:13px!important}#pjOv .tb.ar{display:none}
+ #pjOv .w{padding:14px 12px calc(30px + env(safe-area-inset-bottom))!important}
+ #pjOv .ola{margin-bottom:12px!important}#pjOv .ola h2{font-size:21px!important}#pjOv .ola p{font-size:13.5px}
+ #pjOv .plano{margin-left:0!important;width:100%;box-sizing:border-box;font-size:13px}#pjOv .plano button{margin-left:auto}
+ #pjOv .novo{grid-template-columns:1fr!important;gap:8px!important;margin-bottom:18px!important}
+ #pjOv .novo button{padding:10px 12px!important}#pjOv .novo .ic{width:36px!important;height:36px!important;font-size:17px!important}
+ #pjOv .barra h3{flex:1 1 100%}#pjOv .busca{flex:1}#pjOv .busca input{width:100%!important;box-sizing:border-box}
+ #pjOv .g{grid-template-columns:1fr!important;gap:10px!important}
+ #pjOv .c{flex-direction:row!important}
+ #pjOv .c .mi{width:112px;flex:none;height:auto!important;min-height:120px;border-radius:15px 0 0 15px!important;border-bottom:0!important;border-right:1px solid #eef1ec}
+ #pjOv .c .mi .st{left:6px!important;top:6px!important;right:6px}#pjOv .c .mi .st .chip{font-size:10px;padding:2px 6px}
+ #pjOv .c .b{min-width:0;padding:10px 12px!important}#pjOv .c .n{min-height:0!important;font-size:14.5px!important}#pjOv .mn{bottom:52px!important}
  /* telas cheias respeitam a área segura do iPhone */
  #resOv,#pjOv{padding-top:env(safe-area-inset-top)}
  #mMenu .fx{display:block;margin:8px auto 0;border:0;background:#f1f3f5;border-radius:12px;padding:12px 30px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
@@ -7725,7 +7772,7 @@ const PC_GATE=(function(){const g=document.createElement('div');g.id='pcGate';
 function gateErro(t){const x=document.getElementById('pcGateTx');if(x)x.innerHTML=t+'<br><button onclick="location.reload()" style="margin-top:14px;border:0;border-radius:10px;background:#1f5f20;color:#fff;font:inherit;font-weight:700;padding:10px 16px;cursor:pointer">Tentar de novo</button>';}
 function irParaConta(){location.replace('conta.html?volta=app');}
 async function cadastroOk(u){let c=null;try{const r=await MON.sb.from('cadastros').select('nome,profissao').eq('id',u.id).maybeSingle();if(!r.error)c=r.data||{};}catch(e){}
- if(!c)c=u.user_metadata||{};return !!(String(c.nome||'').trim()&&String(c.profissao||'').trim());}
+ if(!c)c=u.user_metadata||{};MON.nome=String(c.nome||'').trim();return !!(String(c.nome||'').trim()&&String(c.profissao||'').trim());}
 async function iniciarConta(){lerCache();aplicarPlano();
  if(!CFG.supabaseUrl){PC_GATE.remove();return;}
  if(!window.supabase){gateErro('Não foi possível conectar ao PlantaCalc. Verifique a internet.');return;}
