@@ -179,11 +179,13 @@ async function detalhe(u){const el=$('#udet');const hoje=new Date();const mais=d
 /* ---------- ATENÇÃO ---------- */
 function atencaoN(){let n=0;if(ERR)n+=grupoErros().filter(g=>Date.now()-new Date(g.ult)<7*DIA).length;if(PAG)n+=pagProblemas().length;if(OBS)n+=grupoObs().filter(g=>g.tipo!=='pendente').length;return n;}
 function grupoErros(){const g={};for(const e of ERR||[]){const k=e.msg;const o=g[k]=g[k]||{msg:k,n:0,us:new Set(),ult:e.quando,pri:e.quando,build:e.build,tela:e.tela,pilha:e.pilha};o.n++;if(e.user_id)o.us.add(e.user_id);if(e.quando>o.ult)o.ult=e.quando;if(e.quando<o.pri)o.pri=e.quando;}return Object.values(g).sort((a,b)=>b.ult.localeCompare(a.ult));}
+/* referência externa do Mercado Pago: o id do usuário pode vir sozinho ou como pix:<id>:<ciclo> */
+const refUid=r=>{const m=String(r||'').match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);return m?m[0]:r;};
 function pagProblemas(){if(!PAG)return [];const agora=Date.now();const out=[];
- for(const p of PAG.pagamentos){if(p.status==='rejected')out.push({q:p.criado,ref:p.ref,o:`Pagamento recusado (${p.metodo||p.tipo}) — ${p.detalhe||''}`,v:p.valor});
-  else if(p.status==='pending'&&p.expira&&new Date(p.expira)<agora)out.push({q:p.criado,ref:p.ref,o:`Pix gerado e não pago (expirou ${dth(p.expira)})`,v:p.valor});
-  else if(['refunded','charged_back','cancelled'].includes(p.status))out.push({q:p.criado,ref:p.ref,o:`Pagamento ${p.status==='refunded'?'estornado':p.status==='charged_back'?'contestado (chargeback)':'cancelado'}`,v:p.valor});}
- for(const a of PAG.assinaturas||[])if(['cancelled','paused'].includes(a.status))out.push({q:a.alterado||a.criado,ref:a.ref,o:`Assinatura ${a.status==='cancelled'?'cancelada':'pausada'} (${a.freq===12?'anual':'mensal'})`,v:a.valor});
+ for(const p of PAG.pagamentos){if(p.status==='rejected')out.push({q:p.criado,ref:refUid(p.ref),o:`Pagamento recusado (${p.metodo||p.tipo}) — ${p.detalhe||''}`,v:p.valor});
+  else if(p.status==='pending'&&p.expira&&new Date(p.expira)<agora)out.push({q:p.criado,ref:refUid(p.ref),o:`Pix gerado e não pago (expirou ${dth(p.expira)})`,v:p.valor});
+  else if(['refunded','charged_back','cancelled'].includes(p.status))out.push({q:p.criado,ref:refUid(p.ref),o:`Pagamento ${p.status==='refunded'?'estornado':p.status==='charged_back'?'contestado (chargeback)':'cancelado'}`,v:p.valor});}
+ for(const a of PAG.assinaturas||[])if(['cancelled','paused'].includes(a.status))out.push({q:a.alterado||a.criado,ref:refUid(a.ref),o:`Assinatura ${a.status==='cancelled'?'cancelada':'pausada'} (${a.freq===12?'anual':'mensal'})`,v:a.valor});
  if(DADOS)for(const u of DADOS.U)if(u.plano==='pro'&&u.validade){const d=(new Date(u.validade)-agora)/DIA;if(d<7)out.push({q:u.validade,ref:u.id,o:`Pro vence em ${fmt(Math.max(0,d),0)} dia(s) (${dt(u.validade)}) — ${u.mp==='pix'?'Pix não renova sozinho':'confira a renovação'}`,v:null});}
  return out.sort((a,b)=>String(b.q).localeCompare(String(a.q)));}
 function grupoObs(){const g={};for(const o of OBS||[]){const k=o.tipo+'|'+(o.norm||o.chave);const x=g[k]=g[k]||{tipo:o.tipo,norm:o.norm||o.chave,regra:o.regra,descr:o.descr,un:o.un,n:0,us:new Set(),uf:{},comps:{},ult:o.quando};x.n++;x.us.add(o.user_id);if(o.uf)x.uf[o.uf]=(x.uf[o.uf]||0)+1;if(o.regra)x.regra=o.regra;
