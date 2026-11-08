@@ -13,8 +13,8 @@ window.PC_CFG = {
   preco: { mensal: 29.90, anual: 299.00 },
 
   // Supabase → Project Settings → API: "Project URL" e a chave "anon public"
-  supabaseUrl: '',
-  supabaseKey: '',
+  supabaseUrl: 'https://dcrwkkhzlvdzixllzggo.supabase.co',
+  supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjcndra2h6bHZkeml4bGx6Z2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQxNDY0ODMsImV4cCI6MjEwOTcyMjQ4M30.aWCzL_g3chnxRvZgYa6UAB81TodG1RRCKpBev2ESb_I',
 
   // Google AdSense: o seu "ID do editor" (começa com ca-pub-) e os IDs de 3 blocos de anúncio "Display"
   // Enquanto estiver vazio, o site mostra um convite ao plano Pro no lugar do anúncio.
