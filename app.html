@@ -7935,12 +7935,13 @@ function iaLigarCroqui(){const t=$('#iaTxt');$$('#iaOv [data-iax]').forEach(b=>b
   const modo=(document.querySelector('input[name=iaModo]:checked')||{}).value||'add';IA.ultimo=txt;
   const b=$('#iaGo');IA.ocupado=true;b.disabled=true;b.innerHTML='<span class="sp"></span>A IA está desenhando…';iaMsg('');$('#iaRes').innerHTML='';
   try{if(typeof pjPodeCriar==='function'&&typeof PJ!=='undefined'&&!PJ.atual){if(!pjPodeCriar()){pjBloqueio();return;}await pjNovo('branco');}
-   const ctx={tipos:(S.tipos||[]).map(x=>({id:x.id,nome:x.nome})),esq:(S.esq||[]).map(x=>({id:x.id,nome:`${x.desc} ${nf(x.l/1000,2)}×${nf(x.h/1000,2)} m`})),equip:(S.equipTipos||[]).map(x=>({id:x.id,nome:x.nome})),
+   const ctx={tipos:(S.tipos||[]).map(x=>({id:x.id,nome:x.nome})),esq:(S.esq||[]).map(x=>({id:x.id,nome:`${x.desc} ${nf(x.l/1000,2)}×${nf(x.h/1000,2)} m`})),equip:(S.equipTipos||[]).map(x=>({id:x.id,nome:`${x.nome} — ${nf(x.l/1000,1)} × ${nf(x.w/1000,1)} m; afastamentos de manutenção frente ${nf((x.af||[0])[0]/1000,1)} m, lados ${nf((x.af||[0,0])[1]/1000,1)} m, fundo ${nf((x.af||[0,0,0])[2]/1000,1)} m`})),
     ambientes:modo==='sub'?[]:S.rooms.filter(r=>(r.pav||0)===(ed.pav||0)).map(r=>r.nome)};
    const d=await iaChamar({acao:'croqui',texto:txt,ctx});IA.cota={usados:d.usados,limite:d.limite,pro:iaPro()};iaCotaTxt();
    const res=iaAplicar(d,modo);
-   const ok=res.filter(r=>r.ok).length;
-   $('#iaRes').innerHTML=`<div class="res"><b>${ok} de ${res.length} comandos aplicados.</b>${d.observacoes?`<div style="margin-top:4px;color:#46515a">${esc(d.observacoes)}</div>`:''}<ul>${res.map(r=>`<li class="${r.ok?'':'f'}">${r.ok?'✓':'✗'} <code>${esc(r.c)}</code>${r.ok?'':' — '+esc(r.msg)}</li>`).join('')}</ul></div>
+   const ok=res.filter(r=>r.ok).length;const er=(typeof CH!=='undefined'?CH:[]).filter(c=>c.sev==='erro'),al=(typeof CH!=='undefined'?CH:[]).filter(c=>c.sev==='alerta');
+   const verif=`<div style="margin:8px 0 2px;padding:8px 10px;border-radius:10px;background:${er.length?'#fdecea':'#eaf3df'};color:${er.length?'#8a1c12':'#1f4d20'}"><b>Verificação do PlantaCalc:</b> ${er.length?er.length+' erro(s)':'nenhum erro'}${al.length?', '+al.length+' alerta(s)':''}.${er.length?'<br>'+er.slice(0,4).map(c=>'• '+esc(c.msg)).join('<br>'):''}</div>`;
+   $('#iaRes').innerHTML=`<div class="res"><b>${ok} de ${res.length} comandos aplicados.</b>${d.observacoes?`<div style="margin-top:4px;color:#46515a">${esc(d.observacoes)}</div>`:''}${verif}<ul>${res.map(r=>`<li class="${r.ok?'':'f'}">${r.ok?'✓':'✗'} <code>${esc(r.c)}</code>${r.ok?'':' — '+esc(r.msg)}</li>`).join('')}</ul></div>
     <div class="acts"><button data-iaz="desfazer">↶ Desfazer</button><button class="p" data-iaz="ver">Ver o desenho</button></div>`;
    $$('#iaRes [data-iaz]').forEach(x=>x.onclick=()=>{if(x.dataset.iaz==='desfazer'&&typeof doUndo==='function'){doUndo();iaMsg('Desfeito.',true);$('#iaRes').innerHTML='';}else fecharIA();});
    iaMsg(ok?'Croqui gerado. Confira e ajuste o que precisar.':'A IA não conseguiu montar o croqui. Tente descrever de outro jeito.',!!ok);}
@@ -7949,11 +7950,12 @@ function iaLigarCroqui(){const t=$('#iaTxt');$$('#iaOv [data-iax]').forEach(b=>b
 function iaAplicar(d,modo){mark();const res=[];
  if(modo==='sub'){const pv=ed.pav||0;S.rooms=S.rooms.filter(r=>(r.pav||0)!==pv);S.ops=S.ops.filter(o=>(o.pav||0)!==pv);S.equip=(S.equip||[]).filter(q=>(q.pav||0)!==pv);}
  const nR0=S.rooms.length,nO0=S.ops.length;const cap=s=>{s=String(s||'').trim();return s?s.charAt(0).toUpperCase()+s.slice(1):s;};
- for(const c0 of d.comandos){let c=String(c0).trim().replace(/[.;]+$/,'').replace(/\s+a\s+(\d+(?:[.,]\d+)?)\s*(?:m|metros?)?$/i,' a $1 m');
+ const pre=iaPreDimensionar(d.comandos);pre.notas.forEach(n=>res.push({c:'(norma) '+n,ok:true,msg:''}));const salasEq=new Set();
+ for(const c0 of pre.comandos){let c=String(c0).trim().replace(/[.;]+$/,'').replace(/\s+a\s+(\d+(?:[.,]\d+)?)\s*(?:m|metros?)?$/i,' a $1 m');
   S._pav=ed.pav;const nR=S.rooms.length,nE=(S.equip||[]).length;let r;try{r=comando(S,c);}catch(e){r={ok:false,msg:String(e.message||e)};}
   if(r.ok){/* o motor de comandos tira acentos dos nomes: devolve o nome como a IA escreveu */
    let m;if(S.rooms.length>nR&&(m=c.match(/^(?:ambiente|sala|criar)\s+(.+?)\s+\d+(?:[.,]\d+)?\s*(?:x|×|por)\s*\d/i)))S.rooms[S.rooms.length-1].nome=cap(m[1]);
-   if((S.equip||[]).length>nE&&(m=c.match(/^equipamento\s+\S+\s+(.+?)\s+em\s+.+$/i)))S.equip[S.equip.length-1].nome=m[1].trim();}
+   if((S.equip||[]).length>nE&&(m=c.match(/^equipamento\s+\S+\s+(.+?)\s+em\s+(.+)$/i))){S.equip[S.equip.length-1].nome=m[1].trim();salasEq.add(normTxt(m[2]));}}
   res.push({c,ok:!!r.ok,msg:r.msg||''});}
  /* todo ambiente criado precisa de acesso: se a IA esqueceu a porta, coloca uma no maior trecho livre de parede externa */
  try{const pv=ed.pav||0,novos=S.rooms.slice(nR0).filter(r=>(r.pav||0)===pv);
@@ -7996,13 +7998,53 @@ function iaAplicar(d,modo){mark();const res=[];
     const tenta=(lst,f)=>lst.some(sg=>porNaParede(r,sg,tp,f(sg)));const txV=sg=>`entre ${r.nome} e ${sg.q.nome}`,txE=sg=>`na parede ${NOME_L[sg.lado]} de ${r.nome}`;
     if((interno(r)&&tenta(viz,txV))||tenta(ext,txE)||tenta(viz,txV)){feito=true;break;}}
    if(!feito)break;}}catch(e){console.warn('acesso',e);}
- /* equipamentos inseridos no mesmo ambiente ficariam empilhados no centro: distribui ao longo do maior lado */
- const porSala={};(S.equip||[]).forEach(q=>{const rm=S.rooms.find(x=>(x.pav||0)===(q.pav||0)&&pip(x.poly,q.x,q.y));if(rm)(porSala[rm.id]=porSala[rm.id]||{rm,eq:[]}).eq.push(q);});
- Object.values(porSala).forEach(({rm,eq})=>{const pos=eq.map(q=>q.x+','+q.y);if(new Set(pos).size===pos.length)return;const b=polyBBox(rm.poly),hz=(b.x1-b.x0)>=(b.y1-b.y0);
-  eq.forEach((q,i)=>{const f=(i+1)/(eq.length+1);if(hz){q.x=Math.round(b.x0+(b.x1-b.x0)*f);q.y=Math.round((b.y0+b.y1)/2);}else{q.y=Math.round(b.y0+(b.y1-b.y0)*f);q.x=Math.round((b.x0+b.x1)/2);}});});
+ /* arranjo dos equipamentos com os afastamentos de manutenção (NR-10/NR-12) */
+ try{iaArranjar(salasEq);}catch(e){console.warn('arranjo',e);}
  const pad=!S.meta.obra||S.meta.obra==='Nova edificação'||/^Projeto \d+$/.test(S.meta.obra);if(d.obra&&pad)S.meta.obra=d.obra;
  if(!res.some(r=>r.ok)){undoS.pop();}else{refresh();if(typeof setView==='function'&&view!=='croqui')setView('croqui');requestAnimationFrame(()=>{try{fitView();}catch(e){}});if(typeof SIM!=='undefined')SIM.welcomeOff=true;}
  return res;}
+
+
+/* ---------- arranjo de equipamentos: tamanho real + afastamentos de manutenção do cadastro (frente, lados, fundo) ----------
+   Fileiras ao longo do maior lado do ambiente; frente de operação livre; painéis do mesmo tipo lado a lado (barramento contínuo).
+   Margem de 0,20 m para a face interna da parede. */
+const IA_MG=200;
+function iaTipoEq(id){const n=normTxt(id);return S.equipTipos.find(e=>normTxt(e.id)===n)||S.equipTipos.find(e=>normTxt(e.nome).includes(n));}
+function iaItem(T,e){return{T,e,u:(e&&e.l)||T.l,v:(e&&e.w)||T.w,af:(e&&e.af)||T.af||[800,800,800],painel:/painel/.test(T.id)};}
+/* empacota em fileiras dentro de [0,U]×[0,V]; devolve as posições e a profundidade usada */
+function iaPack(itens,U){const ord=itens.slice().sort((a,b)=>(b.painel-a.painel)||(a.T.id<b.T.id?-1:a.T.id>b.T.id?1:0)||(b.v-a.v));
+ const filas=[];let f=null;
+ for(const it of ord){const prev=f&&f.its[f.its.length-1];
+  const gap=prev?((prev.painel&&it.painel&&prev.T.id===it.T.id)?0:Math.max(prev.af[1],it.af[1])):it.af[1];
+  let u0=prev?prev.u1+gap:it.af[1];
+  if(!f||u0+it.u+it.af[1]>U||(prev&&prev.painel!==it.painel)){f={its:[]};filas.push(f);u0=it.af[1];}
+  it.u0=u0;it.u1=u0+it.u;f.its.push(it);}
+ let top=0;for(const fl of filas){const back=Math.max(...fl.its.map(i=>i.af[2]));fl.v0=top+back;fl.its.forEach(i=>{i.v0=fl.v0;i.v1=fl.v0+i.v;});top=fl.v0+Math.max(...fl.its.map(i=>i.v+i.af[0]));}
+ const larg=Math.max(0,...ord.map(i=>i.u1+i.af[1]));return{itens:ord,prof:top,larg};}
+/* antes de executar: amplia o ambiente quando os equipamentos pedidos não cabem com os afastamentos */
+function iaPreDimensionar(cmds){const out=cmds.map(c=>String(c));const notas=[];const salas={},eqs={};
+ out.forEach((c,i)=>{let m;if((m=c.match(/^(ambiente|sala|criar)\s+(.+?)\s+(\d+(?:[.,]\d+)?)\s*(?:x|×|por)\s*(\d+(?:[.,]\d+)?)(.*)$/i)))salas[normTxt(m[2])]={i,m,L:parseFloat(m[3].replace(',','.'))*1000,C:parseFloat(m[4].replace(',','.'))*1000};
+  else if((m=c.match(/^equipamento\s+(\S+)\s+(.+?)\s+em\s+(.+)$/i))){const T=iaTipoEq(m[1]);if(T)(eqs[normTxt(m[3])]=eqs[normTxt(m[3])]||[]).push(iaItem(T));}});
+ for(const [nm,its] of Object.entries(eqs)){const sl=salas[nm];if(!sl)continue;const L=sl.L,C=sl.C;const r5=x=>Math.ceil((x+2*IA_MG)/500)*500;
+  /* testa fileiras ao longo de x e ao longo de y; fica com a que pede menos área */
+  const tenta=alongX=>{let U=(alongX?L:C)-2*IA_MG;const V=(alongX?C:L)-2*IA_MG;const maxU=Math.max(...its.map(i=>i.u+2*i.af[1]));if(maxU>U)U=maxU;
+   let p=iaPack(its,U);while(p.prof>V&&p.prof>U*1.2){U+=1000;p=iaPack(its,U);}
+   const nU=Math.max(U,p.larg),nV=Math.max(V,p.prof);const Lx=Math.max(L,alongX?r5(nU):r5(nV)),Cy=Math.max(C,alongX?r5(nV):r5(nU));return{Lx,Cy,area:Lx*Cy};};
+  const a=tenta(true),b=tenta(false),best=(b.area<a.area-1)?b:a;
+  if(best.Lx>L+1||best.Cy>C+1){const f=x=>nf(x/1000,x%1000?1:0);const m=sl.m;out[sl.i]=`${m[1]} ${m[2]} ${f(best.Lx)} x ${f(best.Cy)}${m[5]}`;
+   notas.push(`${m[2]} ampliado de ${f(L)} × ${f(C)} m para ${f(best.Lx)} × ${f(best.Cy)} m, para os equipamentos caberem com os afastamentos de manutenção (NR-10/NR-12)`);}}
+ return{comandos:out,notas};}
+/* depois de executar: posiciona os equipamentos de cada ambiente afetado */
+function iaArranjar(salasEq){const pv=ed.pav||0;
+ for(const r of S.rooms.filter(x=>(x.pav||0)===pv&&salasEq.has(normTxt(x.nome)))){const b=polyBBox(r.poly);
+  const eqs=(S.equip||[]).filter(q=>(q.pav||0)===pv&&pip(r.poly,q.x,q.y));if(!eqs.length)continue;
+  const its=eqs.map(q=>iaItem(equipTipo(q,S),q));const W=b.x1-b.x0-2*IA_MG,H=b.y1-b.y0-2*IA_MG;
+  /* escolhe a orientação das fileiras que cabe (de preferência ao longo do maior lado) */
+  const pX=iaPack(its.map(x=>Object.assign({},x)),W),pY=iaPack(its.map(x=>Object.assign({},x)),H);const cabeX=pX.prof<=H+1,cabeY=pY.prof<=W+1;
+  const longX=cabeX&&cabeY?W>=H:cabeX?true:cabeY?false:(pX.prof-H)<=(pY.prof-W);const p=longX?pX:pY;
+  const u00=(longX?b.x0:b.y0)+IA_MG,v00=(longX?b.y0:b.x0)+IA_MG;
+  for(const it of p.itens){const q=it.e;const uc=u00+(it.u0+it.u1)/2,vc=v00+(it.v0+it.v1)/2;
+   if(longX){q.rot=0;q.x=Math.round(uc);q.y=Math.round(vc);}else{q.rot=1;q.x=Math.round(vc);q.y=Math.round(uc);}}}}
 
 /* ---------- 2) escopo técnico ---------- */
 function iaHtmlEscopo(){
