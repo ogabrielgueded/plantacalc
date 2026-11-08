@@ -7052,7 +7052,7 @@ function wizForm(w){const m=wizModal();const P=w.perguntas;const a={};P.forEach(
   if((b=t.closest('[data-wk]'))){keep=b.dataset.wk==='1';draw();return;}
   if(!(b=t.closest('[data-wg]')))return;const g=b.dataset.wg;
   if(g==='list'){m.onclick=null;wizOpen();return;}if(g==='back'){k=Math.max(0,k-1);draw();return;}if(g==='next'){k++;draw();return;}
-  if(g==='go'){const u=S.under;const {St,resumo}=wizEstado(w,a,keep);const novoPj=!keep&&temConteudo()&&typeof pjNovoId==='function';if(novoPj)pjNovoId();mark();if(novoPj)undoS.length=0;S=St;S.under=keep?u:(u||null);m.classList.remove('on');m.onclick=null;ed.sel=null;ed.pav=0;SIM.welcomeOff=true;refresh();fitView();toast(resumo);}};
+  if(g==='go'){const u=S.under;const {St,resumo}=wizEstado(w,a,keep);const novoPj=!keep&&temConteudo()&&typeof pjNovoId==='function'&&pjPodeCriar();if(novoPj)pjNovoId();mark();if(novoPj)undoS.length=0;S=St;S.under=keep?u:(u||null);m.classList.remove('on');m.onclick=null;ed.sel=null;ed.pav=0;SIM.welcomeOff=true;refresh();fitView();toast(resumo);}};
  draw();m.classList.add('on');}
 (function(){const _wo=wizOpen;wizOpen=function(){wizModal().onclick=null;_wo();};})();
 
@@ -7074,12 +7074,16 @@ function wizForm(w){const m=wizModal();const P=w.perguntas;const a={};P.forEach(
 </script>
 <script>
 /* ===================== p26 — MEUS PROJETOS: vários projetos com salvamento automático.
-   Sempre no aparelho (IndexedDB, sem limite). Com conta (versão online): também na nuvem (Supabase) — Gratuito até 3, Pro ilimitado. ===================== */
+   Sempre no aparelho (IndexedDB, sem limite). Com conta (versão online): também na nuvem (Supabase) — Gratuito: 1 projeto; Pro ilimitado. ===================== */
 const PJ={db:null,atual:null,locais:{},nuvem:{},status:'',limite:false,trocando:false,tSave:null,tNuvem:null,busca:''};
-const PJ_KEY='pc_proj_atual_v1',PJ_LIM=3;
+const PJ_KEY='pc_proj_atual_v1',PJ_LIM=1; /* plano gratuito (versão online): 1 projeto */
 const pjUUID=()=>(crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);}));
 const pjLogado=()=>typeof MON!=='undefined'&&MON&&MON.sb&&MON.user;
 const pjPro=()=>typeof isPro==='function'&&isPro();
+const pjOnline=()=>typeof MON!=='undefined';
+const pjTotal=()=>new Set([...Object.keys(PJ.locais),...Object.keys(PJ.nuvem)]).size;
+const pjPodeCriar=()=>!pjOnline()||pjPro()||pjTotal()<PJ_LIM;
+function pjBloqueio(){if(typeof abrirPlanos==='function')abrirPlanos('No plano gratuito você tem 1 projeto. Assine o Pro para criar projetos ilimitados — ou exclua o projeto atual em “Meus projetos” para começar outro.');else toast('O plano gratuito permite 1 projeto.');}
 function pjIDB(){return new Promise((ok,err)=>{if(PJ.db)return ok(PJ.db);if(!window.indexedDB)return err(new Error('sem IndexedDB'));const r=indexedDB.open('plantacalc',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('projetos'))r.result.createObjectStore('projetos',{keyPath:'id'});};r.onsuccess=()=>{PJ.db=r.result;ok(PJ.db);};r.onerror=()=>err(r.error);});}
 async function pjTx(modo,fn){const d=await pjIDB();return new Promise((ok,err)=>{const t=d.transaction('projetos',modo);const st=t.objectStore('projetos');const q=fn(st);t.oncomplete=()=>ok(q&&q.result);t.onerror=()=>err(t.error);});}
 const pjTodos=()=>pjTx('readonly',s=>s.getAll());
@@ -7124,7 +7128,7 @@ function pjStatus(s){PJ.status=s;const b=$('#bProj');if(!b)return;const st=PJ_ST
 #pjOv .info b{color:var(--ink)}#pjOv .info .sp{flex:1}
 #pjOv .novo{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:18px}
 #pjOv .novo button{border:2px dashed #b9cfa4;background:#f8fbf3;border-radius:14px;padding:14px;text-align:left;cursor:pointer;font:inherit;color:var(--ink)}
-#pjOv .novo button:hover{border-color:var(--g1)}#pjOv .novo b{display:block;font-size:15px}#pjOv .novo span{font-size:12.5px;color:var(--mut)}
+#pjOv .novo button{position:relative}#pjOv .novo .lk{position:absolute;top:8px;right:10px;font-style:normal;font-size:11.5px;font-weight:700;background:#ffc107;border-radius:8px;padding:2px 7px}#pjOv .novo button:hover{border-color:var(--g1)}#pjOv .novo b{display:block;font-size:15px}#pjOv .novo span{font-size:12.5px;color:var(--mut)}
 #pjOv .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
 #pjOv .c{background:#fff;border-radius:16px;border:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column}
 #pjOv .c.at{border:2px solid var(--g1)}
@@ -7151,11 +7155,13 @@ function pjRender(){const ov=$('#pjOv');const ids=[...new Set([...Object.keys(PJ
  const nN=Object.keys(PJ.nuvem).length;const online=typeof MON!=='undefined';
  let info='';if(online){if(!pjLogado())info=`<div class="info"><span>💻 Seus projetos ficam salvos <b>neste aparelho</b>. Crie uma conta grátis para guardá-los também <b>na nuvem</b> e abrir em qualquer computador ou tablet.</span><span class="sp"></span><button class="bt pri" data-pj="conta">Entrar ou criar conta</button></div>`;
   else if(pjPro())info=`<div class="info"><span>☁ <b>Plano Pro:</b> projetos ilimitados na nuvem, em qualquer aparelho.</span></div>`;
-  else info=`<div class="info"><span>☁ Nuvem: <b>${nN} de ${PJ_LIM}</b> projetos no plano gratuito. Os demais ficam salvos neste aparelho.</span><span class="sp"></span><button class="bt am" data-pj="pro">Projetos ilimitados com o Pro</button></div>`;}
+  else info=`<div class="info"><span>☁ Seu projeto fica <b>na nuvem</b> e abre em qualquer aparelho.</span></div>`;
+  if(!pjPro())info+=`<div class="info"><span>🔒 <b>Plano gratuito: 1 projeto.</b> Para ter vários projetos ao mesmo tempo, assine o Pro.</span><span class="sp"></span><button class="bt am" data-pj="pro">Projetos ilimitados com o Pro</button></div>`;}
+ const trava=pjPodeCriar()?'':'<i class="lk">🔒 Pro</i>';
  const card=p=>{const at=p.id===PJ.atual;return `<div class="c${at?' at':''}"><div class="mi" data-pjo="${p.id}">${p.mini}</div><div class="b"><div class="n" title="${esc(p.nome)}">${esc(p.nome)}</div><div class="m">${at?'<span class="chip a">Aberto agora</span>':''}${p.l?'<span class="chip">💻 neste aparelho</span>':''}${p.n?'<span class="chip n">☁ na nuvem</span>':''}<span>· ${pjQuando(p.t)}</span></div>
-  <div class="ac">${at?'':`<button class="ab" data-pjo="${p.id}">${p.l?'Abrir':'Baixar e abrir'}</button>`}<button data-pjr="${p.id}">Renomear</button><button data-pjd="${p.id}">Duplicar</button><button class="ex" data-pjx="${p.id}" title="Excluir">🗑</button></div></div></div>`;};
+  <div class="ac">${at?'':`<button class="ab" data-pjo="${p.id}">${p.l?'Abrir':'Baixar e abrir'}</button>`}<button data-pjr="${p.id}">Renomear</button><button data-pjd="${p.id}">Duplicar${trava?' 🔒':''}</button><button class="ex" data-pjx="${p.id}" title="Excluir">🗑</button></div></div></div>`;};
  ov.innerHTML=`<div class="w"><div class="t"><h2>Meus projetos</h2><input id="pjBusca" placeholder="Procurar projeto…" value="${esc(PJ.busca)}"><button class="bt" data-pj="arquivo">Abrir arquivo do computador</button><button class="bt pri" data-pj="x">◀ Voltar ao projeto</button></div>${info}
- <div class="novo"><button data-pjn="branco"><b>＋ Projeto em branco</b><span>Desenhe do zero ou use uma planta de fundo.</span></button><button data-pjn="assistente"><b>★ Novo com o assistente</b><span>Responda perguntas e receba o estudo pronto.</span></button><button data-pjn="exemplo"><b>⧉ Novo a partir do exemplo</b><span>Casa de bombas com sala elétrica, para explorar.</span></button></div>
+ <div class="novo"><button data-pjn="branco">${trava}<b>＋ Projeto em branco</b><span>Desenhe do zero ou use uma planta de fundo.</span></button><button data-pjn="assistente">${trava}<b>★ Novo com o assistente</b><span>Responda perguntas e receba o estudo pronto.</span></button><button data-pjn="exemplo">${trava}<b>⧉ Novo a partir do exemplo</b><span>Casa de bombas com sala elétrica, para explorar.</span></button></div>
  ${it.length?`<div class="g">${it.map(card).join('')}</div>`:'<div class="vz">Nenhum projeto encontrado.</div>'}</div>`;
  const bs=$('#pjBusca');bs.oninput=()=>{PJ.busca=bs.value;const pos=bs.selectionStart;pjRender();const nb=$('#pjBusca');nb.focus();nb.setSelectionRange(pos,pos);};}
 $('#pjOv').addEventListener('click',async e=>{const t=e.target;let b;const fechar=()=>$('#pjOv').classList.remove('on');
@@ -7172,19 +7178,19 @@ function pjCarregar(obj,id){PJ.trocando=true;try{const u=obj.under||null;S=migra
 async function pjAbrir(id){if(id===PJ.atual)return;await pjSalvarAgora();const l=PJ.locais[id],n=PJ.nuvem[id];
  try{let obj=null;if(n&&(!l||new Date(n.atualizado).getTime()>l.atualizado+2000)&&pjLogado()){const {data,error}=await MON.sb.from('projetos').select('dados').eq('id',id).single();if(error)throw error;obj=data.dados;if(l){try{obj.under=JSON.parse(l.dados).under||null;}catch(e){}}}
   else if(l)obj=JSON.parse(l.dados);if(!obj)throw new Error('projeto vazio');pjCarregar(obj,id);await pjSalvarLocal();toast(`Projeto “${pjNome()}” aberto.`);}catch(e){console.warn(e);toast('Não foi possível abrir este projeto agora.');}}
-async function pjNovo(tipo){await pjSalvarAgora();const keep={tipos:S.tipos,esq:S.esq,blocos:S.blocos,equipTipos:S.equipTipos,params:S.params,indices:S.indices,precos:S.precos,estr:S.estr};
+async function pjNovo(tipo,forcar){let reusa=false;if(!forcar&&!pjPodeCriar()){if(temConteudo()){pjBloqueio();return;}reusa=true;}await pjSalvarAgora();const keep={tipos:S.tipos,esq:S.esq,blocos:S.blocos,equipTipos:S.equipTipos,params:S.params,indices:S.indices,precos:S.precos,estr:S.estr};
  let St;if(tipo==='exemplo'){St=exemplo();}else{St=defaultState();Object.assign(St,deep(keep));St.fund=Object.assign({},deep(S.fund),{porPilar:{}});}
- const n=Object.keys(PJ.locais).length+1;St.meta.obra=tipo==='exemplo'?'Exemplo — casa de bombas':`Projeto ${n}`;St.under=null;
- const id=pjUUID();pjCarregar(JSON.parse(JSON.stringify(St)),id);await pjSalvarLocal();pjAgendarNuvem();if(typeof SIM!=='undefined')SIM.welcomeOff=tipo!=='branco';
+ const n=reusa?1:Object.keys(PJ.locais).length+1;St.meta.obra=tipo==='exemplo'?'Exemplo — casa de bombas':`Projeto ${n}`;St.under=null;
+ const id=reusa?PJ.atual:pjUUID();pjCarregar(JSON.parse(JSON.stringify(St)),id);await pjSalvarLocal();pjAgendarNuvem();if(typeof SIM!=='undefined')SIM.welcomeOff=tipo!=='branco';
  if(tipo==='assistente'&&typeof wizOpen==='function')wizOpen();else toast(`“${pjNome()}” criado. Ele é salvo automaticamente.`);}
 async function pjRenomear(id,nome){if(id===PJ.atual){edit(()=>{S.meta.obra=nome;});await pjSalvarAgora();return;}
  const l=PJ.locais[id];if(l){l.nome=nome;try{const o=JSON.parse(l.dados);o.meta=o.meta||{};o.meta.obra=nome;l.dados=JSON.stringify(o);}catch(e){}await pjGrava(l);}
  if(PJ.nuvem[id]&&pjLogado()){PJ.nuvem[id].nome=nome;await MON.sb.from('projetos').update({nome}).eq('id',id);}}
-async function pjDuplicar(id){if(id===PJ.atual)await pjSalvarLocal();let l=PJ.locais[id];
+async function pjDuplicar(id){if(!pjPodeCriar())return pjBloqueio();if(id===PJ.atual)await pjSalvarLocal();let l=PJ.locais[id];
  if(!l&&PJ.nuvem[id]&&pjLogado()){const {data}=await MON.sb.from('projetos').select('dados').eq('id',id).single();if(data)l={dados:JSON.stringify(data.dados),mini:PJ.nuvem[id].miniatura,nome:PJ.nuvem[id].nome};}
  if(!l)return;const o=JSON.parse(l.dados);o.meta=o.meta||{};o.meta.obra=(l.nome||'Projeto')+' (cópia)';const rec={id:pjUUID(),nome:o.meta.obra,atualizado:Date.now(),criado:Date.now(),dados:JSON.stringify(o),mini:l.mini,nuvem:null};PJ.locais[rec.id]=rec;await pjGrava(rec);toast('Cópia criada (salva neste aparelho). Abra para guardar na nuvem.');}
 async function pjExcluir(id){try{await pjApaga(id);}catch(e){}delete PJ.locais[id];if(PJ.nuvem[id]&&pjLogado()){await MON.sb.from('projetos').delete().eq('id',id);delete PJ.nuvem[id];PJ.limite=false;}
- if(id===PJ.atual){const outro=Object.values(PJ.locais).sort((a,b)=>b.atualizado-a.atualizado)[0];if(outro){PJ.atual=null;await pjAbrir(outro.id);}else{PJ.atual=null;await pjNovo('branco');}}toast('Projeto excluído.');}
+ if(id===PJ.atual){const outro=Object.values(PJ.locais).sort((a,b)=>b.atualizado-a.atualizado)[0];if(outro){PJ.atual=null;await pjAbrir(outro.id);}else{PJ.atual=null;await pjNovo('branco',true);}}toast('Projeto excluído.');}
 
 /* ---------- ganchos nos botões existentes ---------- */
 (function(){
@@ -7195,7 +7201,7 @@ async function pjExcluir(id){try{await pjApaga(id);}catch(e){}delete PJ.locais[i
  const bj=$('#bJson');if(bj)bj.onclick=()=>{const dd=$('#ddExp');if(dd)dd.classList.remove('open');_salvarArquivo();};
  novo=function(){pjNovo('branco');};$('#bNovo').onclick=()=>novo();
  $('#bAbrir').onclick=()=>abrirProjetos();$('#bAbrir').title='Meus projetos: abrir, criar, duplicar ou excluir';$('#bAbrir').textContent='Meus projetos';
- const _aj=abrirJSON;abrirJSON=function(o){if(o&&o.tipo==='plantacalc-biblioteca')return _aj.apply(this,arguments);pjNovoId();PJ.trocando=true;try{_aj.apply(this,arguments);}finally{PJ.trocando=false;}undoS.length=0;pjSalvarLocal().then(pjAgendarNuvem);};
+ const _aj=abrirJSON;abrirJSON=function(o){if(o&&o.tipo==='plantacalc-biblioteca')return _aj.apply(this,arguments);const novoPj=pjPodeCriar();if(!novoPj&&temConteudo()&&!confirm('No plano gratuito você tem 1 projeto. Abrir este arquivo vai substituir o projeto atual (dá para desfazer com Ctrl+Z). Continuar?'))return;if(novoPj)pjNovoId();PJ.trocando=true;try{_aj.apply(this,arguments);}finally{PJ.trocando=false;}if(novoPj)undoS.length=0;pjSalvarLocal().then(pjAgendarNuvem);};
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#pjOv').classList.contains('on'))$('#pjOv').classList.remove('on');});
  window.addEventListener('pc-conta',async()=>{if(!pjLogado())return;await pjListarNuvem();if(PJ.atual&&PJ.locais[PJ.atual])pjAgendarNuvem();});
  window.addEventListener('beforeunload',()=>{try{localStorage.setItem('plantacalc_v4',snapS());}catch(e){}});
@@ -7251,7 +7257,8 @@ body.plano-pro #bPro{display:none}
 #mPro .bt button{border:0;border-radius:12px;padding:12px;font:inherit;font-size:15px;font-weight:700;cursor:pointer;background:#1f5f20;color:#fff}#mPro .bt button.sec{background:#fff;color:#1f5f20;border:2px solid #1f5f20}
 #mPro .bt small{text-align:center;color:#5b6670;font-size:12px}
 #mPro .x{float:right;border:0;background:#f1f3f5;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px}
-#mPro .msg{margin-top:10px;font-size:13px;color:#8a1c12}
+#mPro .msg{margin-top:10px;font-size:13px;color:#8a1c12}#mPro .aviso{background:#fff8e1;border:1px solid #ffc107;border-radius:12px;padding:10px 12px;margin:8px 0 10px;font-size:14px;font-weight:600;color:#5d4300}
+body.plano-gratis #bXlsx::after,body.plano-gratis #bCsv::after{content:'PRO';margin-left:8px;font-size:10.5px;font-weight:700;background:#ffc107;color:#3d2c00;border-radius:6px;padding:1px 6px}
 @media (max-width:640px){#mPro .pl{grid-template-columns:1fr}}
 /* aviso pós-exportação */
 #pcUp{position:fixed;right:14px;bottom:96px;z-index:70;width:min(360px,calc(100% - 28px));background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:14px 16px;display:none;font-size:13.5px}
@@ -7262,7 +7269,7 @@ body.plano-pro #bPro{display:none}
 /* ---------- cabeçalho: marca leva ao site; botões Pro e Conta ---------- */
 (function(){const br=document.querySelector('header .brand');if(br){br.style.cursor='pointer';br.title='Ir para o site do PlantaCalc';br.onclick=()=>{location.href='index.html';};const sm=br.querySelector('small');if(sm)sm.textContent='estudo preliminar de obras civis';}
  const hdr=document.querySelector('header');const ref=$('#bModo')||$('#ptoggle');
- const bp=document.createElement('button');bp.id='bPro';bp.textContent='⭐ Sem anúncios';bp.title='Conheça o plano Pro';hdr.insertBefore(bp,ref);bp.onclick=()=>abrirPlanos();
+ const bp=document.createElement('button');bp.id='bPro';bp.textContent='⭐ Seja Pro';bp.title='Conheça o plano Pro';hdr.insertBefore(bp,ref);bp.onclick=()=>abrirPlanos();
  const bc=document.createElement('button');bc.id='bConta';bc.textContent='Entrar';hdr.insertBefore(bc,ref);bc.onclick=()=>{location.href='conta.html';};
  ['pcCk','mPro','pcUp'].forEach(id=>{const e=document.createElement('div');e.id=id;document.body.appendChild(e);});})();
 
@@ -7284,13 +7291,16 @@ async function iniciarConta(){lerCache();aplicarPlano();
  try{MON.sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey);const {data}=await MON.sb.auth.getSession();MON.user=data&&data.session?data.session.user:null;await carregarPerfil(false);
   MON.sb.auth.onAuthStateChange((ev,ses)=>{const u=ses?ses.user:null;if((u&&u.id)!==(MON.user&&MON.user.id)){MON.user=u;carregarPerfil(false);}});}catch(e){console.warn('supabase',e);}}
 
+/* ---------- planilha (Excel e CSV) só no Pro ---------- */
+(function(){['bXlsx','bCsv'].forEach(id=>{const b=$('#'+id);if(!b)return;const o=b.onclick;b.onclick=function(e){if(!isPro()){const dd=$('#ddExp');if(dd)dd.classList.remove('open');abrirPlanos('A exportação da planilha (Excel e CSV) é do plano Pro.');return;}return o.call(this,e);};});})();
+
 /* ---------- planos e assinatura ---------- */
 function abrirPlanos(msg){const m=$('#mPro');const P=CFG.preco;const eco=Math.round((1-P.anual/(P.mensal*12))*100);
- m.innerHTML=`<div class="bx"><button class="x" data-pp="x">✕</button><h2>PlantaCalc Pro</h2><p class="sub">Trabalhe sem anúncios e entregue pranchas limpas, sem marca d'água. Você também ajuda a manter o PlantaCalc evoluindo.</p>
- <div class="pl"><div class="pc"><h3>Gratuito</h3><div class="pr">R$ 0</div><ul><li>Todas as ferramentas, assistentes e cálculos</li><li>Pranchas, quantitativo, cronograma, memorial, 3D</li><li>Exporta PDF, Excel, Word, DXF e IFC</li><li>Projetos ilimitados no aparelho e até 3 na nuvem (com conta grátis)</li><li class="n">Com anúncios</li><li class="n">Pranchas com marca d'água “versão gratuita”</li></ul></div>
- <div class="pc pro"><h3>Pro</h3><div class="pr">${brl(P.mensal)}<small> /mês</small></div><div style="font-size:13px;color:#46515a">ou ${brl(P.anual)} por ano${eco>0?` (economia de ${eco}%)`:''}</div><ul><li>Tudo do Gratuito</li><li>Sem nenhum anúncio</li><li>Pranchas e PDF sem marca d'água</li><li>Projetos ilimitados na nuvem, em qualquer aparelho</li><li>Cancele quando quiser</li></ul></div></div>
+ m.innerHTML=`<div class="bx"><button class="x" data-pp="x">✕</button><h2>PlantaCalc Pro</h2>${msg?`<div class="aviso">🔒 ${esc(msg)}</div>`:''}<p class="sub">Crie quantos projetos quiser, exporte a planilha e entregue pranchas limpas, sem anúncios nem marca d'água.</p>
+ <div class="pl"><div class="pc"><h3>Gratuito</h3><div class="pr">R$ 0</div><ul><li>Todas as ferramentas, assistentes e cálculos</li><li>Pranchas, quantitativo, cronograma, memorial, 3D</li><li>Exporta PDF, Word, DXF e IFC</li><li class="n">1 projeto</li><li class="n">Sem exportar a planilha (Excel e CSV)</li><li class="n">Com anúncios</li><li class="n">Pranchas com marca d'água “versão gratuita”</li></ul></div>
+ <div class="pc pro"><h3>Pro</h3><div class="pr">${brl(P.mensal)}<small> /mês</small></div><div style="font-size:13px;color:#46515a">ou ${brl(P.anual)} por ano${eco>0?` (economia de ${eco}%)`:''}</div><ul><li>Tudo do Gratuito</li><li>Projetos ilimitados, na nuvem e em qualquer aparelho</li><li>Exporta a planilha (Excel e CSV)</li><li>Sem nenhum anúncio</li><li>Pranchas e PDF sem marca d'água</li><li>Cancele quando quiser</li></ul></div></div>
  ${isPro()?`<div class="bt"><small>Seu plano Pro está ativo até ${new Date(MON.validade).toLocaleDateString('pt-BR')}.</small><button class="sec" data-pp="conta">Minha conta</button></div>`:`<div class="bt"><button data-pp="anual">Assinar anual — ${brl(P.anual)}</button><button class="sec" data-pp="mensal">Assinar mensal — ${brl(P.mensal)}</button><small>Pagamento seguro pelo Mercado Pago. ${MON.user?'':'Você vai criar uma conta (ou entrar) antes de pagar.'}</small></div>`}
- <div class="msg">${msg?esc(msg):''}</div></div>`;m.classList.add('on');}
+ <div class="msg"></div></div>`;m.classList.add('on');}
 $('#mPro').addEventListener('click',async e=>{const m=$('#mPro');if(e.target===m){m.classList.remove('on');return;}const b=e.target.closest('[data-pp]');if(!b)return;const a=b.dataset.pp;
  if(a==='x'){m.classList.remove('on');return;}if(a==='conta'){location.href='conta.html';return;}
  if(!MON.sb||!MON.user){location.href='conta.html?assinar='+a;return;}
@@ -7305,7 +7315,7 @@ function carregarAds(){if(isPro()||MON.adsLoaded||!CFG.adsense)return;MON.adsLoa
  const s=document.createElement('script');s.async=true;s.crossOrigin='anonymous';s.src=`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(CFG.adsense)}`;document.head.appendChild(s);}
 function adBox(slot){if(isPro())return null;const d=document.createElement('div');d.className='pc-ad';const id=CFG.slots[slot];
  if(CFG.adsense&&id){d.innerHTML=`<span class="lb">Publicidade</span><ins class="adsbygoogle" data-ad-client="${esc(CFG.adsense)}" data-ad-slot="${esc(id)}" data-ad-format="horizontal" data-full-width-responsive="true"></ins>`;setTimeout(()=>{try{(window.adsbygoogle=window.adsbygoogle||[]).push({});}catch(e){}},50);}
- else d.innerHTML=`<div class="pc-house"><div><b>⭐ PlantaCalc Pro</b><span>Sem anúncios e pranchas sem marca d'água — ${brl(CFG.preco.mensal)}/mês.</span></div><button data-hp>Conhecer o Pro</button></div>`;
+ else d.innerHTML=`<div class="pc-house"><div><b>⭐ PlantaCalc Pro</b><span>Projetos ilimitados, planilha em Excel e pranchas sem marca d'água — ${brl(CFG.preco.mensal)}/mês.</span></div><button data-hp>Conhecer o Pro</button></div>`;
  d.addEventListener('click',e=>{if(e.target.closest('[data-hp]'))abrirPlanos();});return d;}
 
 /* ---------- onde os anúncios aparecem (longe da área de desenho e dos botões de download) ---------- */
