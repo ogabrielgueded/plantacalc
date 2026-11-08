@@ -221,7 +221,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}svg text{-webkit-text-s
 </style>
 <meta name="description" content="PlantaCalc: desenhe ou responda algumas perguntas e gere planta, cortes, fundações, quantitativo, custo, prazo, memorial e 3D para estudos preliminares de obras civis.">
 <link rel="icon" href="img/icone.svg" type="image/svg+xml">
-<script>window.PC_BUILD="20261108-200505";</script>
+<script>window.PC_BUILD="20261108-202053";</script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -8300,7 +8300,7 @@ function orcBDI(St){const b=Object.assign({},ORC_BDI0,St.orc.bdi||{});const f=k=
 
 /* ---------- aplica o orçamento sobre o quantitativo (preço e Hh de cada linha) ---------- */
 function orcAplicar(St,G,Mo){if(!orcAtivo(St))return G;const D=orcD(St);if(!D)return G;
- G.forEach(g=>g.itens.forEach(t=>{const R=orcLinha(St,t,D);t.orc=R;t.p=R.p;t.pref=null;t.vinc=null;t.hhUn=R.hhUn;t.Hh=t.q*t.hhUn;t.tot=t.p*t.q;}));
+ G.forEach(g=>g.itens.forEach(t=>{const R=orcLinha(St,t,D);t.orc=R;t.p=R.p;t.pref=null;t.vinc=null;t.hhUn=R.hhUn;t.Hh=t.q*t.hhUn;t.tot=orcTot(t);}));
  if(Mo&&Mo.resumo){const sub={};G.forEach(g=>g.itens.forEach(t=>{const k=t.sub||'ger';const o=sub[k]=sub[k]||{Hh:0,custo:0,n:0};o.Hh+=t.Hh;o.custo+=t.tot;o.n++;}));
   Mo.resumo.sub=sub;Mo.resumo.custo=sum(G,g=>sum(g.itens,t=>t.tot));Mo.resumo.Hh=sum(G,g=>sum(g.itens,t=>t.Hh));}
  return G;}
@@ -8328,21 +8328,29 @@ function orcResumo(St,Qq){const B=orcBDI(St);const L=[];Qq.forEach(g=>g.itens.fo
 .orc .bdi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0}.orc .bdi .fx{font-size:10.5px;color:#66707a}
 .orc .ini{max-width:560px;border:1px solid #dfe5e9;border-radius:12px;padding:16px 18px;background:#fff;margin:10px 0}
 .orc input.pm{width:92px;text-align:right}
+#qtabs .qoS{display:none}@media(max-width:700px){#qtabs .qoL{display:none}#qtabs .qoS{display:inline;white-space:nowrap}}
 `;document.head.appendChild(st);})();
 
-function orcBotaoAba(){const qt=document.getElementById('qtabs');if(!qt||qt.querySelector('[data-q="orc"]'))return;const b=document.createElement('button');b.dataset.q='orc';b.textContent='Orçamento SINAPI';
- const ref=qt.querySelector('[data-q="custo"]');qt.insertBefore(b,ref||null);b.onclick=()=>{qtab='orc';renderView();};}
-(function(){const _rv=renderView;renderView=function(){if(typeof view!=='undefined'&&view==='quant'&&qtab==='orc'){renderPavBar();$$('#qtabs [data-q]').forEach(b=>b.classList.toggle('on',b.dataset.q==='orc'));const sc=($('#qWrap')||{}).scrollTop;$('#qBody').innerHTML=orcHTML();orcBind();if(sc!=null)$('#qWrap').scrollTop=sc;return;}return _rv.apply(this,arguments);};
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',orcBotaoAba);else orcBotaoAba();})();
+/* Quantitativo e orçamento SINAPI na MESMA tela: a aba "Quantitativo" passa a mostrar o orçamento
+   (quando ligado) na própria tabela de itens; sem orçamento, mostra a barra para gerar (Pro) ou o convite (gratuito). */
+function orcAbaNome(){const b=document.querySelector('#qtabs [data-q="quant"]');if(b)b.innerHTML='<span class="qoL">Quantitativo e orçamento</span><span class="qoS">Quant. e orçamento</span>';}
+(function(){const _rv=renderView;renderView=function(){if(typeof qtab!=='undefined'&&qtab==='orc')qtab='quant';
+  const w=$('#qWrap'),mesma=typeof view!=='undefined'&&view==='quant'&&ORC.ultQ===qtab&&ORC.ultV==='quant';const sc=w&&mesma?w.scrollTop:null;
+  const r=_rv.apply(this,arguments);ORC.ultQ=typeof qtab!=='undefined'?qtab:null;ORC.ultV=typeof view!=='undefined'?view:null;if(sc!=null&&w)w.scrollTop=sc;return r;};
+ if(typeof quantHTML==='function'){const _qh=quantHTML;quantHTML=function(){const h=_qh.apply(this,arguments);if(typeof temConteudo==='function'&&!temConteudo())return h;
+  const i=h.indexOf('<table class="q">');if(i<0)return h;const j=h.indexOf('</table>',i)+8;let o='';try{o=orcHTML();}catch(e){console.error(e);return h;}
+  return o.indexOf('data-orctab')>=0?h.slice(0,i)+o+h.slice(j):h.slice(0,i)+o+h.slice(i);};}
+ if(typeof bindQuant==='function'){const _bq=bindQuant;bindQuant=function(){const r=_bq.apply(this,arguments);if(document.querySelector('#qBody .orc'))orcBind();return r;};}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',orcAbaNome);else orcAbaNome();})();
 
 function orcHTML(){
- if(typeof isPro!=='function'||!isPro())return `<div class="orc"><div class="ini"><h3 style="margin:0 0 6px">Orçamento pelo SINAPI</h3><p>Transforme o quantitativo em orçamento com as composições do SINAPI do seu estado: custo unitário, BDI pela fórmula do TCU, curva ABC, composições analíticas e prazo pelas horas do SINAPI.</p><p><b>Recurso do plano Pro.</b></p><button class="btn pri" id="oPro">Conhecer o plano Pro</button></div></div>`;
+ if(typeof isPro!=='function'||!isPro())return `<div class="orc"><div class="av g" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:220px"><b>Orçamento SINAPI</b> — transforme este quantitativo em orçamento com as composições do SINAPI do seu estado, BDI do TCU, curva ABC e composições analíticas. Recurso do plano Pro.</span><button class="btn sm" id="oPro">Conhecer o Pro</button></div></div>`;
  if(!ORC.idx){orcIndice().then(()=>{try{renderView();}catch(e){}});return '<div class="orc"><p class="note">Carregando a base SINAPI…</p></div>';}
  const idx=ORC.idx,meses=Object.keys(idx.meses||{}).sort();
  if(!meses.length)return `<div class="orc"><div class="av y">A base SINAPI ainda não foi publicada${ORC.idxErro&&ORC.idxErro!=='vazio'?' (erro: '+esc(ORC.idxErro)+')':''}. Assim que o mês for publicado, o orçamento fica disponível aqui.</div><button class="btn" id="oRec">Tentar de novo</button></div>`;
  const O=S.orc;const ufsMes=m=>(idx.meses[m]||{}).ufs||[];
  if(!O||!O.on){const ufIni=(O&&O.uf)||(MON&&MON.uf)||'MG';
-  return `<div class="orc"><div class="ini"><h3 style="margin:0 0 4px">Gerar orçamento SINAPI</h3><p class="note">Cada linha do quantitativo recebe a composição SINAPI sugerida. Você revisa os vínculos, completa os itens sem equivalente e ajusta o BDI.</p>
+  return `<div class="orc"><div class="ini" style="max-width:none"><h3 style="margin:0 0 4px">Orçar este quantitativo pelo SINAPI</h3><p class="note">Cada linha abaixo recebe a composição SINAPI sugerida, com custo unitário, total e Hh. Você revisa os vínculos, completa os itens sem equivalente e ajusta o BDI.</p>
   <div class="ob"><div><label>Estado (preços)</label><select id="oUF0">${ufsMes(idx.atual).map(u=>`<option value="${u}"${u===ufIni?' selected':''}>${u} — ${ORC_UFS[u]}</option>`).join('')}</select></div>
   <div><label>Encargos sociais</label><select id="oDes0"><option value="sem">Sem desoneração</option><option value="com">Com desoneração</option></select></div>
   <div><label>Data-base</label><div style="padding:6px 0"><b>${orcMesNome(idx.atual)}</b> (mês atual)</div></div></div>
@@ -8352,26 +8360,25 @@ function orcHTML(){
  if(D.erro)return `<div class="orc"><div class="av r">${esc(D.erro)}</div><button class="btn" id="oTrocaMes">Usar o mês atual (${orcMesNome(idx.atual)})</button></div>`;
  const R=orcResumo(S,Q),pl=plano(S,Q,M),B=R.B,enc=D.u.encargos||{};setTimeout(orcObsPend,2000);
  const novo=idx.atual&&idx.atual>O.mes;
- let h=`<div class="orc"><div class="ob">
+ let h=`<div class="orc"><h3 class="sec" style="margin:14px 0 4px">Orçamento SINAPI</h3><div class="ob">
   <div><label>Estado (preços)</label><select id="oUF">${ufsMes(O.mes).map(u=>`<option value="${u}"${u===O.uf?' selected':''}>${u} — ${ORC_UFS[u]}</option>`).join('')}</select></div>
   <div><label>Encargos sociais</label><select id="oDes"><option value="sem"${O.des!=='com'?' selected':''}>Sem desoneração</option><option value="com"${O.des==='com'?' selected':''}>Com desoneração</option></select></div>
   <div><label>Data-base</label><div style="padding:6px 0"><b>SINAPI ${orcMesNome(O.mes)}</b> · ${esc(D.u.localidade||O.uf)}</div></div>
   <div><label>BDI</label><button class="btn" id="oBDIb">${nf(B.bdi*100)}% ${ORC.abreBDI?'▴':'▾'}</button></div>
   <div style="flex:1"></div>
-  <div><label>Exportar</label><div class="btns" style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" id="oXls">Excel</button><button class="btn" id="oPdf">PDF</button><button class="btn" id="oAbc">Curva ABC</button><button class="btn" id="oAna">Composições</button></div></div></div>`;
+  <div><label>Exportar o orçamento</label><div class="btns" style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" id="oXls">Excel</button><button class="btn" id="oPdf">PDF</button><button class="btn" id="oAbc">Curva ABC</button><button class="btn" id="oAna">Composições</button></div></div></div>`;
  if(novo)h+=`<div class="av g">Já saiu o SINAPI de <b>${orcMesNome(idx.atual)}</b>. Este orçamento continua em ${orcMesNome(O.mes)} até você atualizar (ao atualizar, também passa a usar os vínculos padrão mais recentes). <button class="btn sm" id="oAtual">Atualizar para o mês atual</button></div>`;
  if(ORC.abreBDI)h+=orcBDIHTML(B);
- h+=`<div class="cards"><div class="cd"><small>Custo direto</small><b>R$ ${nf(R.cd)}</b></div><div class="cd"><small>BDI ${O.des==='com'?'(com CPRB)':''}</small><b>${nf(B.bdi*100)}%</b></div><div class="cd v"><small>Preço total com BDI</small><b>R$ ${nf(R.pv)}</b></div>
-  <div class="cd"><small>Mão de obra (SINAPI)</small><b>${nf(R.hh,0)} Hh</b></div><div class="cd"><small>Prazo estimado</small><b>${pl?pl.prazoDias+' dias úteis':'—'}</b></div>
+ h+=`<div class="cards"><div class="cd"><small>BDI ${O.des==='com'?'(com CPRB)':''}</small><b>${nf(B.bdi*100)}%</b></div><div class="cd v"><small>Preço total com BDI</small><b>R$ ${nf(R.pv)}</b></div>
   <div class="cd"><small>Encargos ${O.des==='com'?'com':'sem'} desoneração</small><b>${enc.semH!=null?nf(O.des==='com'?enc.comH:enc.semH)+'% / '+nf(O.des==='com'?enc.comM:enc.semM)+'%':'—'}</b></div></div>`;
  if(R.pend.length)h+=`<div class="av r"><b>${R.pend.length} ${R.pend.length>1?'itens sem preço':'item sem preço'}</b> — sem composição SINAPI equivalente ou sem custo publicado. Digite o custo unitário na linha (fica marcado como “informado”) ou troque o vínculo. Enquanto isso, ${R.pend.length>1?'eles entram':'ele entra'} com R$ 0,00.</div>`;
  if(R.sp.length)h+=`<div class="av y">${R.sp.length} ${R.sp.length>1?'itens usam':'item usa'} o custo de <b>São Paulo</b> porque ${O.uf} não tem custo publicado (marcado <span class="chip sp">SP</span>). ${R.as.length?R.as.length+' outros têm parte do custo completada pela CAIXA com preços de SP (<span class="chip as">%AS</span>).':''}</div>`;
  if(B.av.length)h+=`<div class="av y">${B.av.map(esc).join('<br>')}</div>`;
  h+=`<div class="ob" style="margin:4px 0"><div><label>Mostrar</label><select id="oFil"><option value="todos">Todos os itens</option><option value="pend"${ORC.filtro==='pend'?' selected':''}>Só sem preço (${R.pend.length})</option><option value="sp"${ORC.filtro==='sp'?' selected':''}>Com custo de SP ou %AS (${R.sp.length+R.as.length})</option><option value="us"${ORC.filtro==='us'?' selected':''}>Vínculos alterados por você</option></select></div>
-  <div class="note" style="flex:1;align-self:center">Vínculos sugeridos pelo PlantaCalc — revise: clique no código para trocar. Os preços não incluem BDI; o total com BDI está no resumo e nas exportações.</div></div>`;
- h+=`<div class="tw"><table class="q"><thead><tr><th>Item</th><th>SINAPI</th><th>Descrição</th><th>Un</th><th class="n">Quant.</th><th class="n">Custo unit. (R$)</th><th class="n">Total (R$)</th><th class="n">Hh</th></tr></thead><tbody>`;
+  <div class="note" style="flex:1;align-self:center">Vínculos sugeridos pelo PlantaCalc — revise: clique no código SINAPI para trocar. Custos sem BDI; o preço com BDI está no resumo e nas exportações. Hh pelas horas do SINAPI.</div></div>`;
+ h+=`<div class="tw"><table class="q" data-orctab="1"><thead><tr><th>Item</th><th>Descrição</th><th>Un</th><th class="n">Quant.</th><th>SINAPI</th><th class="n">Custo unit. (R$)</th><th class="n">Total (R$)</th><th class="n">Hh</th><th>Memória de cálculo</th></tr></thead><tbody>`;
  for(const g of Q){const its=g.itens.filter(t=>t.orc&&(ORC.filtro==='todos'||(ORC.filtro==='pend'&&t.orc.st==='pend')||(ORC.filtro==='sp'&&(t.orc.sp||t.orc.as>0))||(ORC.filtro==='us'&&t.orc.regra&&t.orc.regra.usuario)));if(!its.length)continue;
-  h+=`<tr class="g"><td>${g.cod}</td><td colspan="5"><b>${esc(g.nome)}</b></td><td class="n"><b>${nf(sum(g.itens.filter(t=>t.orc),t=>orcTot(t)))}</b></td><td class="n">${nf(sum(g.itens,t=>t.Hh),0)}</td></tr>`;
+  h+=`<tr class="g"><td>${g.cod}</td><td colspan="5">${esc(g.nome)} <span style="font-weight:400;color:#66707a">· incerteza ±${g.inc}%</span></td><td class="n">${nf(sum(g.itens.filter(t=>t.orc),t=>orcTot(t)))}</td><td class="n">${nf(sum(g.itens,t=>t.Hh),0)}</td><td></td></tr>`;
   for(const t of its){const o=t.orc,r=o.regra||{};const ch=[];
    if(o.st==='pend')ch.push('<span class="chip pd">sem preço</span>');if(o.st==='man')ch.push('<span class="chip mn">informado</span>');if(o.st==='incl')ch.push('<span class="chip in">incluso</span>');
    if(o.sp)ch.push('<span class="chip sp" title="Custo de São Paulo: o estado não tem custo publicado">SP</span>');else if(o.as>0)ch.push(`<span class="chip as" title="Parte do custo completada pela CAIXA com preços de São Paulo">${nf(o.as,0)}% AS</span>`);
@@ -8379,8 +8386,8 @@ function orcHTML(){
    const cods=o.st==='incl'?'—':o.comps.length?o.comps.map(c=>esc(c.cod)).join('<br>'):'—';
    const sd=o.st==='incl'?esc(typeof r.incl==='string'&&!/^[a-z_]+$/.test(r.incl)?r.incl:'Já incluído em outra composição deste orçamento.'):o.comps.length?o.comps.map(c=>`${c.f!==1?nf(c.f,c.f<1?4:2)+' × ':''}${esc(trunc(c.desc,120))} (${esc(c.un)})`).join('<br>'):esc(o.aviso||'');
    const pu=o.st==='pend'||o.st==='man'?`<input class="oi pm" data-opm="${esc(t.key)}" inputmode="decimal" value="${o.st==='man'?nf(o.p):''}" placeholder="R$">`:nf(orcR2(o.p));
-   h+=`<tr class="${o.st==='pend'?'pd':''}"><td>${t.cod}</td><td class="cod"><button class="lk" data-oed="${esc(t.key)}" title="Trocar a composição">${cods}</button></td><td>${esc(t.desc)}${ch.join('')}<span class="sd">${sd}${o.aviso&&o.comps.length?' — '+esc(o.aviso):''}${r.obs&&!r.usuario&&r.obs!==o.aviso?'<br><i>'+esc(r.obs)+'</i>':''}</span>${ORC.edita===t.key?orcEditorHTML(t):''}</td><td>${t.un}</td><td class="n">${nf(t.q,t.un==='un'?0:2)}</td><td class="n">${pu}</td><td class="n">${o.st==='incl'?'—':nf(orcTot(t))}</td><td class="n">${nf(t.Hh,1)}</td></tr>`;}}
- h+=`</tbody><tfoot><tr class="g"><td></td><td colspan="5"><b>CUSTO DIRETO</b></td><td class="n"><b>${nf(R.cd)}</b></td><td class="n">${nf(R.hh,0)}</td></tr><tr class="g"><td></td><td colspan="5"><b>PREÇO TOTAL COM BDI (${nf(B.bdi*100)}%)</b></td><td class="n"><b>${nf(R.pv)}</b></td><td></td></tr></tfoot></table></div>
+   h+=`<tr class="${o.st==='pend'?'pd':''}"><td>${t.cod} <button class="expl" data-expl="${esc(t.key)}" title="Explicar este número">?</button></td><td>${esc(t.desc)}${ch.join('')}<span class="sd">${sd}${o.aviso&&o.comps.length?' — '+esc(o.aviso):''}${r.obs&&!r.usuario&&r.obs!==o.aviso?'<br><i>'+esc(r.obs)+'</i>':''}</span>${ORC.edita===t.key?orcEditorHTML(t):''}</td><td>${t.un}</td><td class="n">${nf(t.q,t.un==='un'?0:2)}</td><td class="cod"><button class="lk" data-oed="${esc(t.key)}" title="Trocar a composição">${cods}</button></td><td class="n">${pu}</td><td class="n">${o.st==='incl'?'—':nf(orcTot(t))}</td><td class="n">${nf(t.Hh,1)}</td><td class="m">${esc(t.mem||'')}</td></tr>`;}}
+ h+=`<tr class="t"><td></td><td colspan="5">CUSTO DIRETO (SINAPI)</td><td class="n">${nf(R.cd)}</td><td class="n">${nf(R.hh,0)}</td><td></td></tr><tr class="t"><td></td><td colspan="5">PREÇO TOTAL COM BDI (${nf(B.bdi*100)}%)</td><td class="n">${nf(R.pv)}</td><td></td><td></td></tr></tbody></table></div>
   <p class="note">Fonte: SINAPI/CAIXA ${orcMesNome(O.mes)}, ${esc(D.u.localidade||O.uf)}, ${O.des==='com'?'com':'sem'} desoneração. Hh pelas horas de mão de obra do relatório analítico; o prazo e o cronograma da aba Planejamento usam essas horas. <button class="lk" id="oDesl">Desligar o orçamento SINAPI deste projeto</button></p></div>`;
  return h;}
 
