@@ -23,6 +23,6 @@ window.PC_CFG = {
 
   // Dados de quem vende (aparecem nos Termos de uso e na Política de privacidade)
   responsavel: 'Gabriel Ernesto Oliveira Guedes',
-  documento: ''   // CNPJ, quando houver (não publique CPF),
+  documento: '',  // CNPJ, quando houver (não publique CPF)
   cidade: 'Ipatinga – MG'
 };
