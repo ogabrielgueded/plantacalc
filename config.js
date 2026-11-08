@@ -16,6 +16,10 @@ window.PC_CFG = {
   supabaseUrl: 'https://dcrwkkhzlvdzixllzggo.supabase.co',
   supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjcndra2h6bHZkeml4bGx6Z2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQxNDY0ODMsImV4cCI6MjEwOTcyMjQ4M30.aWCzL_g3chnxRvZgYa6UAB81TodG1RRCKpBev2ESb_I',
 
+  // Mercado Pago → Suas integrações → Credenciais de produção → "Public Key" (é pública: pode ficar no site).
+  // Usada no formulário de cartão embutido na página "Minha conta". NUNCA coloque aqui o Access Token.
+  mpPublicKey: 'APP_USR-bcd47655-3448-4c94-a237-bd8eda1987d9',
+
   // Google AdSense: o seu "ID do editor" (começa com ca-pub-) e os IDs de 3 blocos de anúncio "Display"
   // Enquanto estiver vazio, o site mostra um convite ao plano Pro no lugar do anúncio.
   adsense: 'ca-pub-8681311606179270',

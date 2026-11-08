@@ -7743,8 +7743,7 @@ function abrirPlanos(msg){const m=$('#mPro');const P=CFG.preco;const eco=Math.ro
  <div class="msg"></div></div>`;m.classList.add('on');}
 $('#mPro').addEventListener('click',async e=>{const m=$('#mPro');if(e.target===m){m.classList.remove('on');return;}const b=e.target.closest('[data-pp]');if(!b)return;const a=b.dataset.pp;
  if(a==='x'){m.classList.remove('on');return;}if(a==='conta'){location.href='conta.html';return;}if(/^pix/.test(a)){location.href='conta.html?assinar='+a;return;}
- if(!MON.sb||!MON.user){location.href='conta.html?assinar='+a;return;}
- b.disabled=true;b.textContent='Abrindo o Mercado Pago…';try{const {data,error}=await MON.sb.functions.invoke('assinatura',{body:{acao:'criar',ciclo:a}});if(error||!data||!data.url)throw new Error((data&&data.erro)||'falha');location.href=data.url;}catch(x){location.href='conta.html?assinar='+a;}});
+ location.href='conta.html?assinar='+a;});
 
 /* ---------- consentimento de cookies (LGPD) e AdSense ---------- */
 function cookiesAviso(){if(isPro())return;let c=null;try{c=localStorage.getItem(COOKIE_KEY);}catch(e){}if(c){carregarAds();return;}
