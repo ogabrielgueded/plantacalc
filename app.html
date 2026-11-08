@@ -7153,11 +7153,11 @@ function pjStatus(s){PJ.status=s;const b=$('#bProj');if(!b)return;if(!PJ.atual){
 #pjOv .plano b{color:#1b2733}#pjOv .plano .pp{font-size:11px;font-weight:800;border-radius:7px;padding:2px 8px;background:#eaf3df;color:var(--g1,#1f5f20)}#pjOv .plano .pp.f{background:#eef1f4;color:#5b6670}
 #pjOv .plano button{border:0;border-radius:9px;background:#ffc107;color:#3d2c00;font:inherit;font-weight:700;padding:8px 12px;cursor:pointer}
 #pjOv h3{font-size:13px;text-transform:uppercase;letter-spacing:.7px;color:#6b7680;margin:0 0 10px;font-weight:700}
-#pjOv .novo{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px}
+#pjOv .novo{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:28px}
 #pjOv .novo button{position:relative;display:flex;gap:12px;align-items:center;text-align:left;border:1px solid #dfe6da;background:#fff;border-radius:14px;padding:14px 16px;cursor:pointer;font:inherit;color:#1b2733;transition:border-color .15s,box-shadow .15s,transform .15s}
 #pjOv .novo button:hover{border-color:var(--g1,#1f5f20);box-shadow:0 6px 18px rgba(31,95,32,.12);transform:translateY(-1px)}
 #pjOv .novo .ic{flex:none;width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;background:#eaf3df;color:var(--g1,#1f5f20)}
-#pjOv .novo .ic.a{background:#fff3cd;color:#8a5a00}#pjOv .novo .ic.e{background:#e6f1fb;color:#1d4f7a}
+#pjOv .novo .ic.a{background:#fff3cd;color:#8a5a00}#pjOv .novo .ic.i{background:#f1e9fb;color:#5b2b8a}#pjOv .novo .ic.e{background:#e6f1fb;color:#1d4f7a}
 #pjOv .novo b{display:block;font-size:15px}#pjOv .novo span{font-size:12.5px;color:#6b7680;line-height:1.35}
 #pjOv .novo .lk{position:absolute;top:8px;right:10px;font-style:normal;font-size:11px;font-weight:800;background:#ffc107;border-radius:7px;padding:2px 7px}
 #pjOv .barra{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}#pjOv .barra h3{margin:0 auto 0 0}
@@ -7225,7 +7225,7 @@ function pjRender(){const ov=$('#pjOv');const ids=[...new Set([...Object.keys(PJ
  <h3>Começar um projeto</h3>
  <div class="novo"><button data-pjn="branco">${trava}<span class="ic">＋</span><div><b>Projeto em branco</b><span>Desenhe do zero ou sobre uma planta de fundo.</span></div></button>
   <button data-pjn="assistente">${trava}<span class="ic a">★</span><div><b>Com o assistente</b><span>Responda algumas perguntas e receba o estudo pronto.</span></div></button>
-  <button data-pjn="exemplo">${trava}<span class="ic e">⧉</span><div><b>A partir do exemplo</b><span>Casa de bombas com sala elétrica, para explorar.</span></div></button></div>
+  <button data-pjn="exemplo">${trava}<span class="ic e">⧉</span><div><b>A partir do exemplo</b><span>Casa de bombas com sala elétrica, para explorar.</span></div></button>${typeof abrirIA==='function'?`<button data-pjn="ia">${trava}<span class="ic i">✨</span><div><b>Descrever com IA</b><span>Escreva o que precisa e a IA desenha o croqui.</span></div></button>`:''}</div>
  ${n?`<div class="barra"><h3>Meus projetos (${n})</h3><div class="busca"><input id="pjBusca" placeholder="Procurar projeto…" value="${esc(PJ.busca)}"></div><div class="ord"><button data-pjord="rec" class="${ord==='rec'?'on':''}">Recentes</button><button data-pjord="nome" class="${ord==='nome'?'on':''}">Nome</button></div></div>`:''}
  ${it.length?`<div class="g">${it.map(card).join('')}</div>`:vazio}</div>`;
  const bs=$('#pjBusca');if(bs)bs.oninput=()=>{PJ.busca=bs.value;const pos=bs.selectionStart;pjRender();const nb=$('#pjBusca');if(nb){nb.focus();nb.setSelectionRange(pos,pos);}};}
@@ -7234,7 +7234,7 @@ $('#pjOv').addEventListener('click',async e=>{const t=e.target;let b;
  if((b=t.closest('[data-pjm]'))){const m=$(`#pjOv [data-mn="${b.dataset.pjm}"]`);const ab=m&&m.classList.contains('on');$$('#pjOv .mn.on').forEach(x=>x.classList.remove('on'));if(m&&!ab)m.classList.add('on');return;}
  if(!t.closest('.mn'))$$('#pjOv .mn.on').forEach(x=>x.classList.remove('on'));const fechar=()=>{if(PJ.atual)$('#pjOv').classList.remove('on');};
  if((b=t.closest('[data-pj]'))){const a=b.dataset.pj;if(a==='x')fechar();else if(a==='conta')location.href='conta.html';else if(a==='pro'){fechar();if(typeof abrirPlanos==='function')abrirPlanos();}else if(a==='arquivo'){$('#fOpen').click();}return;}
- if((b=t.closest('[data-pjn]'))){if(PJ.atual)fechar();await pjNovo(b.dataset.pjn);fechar();return;}
+ if((b=t.closest('[data-pjn]'))){const tp=b.dataset.pjn;const antes=PJ.atual;if(PJ.atual)fechar();await pjNovo(tp==='ia'?'branco':tp);fechar();if(tp==='ia'&&PJ.atual&&PJ.atual!==antes&&typeof abrirIA==='function')abrirIA('croqui');return;}
  if((b=t.closest('[data-pjo]'))){if(PJ.atual)fechar();await pjAbrir(b.dataset.pjo);fechar();return;}
  if((b=t.closest('[data-pjr]'))){const id=b.dataset.pjr;const atual=(PJ.locais[id]||PJ.nuvem[id]||{}).nome||'';const n=prompt('Nome do projeto:',atual);if(n&&n.trim())await pjRenomear(id,n.trim());pjRender();return;}
  if((b=t.closest('[data-pjd]'))){await pjDuplicar(b.dataset.pjd);pjRender();return;}
@@ -7363,7 +7363,7 @@ function abrir(){const it=(ic,txt,act,cls='')=>`<button class="it ${cls}" data-m
  const t=id=>{const e=document.getElementById(id);return e?e.textContent.trim():'';};
  let h=`<div class="sh"><div class="gr"></div>`;
  if(vis('bPro'))h+=it('⭐',gratis()?'Seja Pro — tudo liberado':'Plano Pro','bPro','pro');
- h+=`<div class="hd">Projeto</div>`+it('★','Assistente (responder perguntas)','bWiz')+it('📁','Meus projetos','bAbrir')+it('＋','Novo projeto','bNovo')+it('💾','Salvar','bSalvar');
+ h+=`<div class="hd">Projeto</div>`+(document.getElementById('bIA')?it('✨','Assistente de IA','bIA'):'')+it('★','Assistente (responder perguntas)','bWiz')+it('📁','Meus projetos','bAbrir')+it('＋','Novo projeto','bNovo')+it('💾','Salvar','bSalvar');
  const ex=[...document.querySelectorAll('#ddExp button')];
  if(ex.length){h+=it('⬇','Exportar arquivos','exp')+`<div class="sub" id="mmExp">${ex.map(b=>`<button class="it" data-mm="x:${b.id}"><span>${b.textContent.replace(/PRO$/,'')}</span>${gratis()?'<span class="tg">PRO</span>':''}</button>`).join('')}</div>`;}
  if(!simp()){h+=`<div class="hd">Ferramentas</div>`;if(document.getElementById('b3D'))h+=it('🧊','Vista 3D','b3D');if(document.getElementById('bRev'))h+=it('🏷','Emitir revisão','bRev');if(document.getElementById('ptoggle'))h+=it('▤','Mostrar/ocultar o painel','ptoggle');}
@@ -7809,7 +7809,7 @@ document.addEventListener('click',e=>{if(e.target.closest('[data-pcpro]'))abrirP
 function abrirPlanos(msg){const m=$('#mPro');const P=CFG.preco;const eco=Math.round((1-P.anual/(P.mensal*12))*100);
  m.innerHTML=`<div class="bx"><button class="x" data-pp="x">✕</button><h2>PlantaCalc Pro</h2>${msg?`<div class="aviso">🔒 ${esc(msg)}</div>`:''}<p class="sub">Veja o quantitativo completo, exporte PDF, Excel, Word, DXF e IFC e crie quantos projetos quiser — sem anúncios nem marca d'água.</p>
  <div class="pl"><div class="pc"><h3>Gratuito</h3><div class="pr">R$ 0</div><ul><li>Todas as ferramentas, assistentes e cálculos</li><li>Pranchas, 3D, cronograma e memorial na tela</li><li class="n">Quantitativo parcial (metade da tabela) e só a faixa de custo</li><li class="n">1 projeto</li><li class="n">Sem exportar arquivos</li><li class="n">Com anúncios</li><li class="n">Pranchas com marca d'água “versão gratuita”</li></ul></div>
- <div class="pc pro"><h3>Pro</h3><div class="pr">${brl(P.mensal)}<small> /mês</small></div><div style="font-size:13px;color:#46515a">ou ${brl(P.anual)} por ano${eco>0?` (economia de ${eco}%)`:''}</div><ul><li>Tudo do Gratuito</li><li>Quantitativo completo, curva ABC e análise de custo</li><li>Projetos ilimitados, na nuvem e em qualquer aparelho</li><li>Exporta PDF, Excel, Word, DXF e IFC</li><li>Sem nenhum anúncio</li><li>Pranchas e PDF sem marca d'água</li><li>Cancele quando quiser</li></ul></div></div>
+ <div class="pc pro"><h3>Pro</h3><div class="pr">${brl(P.mensal)}<small> /mês</small></div><div style="font-size:13px;color:#46515a">ou ${brl(P.anual)} por ano${eco>0?` (economia de ${eco}%)`:''}</div><ul><li>Tudo do Gratuito</li><li>Quantitativo completo, curva ABC e análise de custo</li><li>Projetos ilimitados, na nuvem e em qualquer aparelho</li><li>Assistente de IA: desenha o croqui a partir de uma descrição e redige o escopo técnico</li><li>Exporta PDF, Excel, Word, DXF e IFC</li><li>Sem nenhum anúncio</li><li>Pranchas e PDF sem marca d'água</li><li>Cancele quando quiser</li></ul></div></div>
  ${isPro()?`<div class="bt"><small>Seu plano Pro está ativo até ${new Date(MON.validade).toLocaleDateString('pt-BR')}.</small><button class="sec" data-pp="conta">Minha conta</button></div>`:`<div class="bt"><button data-pp="anual">Assinar anual — ${brl(P.anual)}</button><button class="sec" data-pp="mensal">Assinar mensal — ${brl(P.mensal)}</button><button class="sec" data-pp="pix-anual" style="border-color:#32bcad;color:#0f766e">Pagar com Pix — 12 meses por ${brl(P.anual)}</button><small>Pagamento seguro pelo Mercado Pago. ${MON.user?'':'Você vai criar uma conta (ou entrar) antes de pagar.'}</small></div>`}
  <div class="msg"></div></div>`;m.classList.add('on');}
 $('#mPro').addEventListener('click',async e=>{const m=$('#mPro');if(e.target===m){m.classList.remove('on');return;}const b=e.target.closest('[data-pp]');if(!b)return;const a=b.dataset.pp;
@@ -7853,6 +7853,143 @@ document.addEventListener('click',e=>{const b=e.target.closest('#bPdf,#bSheetPdf
 $('#pcUp').addEventListener('click',e=>{const b=e.target.closest('[data-u]');if(!b)return;$('#pcUp').classList.remove('on');if(b.dataset.u==='pro')abrirPlanos();});
 
 iniciarConta();
+</script>
+
+<script>
+/* ===================== p30 — ASSISTENTE DE IA (versão online)
+   1) Desenhar com IA: a pessoa descreve a edificação; a IA (função "ia" do Supabase) devolve COMANDOS do PlantaCalc,
+      que o próprio motor executa (a IA não calcula nada).
+   2) Escopo técnico (Pro): a IA redige o escopo de contratação a partir do memorial que o sistema já gera.
+   ===================================================================== */
+const IA={aba:'croqui',cota:null,ocupado:false,escopo:null,ultimo:null};
+(function(){const st=document.createElement('style');st.textContent=`
+#bIA{background:#fff!important;color:var(--g1,#1f5f20)!important;border-color:#fff!important;font-weight:700}
+#iaOv{position:fixed;inset:0;z-index:85;display:none;background:rgba(15,25,15,.45);align-items:flex-start;justify-content:center;overflow:auto;padding:28px 14px}
+#iaOv.on{display:flex}
+#iaOv .bx{background:#fff;border-radius:18px;width:min(760px,100%);box-shadow:0 20px 60px rgba(0,0,0,.28);overflow:hidden}
+#iaOv .hd{display:flex;align-items:center;gap:10px;padding:16px 18px 0}
+#iaOv .hd h2{margin:0;font-size:20px;color:#1b2733}#iaOv .hd .ct{margin-left:auto;font-size:12.5px;color:#5b6670;background:#f1f4f1;border-radius:999px;padding:4px 10px}
+#iaOv .x{border:0;background:#f1f3f5;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;flex:none}
+#iaOv .tabs{display:flex;gap:6px;margin:14px 18px 0;background:#f1f4f2;border-radius:12px;padding:4px}
+#iaOv .tabs button{flex:1;border:0;background:none;font:inherit;font-weight:600;padding:9px;border-radius:9px;cursor:pointer;color:#5b6670}
+#iaOv .tabs button.on{background:#fff;color:#1b2733;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+#iaOv .ct2{padding:14px 18px 18px}
+#iaOv p.d{margin:0 0 10px;color:#46515a;font-size:14px;line-height:1.45}
+#iaOv textarea{width:100%;box-sizing:border-box;min-height:120px;font:inherit;font-size:15px;line-height:1.45;border:1.5px solid #d3d9de;border-radius:12px;padding:10px 12px;resize:vertical}
+#iaOv textarea:focus{outline:0;border-color:var(--g1,#1f5f20);box-shadow:0 0 0 4px rgba(31,95,32,.12)}
+#iaOv .ex{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}#iaOv .ex button{border:1px solid #dfe6da;background:#f8fbf3;border-radius:999px;padding:5px 10px;font:inherit;font-size:12.5px;cursor:pointer;color:#2c4a2c}
+#iaOv .op{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:#46515a;margin:0 0 12px}#iaOv .op label{display:flex;gap:6px;align-items:center;cursor:pointer}
+#iaOv .go{width:100%;border:0;border-radius:12px;background:var(--g1,#1f5f20);color:#fff;font:inherit;font-size:16px;font-weight:700;padding:13px;cursor:pointer}
+#iaOv .go:disabled{opacity:.6;cursor:wait}#iaOv .go.am{background:#ffc107;color:#3d2c00}
+#iaOv .msg{margin-top:12px;border-radius:12px;padding:10px 12px;font-size:14px;display:none}#iaOv .msg.on{display:block}#iaOv .msg.err{background:#fdecea;color:#8a1c12}#iaOv .msg.ok{background:#eaf3df;color:#1f4d20}
+#iaOv .res{margin-top:12px;border:1px solid #e1e6e2;border-radius:12px;padding:10px 12px;font-size:13.5px;max-height:260px;overflow:auto}
+#iaOv .res li{margin:2px 0;list-style:none}#iaOv .res ul{padding:0;margin:6px 0 0}#iaOv .res .f{color:#a3261a}#iaOv .res code{font-size:12.5px}
+#iaOv .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}#iaOv .acts button{flex:1;border:1px solid #d6dcd8;background:#fff;border-radius:11px;padding:10px 12px;font:inherit;font-weight:600;cursor:pointer}
+#iaOv .acts .p{background:var(--g1,#1f5f20);color:#fff;border-color:var(--g1,#1f5f20)}
+#iaOv .doc{margin-top:12px;border:1px solid #e1e6e2;border-radius:12px;padding:14px 16px;max-height:46vh;overflow:auto;font-size:13.5px;line-height:1.5;color:#1b2733;background:#fcfdfb}
+#iaOv .doc h3{font-size:15px;margin:12px 0 4px}#iaOv .doc h3:first-child{margin-top:0}#iaOv .doc ul{margin:4px 0 8px;padding-left:20px}#iaOv .doc p{margin:4px 0}
+#iaOv .av{font-size:12px;color:#6b7680;margin-top:10px}
+#iaOv .lock{text-align:center;padding:18px 8px}#iaOv .lock b{display:block;font-size:17px;margin-bottom:6px}
+#iaOv .sp{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:iasp 0.8s linear infinite;vertical-align:-2px;margin-right:8px}@keyframes iasp{to{transform:rotate(360deg)}}
+@media (max-width:640px){#iaOv{padding:0}#iaOv .bx{border-radius:0;min-height:100%}}
+`;document.head.appendChild(st);
+ const hdr=document.querySelector('header');if(hdr){const b=document.createElement('button');b.id='bIA';b.textContent='✨ IA';b.title='Assistente de IA: desenhar a partir de uma descrição e redigir o escopo técnico';
+  const ref=document.getElementById('bWiz');if(ref&&ref.parentNode===hdr)hdr.insertBefore(b,ref.nextSibling);else hdr.insertBefore(b,hdr.children[2]||null);b.onclick=()=>abrirIA();}
+ const ov=document.createElement('div');ov.id='iaOv';document.body.appendChild(ov);
+ ov.addEventListener('click',e=>{if(e.target===ov&&!IA.ocupado)fecharIA();});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ov.classList.contains('on')&&!IA.ocupado)fecharIA();});})();
+
+const IA_EX=['Casa de bombas de incêndio com 2 bombas, sala elétrica de 4,5 x 4 m ao lado e depósito pequeno',
+ 'Subestação com sala de painéis de 10 x 5 m, dois transformadores e sala de baterias',
+ 'Vestiário para 30 pessoas com sanitários masculino e feminino e um refeitório de 40 m²',
+ 'Galpão de 20 x 12 m com escritório de 4 x 3,5 m e depósito anexos, estrutura metálica'];
+const iaPro=()=>typeof isPro==='function'&&isPro();
+function fecharIA(){$('#iaOv').classList.remove('on');}
+async function iaChamar(body){if(typeof MON==='undefined'||!MON.sb)throw new Error('Entre na sua conta para usar a IA.');
+ const r=await MON.sb.functions.invoke('ia',{body});if(!r.error&&r.data&&!r.data.erro)return r.data;
+ let d=r.data||{};try{if(r.error&&r.error.context&&r.error.context.json)d=await r.error.context.json();}catch(e){}
+ const er=new Error(d.msg||d.erro||'Não foi possível falar com a IA agora.');er.cod=d.erro;er.d=d;throw er;}
+async function iaCota(){try{IA.cota=await iaChamar({acao:'cota'});}catch(e){IA.cota=null;}iaCotaTxt();}
+function iaCotaTxt(){const c=$('#iaOv .hd .ct');if(!c)return;if(!IA.cota){c.textContent='';c.style.display='none';return;}c.style.display='';const rest=Math.max(0,IA.cota.limite-IA.cota.usados);c.textContent=`${rest} de ${IA.cota.limite} usos restantes este mês`;}
+function abrirIA(aba){if(aba)IA.aba=aba;const pj=typeof PJ!=='undefined'?PJ.atual:null;if(IA.escopo&&IA.escopoPj!==pj)IA.escopo=null;const ov=$('#iaOv');iaRender();ov.classList.add('on');iaCota();setTimeout(()=>{const t=$('#iaTxt');if(t)t.focus();},60);}
+function iaRender(){const ov=$('#iaOv');const aba=IA.aba;
+ ov.innerHTML=`<div class="bx" role="dialog" aria-modal="true"><div class="hd"><h2>✨ Assistente de IA</h2><span class="ct" style="display:none"></span><button class="x" data-ia="x" aria-label="Fechar">✕</button></div>
+ <div class="tabs"><button data-iaa="croqui" class="${aba==='croqui'?'on':''}">Desenhar com IA</button><button data-iaa="escopo" class="${aba==='escopo'?'on':''}">Escopo técnico${iaPro()?'':' 🔒'}</button></div>
+ <div class="ct2">${aba==='croqui'?iaHtmlCroqui():iaHtmlEscopo()}</div></div>`;iaCotaTxt();
+ ov.querySelectorAll('[data-iaa]').forEach(b=>b.onclick=()=>{if(IA.ocupado)return;IA.aba=b.dataset.iaa;iaRender();});
+ ov.querySelector('[data-ia="x"]').onclick=()=>{if(!IA.ocupado)fecharIA();};
+ if(aba==='croqui')iaLigarCroqui();else iaLigarEscopo();}
+
+/* ---------- 1) desenhar com IA ---------- */
+function iaHtmlCroqui(){const tem=typeof temConteudo==='function'&&temConteudo();
+ return `<p class="d">Descreva a edificação com suas palavras: ambientes, medidas ou áreas aproximadas, portas, equipamentos e o tipo de estrutura. A IA monta o croqui e o PlantaCalc calcula o resto.</p>
+ <textarea id="iaTxt" maxlength="2500" placeholder="Ex.: casa de bombas de uns 45 m² com 2 bombas, sala elétrica de 4,5 x 4 m à direita, vestiário com sanitário e um depósito pequeno. Portão de 3 m para o pátio. Estrutura de concreto.">${esc(IA.ultimo||'')}</textarea>
+ <div class="ex">${IA_EX.map((x,i)=>`<button data-iax="${i}">${esc(x.split(',')[0])}</button>`).join('')}</div>
+ ${tem?`<div class="op"><label><input type="radio" name="iaModo" value="add" checked> Acrescentar ao desenho atual</label><label><input type="radio" name="iaModo" value="sub"> Substituir o desenho atual</label></div>`:''}
+ <button class="go" id="iaGo">Gerar croqui</button><div class="msg" id="iaMsg"></div><div id="iaRes"></div>
+ <p class="av">A IA pode errar: confira o desenho. Dá para desfazer tudo com Ctrl+Z. O texto que você escreve e a lista de ambientes do desenho são enviados ao provedor de IA (sem uso para treinamento).</p>`;}
+function iaMsg(t,ok){const m=$('#iaMsg');if(!m)return;m.textContent=t||'';m.className='msg'+(t?' on '+(ok?'ok':'err'):'');}
+function iaErro(e){if(e.cod==='LIMITE'){const d=e.d||{};return d.pro?`Você usou os ${d.limite} usos de IA deste mês. A cota renova no dia 1º.`:`Você usou os ${d.limite} usos de IA do plano gratuito neste mês. Assine o Pro para usar bem mais.`;}return e.message;}
+function iaLigarCroqui(){const t=$('#iaTxt');$$('#iaOv [data-iax]').forEach(b=>b.onclick=()=>{t.value=IA_EX[+b.dataset.iax];t.focus();});
+ $('#iaGo').onclick=async()=>{const txt=t.value.trim();if(txt.length<8){iaMsg('Descreva a edificação com um pouco mais de detalhe.');return;}
+  const modo=(document.querySelector('input[name=iaModo]:checked')||{}).value||'add';IA.ultimo=txt;
+  const b=$('#iaGo');IA.ocupado=true;b.disabled=true;b.innerHTML='<span class="sp"></span>A IA está desenhando…';iaMsg('');$('#iaRes').innerHTML='';
+  try{if(typeof pjPodeCriar==='function'&&typeof PJ!=='undefined'&&!PJ.atual){if(!pjPodeCriar()){pjBloqueio();return;}await pjNovo('branco');}
+   const ctx={tipos:(S.tipos||[]).map(x=>({id:x.id,nome:x.nome})),esq:(S.esq||[]).map(x=>({id:x.id,nome:`${x.desc} ${nf(x.l/1000,2)}×${nf(x.h/1000,2)} m`})),equip:(S.equipTipos||[]).map(x=>({id:x.id,nome:x.nome})),
+    ambientes:modo==='sub'?[]:S.rooms.filter(r=>(r.pav||0)===(ed.pav||0)).map(r=>r.nome)};
+   const d=await iaChamar({acao:'croqui',texto:txt,ctx});IA.cota={usados:d.usados,limite:d.limite,pro:iaPro()};iaCotaTxt();
+   const res=iaAplicar(d,modo);
+   const ok=res.filter(r=>r.ok).length;
+   $('#iaRes').innerHTML=`<div class="res"><b>${ok} de ${res.length} comandos aplicados.</b>${d.observacoes?`<div style="margin-top:4px;color:#46515a">${esc(d.observacoes)}</div>`:''}<ul>${res.map(r=>`<li class="${r.ok?'':'f'}">${r.ok?'✓':'✗'} <code>${esc(r.c)}</code>${r.ok?'':' — '+esc(r.msg)}</li>`).join('')}</ul></div>
+    <div class="acts"><button data-iaz="desfazer">↶ Desfazer</button><button class="p" data-iaz="ver">Ver o desenho</button></div>`;
+   $$('#iaRes [data-iaz]').forEach(x=>x.onclick=()=>{if(x.dataset.iaz==='desfazer'&&typeof doUndo==='function'){doUndo();iaMsg('Desfeito.',true);$('#iaRes').innerHTML='';}else fecharIA();});
+   iaMsg(ok?'Croqui gerado. Confira e ajuste o que precisar.':'A IA não conseguiu montar o croqui. Tente descrever de outro jeito.',!!ok);}
+  catch(e){iaMsg(iaErro(e));if(e.cod==='LIMITE'&&!iaPro()&&typeof abrirPlanos==='function')setTimeout(()=>abrirPlanos('Você usou os usos de IA do plano gratuito deste mês. No Pro você tem bem mais.'),900);}
+  finally{IA.ocupado=false;const bb=$('#iaGo');if(bb){bb.disabled=false;bb.textContent='Gerar croqui';}}};}
+function iaAplicar(d,modo){mark();const res=[];
+ if(modo==='sub'){const pv=ed.pav||0;S.rooms=S.rooms.filter(r=>(r.pav||0)!==pv);S.ops=S.ops.filter(o=>(o.pav||0)!==pv);S.equip=(S.equip||[]).filter(q=>(q.pav||0)!==pv);}
+ const cap=s=>{s=String(s||'').trim();return s?s.charAt(0).toUpperCase()+s.slice(1):s;};
+ for(const c0 of d.comandos){let c=String(c0).trim().replace(/[.;]+$/,'').replace(/\s+a\s+(\d+(?:[.,]\d+)?)\s*(?:m|metros?)?$/i,' a $1 m');
+  S._pav=ed.pav;const nR=S.rooms.length,nE=(S.equip||[]).length;let r;try{r=comando(S,c);}catch(e){r={ok:false,msg:String(e.message||e)};}
+  if(r.ok){/* o motor de comandos tira acentos dos nomes: devolve o nome como a IA escreveu */
+   let m;if(S.rooms.length>nR&&(m=c.match(/^(?:ambiente|sala|criar)\s+(.+?)\s+\d+(?:[.,]\d+)?\s*(?:x|×|por)\s*\d/i)))S.rooms[S.rooms.length-1].nome=cap(m[1]);
+   if((S.equip||[]).length>nE&&(m=c.match(/^equipamento\s+\S+\s+(.+?)\s+em\s+.+$/i)))S.equip[S.equip.length-1].nome=m[1].trim();}
+  res.push({c,ok:!!r.ok,msg:r.msg||''});}
+ /* equipamentos inseridos no mesmo ambiente ficariam empilhados no centro: distribui ao longo do maior lado */
+ const porSala={};(S.equip||[]).forEach(q=>{const rm=S.rooms.find(x=>(x.pav||0)===(q.pav||0)&&pip(x.poly,q.x,q.y));if(rm)(porSala[rm.id]=porSala[rm.id]||{rm,eq:[]}).eq.push(q);});
+ Object.values(porSala).forEach(({rm,eq})=>{const pos=eq.map(q=>q.x+','+q.y);if(new Set(pos).size===pos.length)return;const b=polyBBox(rm.poly),hz=(b.x1-b.x0)>=(b.y1-b.y0);
+  eq.forEach((q,i)=>{const f=(i+1)/(eq.length+1);if(hz){q.x=Math.round(b.x0+(b.x1-b.x0)*f);q.y=Math.round((b.y0+b.y1)/2);}else{q.y=Math.round(b.y0+(b.y1-b.y0)*f);q.x=Math.round((b.x0+b.x1)/2);}});});
+ const pad=!S.meta.obra||S.meta.obra==='Nova edificação'||/^Projeto \d+$/.test(S.meta.obra);if(d.obra&&pad)S.meta.obra=d.obra;
+ if(!res.some(r=>r.ok)){undoS.pop();}else{refresh();if(typeof setView==='function'&&view!=='croqui')setView('croqui');requestAnimationFrame(()=>{try{fitView();}catch(e){}});if(typeof SIM!=='undefined')SIM.welcomeOff=true;}
+ return res;}
+
+/* ---------- 2) escopo técnico ---------- */
+function iaHtmlEscopo(){
+ if(!iaPro())return `<div class="lock"><b>🔒 Escopo técnico com IA — exclusivo do Pro</b><p class="d">A IA redige o escopo técnico para cotação com empreiteiras a partir do seu estudo: objeto, serviços por etapa, fornecimentos, exclusões, premissas, critérios de medição e pendências. Você baixa em Word ou PDF.</p><button class="go am" data-ia="pro">Conhecer o plano Pro</button></div>`;
+ if(typeof M==='undefined'||!M||M.empty)return `<p class="d">Desenhe a edificação primeiro (ou use a aba “Desenhar com IA”). O escopo é redigido a partir do estudo calculado pelo PlantaCalc.</p>`;
+ return `<p class="d">A IA lê o memorial descritivo calculado pelo PlantaCalc (áreas, fundações, estrutura, quantitativos, prazo e custo) e redige o <b>escopo técnico para contratação</b>, pronto para mandar às empreiteiras. Ela não inventa quantidades: usa só os dados do estudo.</p>
+ <button class="go" id="iaGoE">${IA.escopo?'Redigir de novo':'Redigir escopo técnico'}</button><div class="msg" id="iaMsg"></div><div id="iaDoc">${IA.escopo?iaDocHtml(IA.escopo):''}</div>
+ <p class="av">Revise antes de enviar: o texto é gerado por IA a partir de um estudo preliminar. O memorial do estudo é enviado ao provedor de IA (sem uso para treinamento).</p>`;}
+function iaMemorialTxt(){const D=memorialDoc(S,M,Q,CH);let s='';
+ for(const d of D){if(d.h!=null)s+=`\n${'#'.repeat((d.l||0)+1)} ${d.h}\n`;else if(d.p)s+=d.p+'\n';else if(d.ul)s+=d.ul.map(x=>'- '+x).join('\n')+'\n';
+  else if(d.table){s+=d.table.head.join(' | ')+'\n'+d.table.rows.slice(0,40).map(r=>r.join(' | ')).join('\n')+'\n';}}
+ return s.slice(0,24000);}
+function iaDocHtml(E){return `<div class="doc"><h3 style="font-size:16px">${esc(E.titulo)}</h3>${E.secoes.map(s=>`<h3>${esc(s.titulo)}</h3>${s.paragrafos.map(p=>`<p>${esc(p)}</p>`).join('')}${s.itens.length?`<ul>${s.itens.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>`:''}`).join('')}</div>
+ <div class="acts"><button data-iae="docx" class="p">Baixar Word (.docx)</button><button data-iae="pdf">Baixar PDF</button><button data-iae="copiar">Copiar texto</button></div>`;}
+function iaEscopoD(E){const D=[{h:E.titulo,l:0},{p:`${S.meta.obra} — documento ${S.meta.codigo}, rev. ${S.meta.rev}. Escopo redigido com apoio de IA a partir do estudo preliminar do PlantaCalc (modelo #${modelHash(S)}). Não é projeto executivo: revise antes de enviar.`}];
+ E.secoes.forEach(s=>{D.push({h:s.titulo,l:1});s.paragrafos.forEach(p=>D.push({p}));if(s.itens.length)D.push({ul:s.itens});});return D;}
+function iaEscopoTxt(E){return E.titulo+'\n\n'+E.secoes.map(s=>s.titulo+'\n'+s.paragrafos.join('\n')+(s.itens.length?'\n'+s.itens.map(i=>'• '+i).join('\n'):'')).join('\n\n');}
+function iaLigarEscopo(){const pro=$('#iaOv [data-ia="pro"]');if(pro)pro.onclick=()=>{fecharIA();if(typeof abrirPlanos==='function')abrirPlanos();};
+ const ligarDoc=()=>{$$('#iaOv [data-iae]').forEach(b=>b.onclick=async()=>{const E=IA.escopo;if(!E)return;const a=b.dataset.iae;
+  if(a==='docx')download(memorialDOCX(iaEscopoD(E)),fname('escopo-tecnico.docx'));
+  else if(a==='pdf')download(pdfBuild(memorialPDF(iaEscopoD(E))),fname('escopo-tecnico.pdf'));
+  else{try{await navigator.clipboard.writeText(iaEscopoTxt(E));b.textContent='Copiado ✓';}catch(e){b.textContent='Não foi possível copiar';}setTimeout(()=>{if(b.isConnected)b.textContent='Copiar texto';},2200);}});};
+ ligarDoc();
+ const go=$('#iaGoE');if(!go)return;go.onclick=async()=>{IA.ocupado=true;go.disabled=true;go.innerHTML='<span class="sp"></span>A IA está redigindo… (até 1 minuto)';iaMsg('');
+  try{const d=await iaChamar({acao:'escopo',memorial:iaMemorialTxt()});IA.cota={usados:d.usados,limite:d.limite,pro:true};iaCotaTxt();IA.escopo={titulo:d.titulo,secoes:d.secoes};IA.escopoPj=typeof PJ!=='undefined'?PJ.atual:null;
+   $('#iaDoc').innerHTML=iaDocHtml(IA.escopo);ligarDoc();iaMsg('Escopo redigido. Revise e baixe.',true);}
+  catch(e){iaMsg(iaErro(e));}
+  finally{IA.ocupado=false;const g=$('#iaGoE');if(g){g.disabled=false;g.textContent=IA.escopo?'Redigir de novo':'Redigir escopo técnico';}}};}
 </script>
 
 <!-- pdf.js (Apache-2.0, Mozilla) embutido para ler PDF de fundo -->
