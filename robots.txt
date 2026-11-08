@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /conta.html
+Sitemap: https://plantacalc.com.br/sitemap.xml

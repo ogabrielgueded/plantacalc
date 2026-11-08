@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PlantaCalc — do croqui ao orçamento em minutos</title>
+<meta name="description" content="Desenhe ou responda algumas perguntas: o PlantaCalc gera planta, cortes, fundações, quantitativo, custo, prazo, memorial e 3D para estudos preliminares de obras civis. Grátis no navegador, também no tablet.">
+<meta property="og:title" content="PlantaCalc — do croqui ao orçamento em minutos">
+<meta property="og:description" content="Estudo preliminar de obras civis no navegador: pranchas, quantitativo, custo, prazo, memorial e 3D.">
+<meta property="og:image" content="img/hero.webp">
+<meta property="og:type" content="website">
+<!-- AdSense (passo 7 do guia): apague esta linha de comentário e a de baixo, e troque o número pelo seu ID de editor -->
+<!-- <meta name="google-adsense-account" content="ca-pub-0000000000000000"> -->
+<link rel="icon" href="img/icone.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+<script src="config.js"></script>
+</head>
+<body>
+<header class="nav"><div class="wrap">
+  <a class="logo" href="index.html"><img src="img/icone.svg" alt="">PlantaCalc</a>
+  <nav id="menu"><a href="#recursos">Recursos</a><a href="#como">Como funciona</a><a href="#planos">Planos</a><a href="#duvidas">Dúvidas</a></nav>
+  <div class="sp"></div>
+  <a class="btn sec sm" href="conta.html">Entrar</a>
+  <a class="btn pri sm" href="app.html">Abrir o PlantaCalc</a>
+  <button class="burger" aria-label="Menu" onclick="document.getElementById('menu').classList.toggle('open')">☰</button>
+</div></header>
+
+<main>
+<section class="hero"><div class="wrap">
+  <div class="tag"><i></i>Estudo preliminar de obras civis · direto no navegador</div>
+  <h1>Do croqui ao <em>orçamento</em> em minutos.</h1>
+  <p class="lead">Desenhe as salas com o dedo ou responda algumas perguntas. O PlantaCalc monta as pranchas, calcula quantitativo, custo e prazo, escreve o memorial e mostra tudo em 3D.</p>
+  <div class="cta"><a class="btn pri" href="app.html">Começar grátis — sem cadastro</a><a class="btn sec" href="#planos">Ver planos</a><small>Funciona no notebook e no tablet. Nada para instalar.</small></div>
+  <div class="shot"><div class="bar"><i></i><i></i><i></i></div><img src="img/hero.webp" width="1600" height="1000" alt="Tela do PlantaCalc com uma casa de bombas desenhada e o cartão de opções da sala aberto"></div>
+  <div class="nums"><div><b>6</b><span>assistentes prontos</span></div><div><b>A3</b><span>pranchas técnicas cotadas</span></div><div><b>5</b><span>formatos: PDF, Excel, Word, DXF, IFC</span></div><div><b>0</b><span>instalação</span></div></div>
+</div></section>
+
+<section id="recursos"><div class="wrap">
+  <p class="kick">Recursos</p>
+  <h2>Tudo o que um estudo preliminar precisa, num só lugar.</h2>
+  <p class="sub">Feito por engenheiro de obras industriais para quem precisa de número confiável cedo — antes do projeto executivo.</p>
+
+  <div class="feat">
+    <div class="txt">
+      <h3>Responda perguntas. Receba o estudo dimensionado.</h3>
+      <p>Os assistentes fazem uma pergunta por vez e já mostram custo, prazo e área enquanto você responde. No fim, conferem tudo antes de criar.</p>
+      <ul><li>Casa de bombas, sala elétrica/CCM, base de equipamento, galeria e canaleta, pátio e reforma/demolição</li><li>Afastamentos da NR-10, portas abrindo no sentido da fuga, fundações e escoramento</li><li>Avisa com antecedência quando um caso foge do comum</li></ul>
+    </div>
+    <div class="img"><img src="img/assistente.webp" width="1600" height="1000" alt="Assistente da sala elétrica com estimativa ao lado" loading="lazy"></div>
+  </div>
+
+  <div class="feat rev">
+    <div class="txt">
+      <h3>Pranchas técnicas que já saem cotadas.</h3>
+      <p>Planta detalhada, estrutura, cortes, fachadas, fundações, quadros de pilares, armaduras e acabamentos, implantação e detalhes típicos — com carimbo, legenda e notas.</p>
+      <ul><li>PDF em A3 pronto para imprimir</li><li>DXF para AutoCAD e IFC 4 para Revit e Navisworks</li><li>Planta de fundo em PDF colocada na escala para desenhar por cima</li></ul>
+    </div>
+    <div class="img"><img src="img/pranchas.webp" width="1600" height="896" alt="Prancha de planta detalhada com quadro de áreas e esquadrias" loading="lazy"></div>
+  </div>
+
+  <div class="feat">
+    <div class="txt">
+      <h3>Custo, prazo e riscos sem planilha paralela.</h3>
+      <p>Quantitativo por serviço com preço, custo provável com reserva de risco, cronograma com equipe e histograma, e a lista do que precisa de atenção.</p>
+      <ul><li>“Onde vai o dinheiro” por etapa da obra</li><li>Excel com quantitativo, lista de materiais por disciplina e memória de cálculo</li><li>Memorial descritivo em Word, editável</li></ul>
+    </div>
+    <div class="img"><img src="img/resultados.webp" width="1600" height="1000" alt="Tela de resultados com custo, prazo, área e pontos de atenção" loading="lazy"></div>
+  </div>
+
+  <div class="feat rev">
+    <div class="txt">
+      <h3>Veja o conjunto em 3D antes de apresentar.</h3>
+      <p>Terreno, edificação, pipe racks, canaletas, cercas e bases aparecem juntos. Gire, aproxime e exporte a imagem para a reunião.</p>
+    </div>
+    <div class="img"><img src="img/3d.webp" width="1200" height="729" alt="Vista 3D de uma casa de bombas com pipe rack e cerca" loading="lazy"></div>
+  </div>
+
+  <div class="grid" style="margin-top:84px">
+    <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16"/><path d="M4 12h16M12 4v16"/></svg></div><h4>Acabamento por parede</h4><p>Toque na parede e escolha pintura, cerâmica, porcelanato, epóxi… com a altura da barra.</p></div>
+    <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></div><h4>Planta de fundo na escala</h4><p>Carregue um PDF ou foto, informe a escala ou meça uma cota conhecida e desenhe por cima.</p></div>
+    <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V5M16 20v-6M2 20h20"/></svg></div><h4>Cronograma e histograma</h4><p>Sequência das etapas, equipe por função e prazo em dias úteis.</p></div>
+    <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v6c0 4-3.5 7-8 8-4.5-1-8-4-8-8V7z"/><path d="M9 12l2 2 4-4"/></svg></div><h4>Segurança do trabalho</h4><p>Itens de NR-18, NR-33 e NR-35 entram sozinhos no quantitativo conforme a obra.</p></div>
+    <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg></div><h4>Seus projetos ficam com você</h4><p>O estudo é salvo no seu aparelho e num arquivo que você guarda. Nada vai para servidor.</p></div>
+    <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg></div><h4>Modo simples e modo engenheiro</h4><p>Tela limpa para quem está começando; todos os parâmetros quando você precisar.</p></div>
+  </div>
+</div></section>
+
+<section class="dark" id="como"><div class="wrap">
+  <p class="kick">Como funciona</p>
+  <h2 style="color:#fff">Três passos, sem curso.</h2>
+  <p class="sub">Comece com o assistente ou com um desenho rápido. Ajuste tocando no que quiser mudar.</p>
+  <div class="steps">
+    <div class="step"><h4>Comece</h4><p>Escolha um assistente, desenhe uma sala ou carregue a planta que você já tem.</p></div>
+    <div class="step"><h4>Ajuste</h4><p>Toque numa sala, parede ou peça: renomeie, troque o tipo, o piso, o revestimento e as medidas.</p></div>
+    <div class="step"><h4>Entregue</h4><p>Baixe as pranchas, a planilha, o memorial e o modelo 3D para levar à reunião.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap tablet">
+  <div>
+    <p class="kick">No tablet também</p>
+    <h2>Leve o estudo para a obra.</h2>
+    <p class="sub" style="margin-bottom:24px">A tela se reorganiza no tablet em pé ou deitado. Botões grandes, cartões que abrem embaixo e o desenho sempre visível.</p>
+    <a class="btn pri" href="app.html">Abrir no meu aparelho</a>
+  </div>
+  <div class="dev"><img src="img/tablet.webp" width="900" height="1295" alt="PlantaCalc no tablet escolhendo o revestimento de uma parede" loading="lazy"></div>
+</div></section>
+
+<section id="planos" style="background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)"><div class="wrap">
+  <p class="kick">Planos</p>
+  <h2>Grátis para usar. Pro para entregar.</h2>
+  <p class="sub">Todas as ferramentas estão no plano Gratuito. O Pro tira os anúncios e a marca d'água das pranchas.</p>
+  <div class="planos">
+    <div class="plano">
+      <h3>Gratuito</h3><div class="pr">R$ 0</div><div class="alt">sem cadastro</div>
+      <ul><li>Todos os assistentes e cálculos</li><li>Pranchas, quantitativo, cronograma, memorial e 3D</li><li>Exporta PDF, Excel, Word, DXF e IFC</li><li class="n">Com anúncios</li><li class="n">Pranchas com marca d'água “versão gratuita”</li></ul>
+      <a class="btn sec" href="app.html">Começar grátis</a>
+    </div>
+    <div class="plano pro"><span class="rib" id="eco">Mais escolhido</span>
+      <h3>Pro</h3><div class="pr"><span data-preco="mensal">R$ 29,90</span><small> /mês</small></div><div class="alt">ou <span data-preco="anual">R$ 299,00</span> por ano</div>
+      <ul><li>Tudo do Gratuito</li><li>Sem nenhum anúncio</li><li>Pranchas e PDF sem marca d'água</li><li>Cancele quando quiser, sem multa</li></ul>
+      <a class="btn pri" href="conta.html?assinar=anual">Assinar o Pro</a>
+    </div>
+  </div>
+  <p class="nota">Pagamento pelo Mercado Pago. Desistiu nos primeiros 7 dias? Devolvemos o valor integral (Código de Defesa do Consumidor, art. 49).</p>
+</div></section>
+
+<section id="duvidas"><div class="wrap">
+  <p class="kick">Dúvidas</p>
+  <h2>Perguntas frequentes</h2>
+  <div class="faq">
+    <details><summary>Preciso instalar alguma coisa?</summary><p>Não. O PlantaCalc abre no navegador (Chrome, Edge, Safari ou Firefox) do notebook, do tablet ou do celular.</p></details>
+    <details><summary>O estudo substitui o projeto executivo?</summary><p>Não. O PlantaCalc gera estudo preliminar: serve para estimar custo e prazo, comparar alternativas e apoiar a decisão. Obra exige projeto executivo com responsável técnico e ART.</p></details>
+    <details><summary>Onde ficam os meus projetos?</summary><p>No seu aparelho. O estudo é guardado no navegador e você pode salvar um arquivo (.json) para guardar, enviar ou abrir em outro computador. Os desenhos não são enviados para nenhum servidor.</p></details>
+    <details><summary>De onde vêm os preços?</summary><p>De uma base de preços de referência que vem com o sistema. Você pode ajustar os preços unitários e índices no modo engenheiro para a sua região ou para a sua empresa.</p></details>
+    <details><summary>Como funciona o pagamento do Pro?</summary><p>A assinatura é feita pelo Mercado Pago, mensal ou anual, com renovação automática. Você cancela quando quiser em “Minha conta” e continua com o Pro até o fim do período pago.</p></details>
+    <details><summary>Posso usar o plano Gratuito em trabalho profissional?</summary><p>Sim. A única diferença são os anúncios na tela e a marca d'água “versão gratuita” nas pranchas.</p></details>
+  </div>
+</div></section>
+
+<div class="final"><h2>Faça o seu primeiro estudo agora.</h2><p>Grátis, sem cadastro, em menos de 15 minutos.</p><a class="btn pri" href="app.html">Abrir o PlantaCalc</a></div>
+</main>
+
+<footer><div class="wrap">
+  <a class="logo" href="index.html" style="font-size:16px"><img src="img/icone.svg" alt="" style="width:26px;height:26px">PlantaCalc</a>
+  <nav><a href="termos.html">Termos de uso</a><a href="privacidade.html">Privacidade</a><a href="conta.html">Minha conta</a><a id="mail" href="#">Contato</a></nav>
+  <span>© <span id="ano"></span> PlantaCalc</span>
+</div></footer>
+<script>
+(function(){var C=window.PC_CFG||{};var f=function(v){return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});};
+ if(C.preco){document.querySelectorAll('[data-preco]').forEach(function(e){e.textContent=f(C.preco[e.dataset.preco]);});var eco=Math.round((1-C.preco.anual/(C.preco.mensal*12))*100);if(eco>0)document.getElementById('eco').textContent='Anual: economize '+eco+'%';}
+ var m=document.getElementById('mail');if(C.contato){m.href='mailto:'+C.contato;}else m.remove();document.getElementById('ano').textContent=new Date().getFullYear();
+ document.querySelectorAll('#menu a').forEach(function(a){a.addEventListener('click',function(){document.getElementById('menu').classList.remove('open');});});})();
+</script>
+</body>
+</html>

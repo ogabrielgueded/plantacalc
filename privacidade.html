@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Política de privacidade — PlantaCalc</title>
+<link rel="icon" href="img/icone.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+<script src="config.js"></script>
+</head>
+<body>
+<header class="nav"><div class="wrap"><a class="logo" href="index.html"><img src="img/icone.svg" alt="">PlantaCalc</a><div class="sp"></div><a class="btn pri sm" href="app.html">Abrir o PlantaCalc</a></div></header>
+<main class="doc">
+<h1>Política de privacidade</h1><div class="dt">Última atualização: 8 de novembro de 2026</div>
+<p>Esta política explica como o PlantaCalc trata dados pessoais, conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018 – LGPD). Controlador: <span data-cfg="responsavel"></span>, <span data-cfg="documento"></span>, <span data-cfg="cidade"></span>. Contato do encarregado: <a data-mail href="#">e-mail</a>.</p>
+
+<h2>1. Quais dados tratamos</h2>
+<ul>
+<li><b>Conta (somente plano Pro):</b> e-mail e senha (guardada de forma criptografada pelo provedor de autenticação).</li>
+<li><b>Assinatura:</b> situação da assinatura e identificador da assinatura no Mercado Pago. <b>Não recebemos nem guardamos dados de cartão</b>: o pagamento é feito diretamente no Mercado Pago.</li>
+<li><b>Seus projetos:</b> ficam no seu navegador (armazenamento local) e nos arquivos que você salva. Não são enviados aos nossos servidores.</li>
+<li><b>Anúncios (plano Gratuito):</b> o Google AdSense pode usar cookies e identificadores do dispositivo para exibir e medir anúncios.</li>
+</ul>
+
+<h2>2. Para que usamos</h2>
+<ul>
+<li>Criar e manter sua conta e liberar o plano contratado (execução de contrato).</li>
+<li>Processar a assinatura e cumprir obrigações legais e fiscais (obrigação legal).</li>
+<li>Exibir anúncios no plano Gratuito: anúncios personalizados apenas com o seu consentimento; sem consentimento, anúncios não personalizados.</li>
+<li>Responder aos seus contatos e prevenir fraudes (legítimo interesse).</li>
+</ul>
+
+<h2>3. Com quem compartilhamos</h2>
+<ul>
+<li><b>Supabase</b> — hospedagem da conta e da situação do plano.</li>
+<li><b>Mercado Pago</b> — processamento dos pagamentos.</li>
+<li><b>Google (AdSense)</b> — anúncios no plano Gratuito. Saiba como o Google usa os dados em <a href="https://policies.google.com/technologies/partner-sites?hl=pt-BR" target="_blank" rel="noopener">policies.google.com/technologies/partner-sites</a>.</li>
+</ul>
+<p>Esses fornecedores podem armazenar dados fora do Brasil, com as salvaguardas previstas na LGPD. Não vendemos dados pessoais.</p>
+
+<h2>4. Cookies</h2>
+<p>Usamos armazenamento local para lembrar suas preferências (modo da tela, plano, escolha sobre cookies) e manter a sessão. No plano Gratuito, o Google usa cookies de publicidade conforme a sua escolha no aviso de cookies. Você pode mudar a escolha limpando os dados do site no navegador.</p>
+
+<h2>5. Por quanto tempo</h2>
+<p>Dados da conta: enquanto a conta existir. Registros de assinatura e pagamento: pelo prazo exigido pela legislação fiscal. Após pedido de exclusão, apagamos ou anonimizamos o que não precisar ser mantido por lei.</p>
+
+<h2>6. Seus direitos</h2>
+<p>Você pode pedir confirmação, acesso, correção, portabilidade, exclusão dos dados e revogação do consentimento, e reclamar à ANPD. Escreva para o <a data-mail href="#">e-mail de contato</a>.</p>
+
+<h2>7. Segurança</h2>
+<p>A comunicação é criptografada (HTTPS), o acesso aos dados da conta é restrito por regras de segurança no banco de dados e o pagamento ocorre no ambiente do Mercado Pago.</p>
+</main>
+<footer><div class="wrap"><nav><a href="index.html">Início</a><a href="termos.html">Termos de uso</a><a href="privacidade.html">Privacidade</a></nav><span>© <span id="ano"></span> PlantaCalc</span></div></footer>
+<script>(function(){var C=window.PC_CFG||{};document.querySelectorAll('[data-cfg]').forEach(function(e){var v=C[e.dataset.cfg];if(v){e.textContent=v;if(/^\[/.test(v))e.classList.add('ph');}});document.querySelectorAll('[data-mail]').forEach(function(a){if(C.contato){a.href='mailto:'+C.contato;a.textContent=C.contato;}});document.getElementById('ano').textContent=new Date().getFullYear();})();</script>
+</body>
+</html>
