@@ -7948,13 +7948,54 @@ function iaLigarCroqui(){const t=$('#iaTxt');$$('#iaOv [data-iax]').forEach(b=>b
   finally{IA.ocupado=false;const bb=$('#iaGo');if(bb){bb.disabled=false;bb.textContent='Gerar croqui';}}};}
 function iaAplicar(d,modo){mark();const res=[];
  if(modo==='sub'){const pv=ed.pav||0;S.rooms=S.rooms.filter(r=>(r.pav||0)!==pv);S.ops=S.ops.filter(o=>(o.pav||0)!==pv);S.equip=(S.equip||[]).filter(q=>(q.pav||0)!==pv);}
- const cap=s=>{s=String(s||'').trim();return s?s.charAt(0).toUpperCase()+s.slice(1):s;};
+ const nR0=S.rooms.length,nO0=S.ops.length;const cap=s=>{s=String(s||'').trim();return s?s.charAt(0).toUpperCase()+s.slice(1):s;};
  for(const c0 of d.comandos){let c=String(c0).trim().replace(/[.;]+$/,'').replace(/\s+a\s+(\d+(?:[.,]\d+)?)\s*(?:m|metros?)?$/i,' a $1 m');
   S._pav=ed.pav;const nR=S.rooms.length,nE=(S.equip||[]).length;let r;try{r=comando(S,c);}catch(e){r={ok:false,msg:String(e.message||e)};}
   if(r.ok){/* o motor de comandos tira acentos dos nomes: devolve o nome como a IA escreveu */
    let m;if(S.rooms.length>nR&&(m=c.match(/^(?:ambiente|sala|criar)\s+(.+?)\s+\d+(?:[.,]\d+)?\s*(?:x|×|por)\s*\d/i)))S.rooms[S.rooms.length-1].nome=cap(m[1]);
    if((S.equip||[]).length>nE&&(m=c.match(/^equipamento\s+\S+\s+(.+?)\s+em\s+.+$/i)))S.equip[S.equip.length-1].nome=m[1].trim();}
   res.push({c,ok:!!r.ok,msg:r.msg||''});}
+ /* todo ambiente criado precisa de acesso: se a IA esqueceu a porta, coloca uma no maior trecho livre de parede externa */
+ try{const pv=ed.pav||0,novos=S.rooms.slice(nR0).filter(r=>(r.pav||0)===pv);
+  const ehPorta=o=>{const e=S.esq.find(x=>x.id===o.tipo);return e?(e.cat==='porta'||e.cat==='portao'):/^P/.test(o.tipo);};
+  const naParede=(o,b)=>o.ori==='h'?((Math.abs(o.y-b.y0)<30||Math.abs(o.y-b.y1)<30)&&o.x>b.x0&&o.x<b.x1):((Math.abs(o.x-b.x0)<30||Math.abs(o.x-b.x1)<30)&&o.y>b.y0&&o.y<b.y1);
+  const livres=(r,lado)=>{const b=polyBBox(r.poly);const hz=lado==='n'||lado==='s';const c=lado==='n'?b.y0:lado==='s'?b.y1:lado==='o'?b.x0:b.x1;let seg=[[hz?b.x0:b.y0,hz?b.x1:b.y1]];
+   S.rooms.forEach(q=>{if(q===r||(q.pav||0)!==pv)return;const bq=polyBBox(q.poly);const toca=lado==='n'?Math.abs(bq.y1-c)<30:lado==='s'?Math.abs(bq.y0-c)<30:lado==='o'?Math.abs(bq.x1-c)<30:Math.abs(bq.x0-c)<30;if(!toca)return;
+    const a=hz?bq.x0:bq.y0,z=hz?bq.x1:bq.y1;seg=seg.flatMap(([s,e])=>z<=s||a>=e?[[s,e]]:[[s,Math.max(s,a)],[Math.min(e,z),e]].filter(([u,v])=>v-u>1));});return seg.map(([s,e])=>({lado,c,s,e,len:e-s}));};
+  const tipoPorta=r=>{const n=normTxt(r.nome+' '+r.tipo);const tem=id=>S.esq.some(e=>e.id===id);
+   if(/sanit|banh|wc/.test(n)&&tem('P3'))return 'P3';if(/bomba|galp|oficin|eletric|\bsel\b|\bcb\b|subest|trafo|compress/.test(n)&&tem('PM'))return 'PM';if(/deposit|almox/.test(n)&&tem('P1'))return 'P1';return tem('P2')?'P2':(S.esq.find(e=>e.cat==='porta')||{}).id;};
+  const LADOS=['s','n','o','l'],NOME_L={n:'norte',s:'sul',o:'oeste',l:'leste'};
+  const vizinhos=(r,lado)=>{const b=polyBBox(r.poly);const hz=lado==='n'||lado==='s';const c=lado==='n'?b.y0:lado==='s'?b.y1:lado==='o'?b.x0:b.x1;const out=[];
+   S.rooms.forEach(q=>{if(q===r||(q.pav||0)!==pv)return;const bq=polyBBox(q.poly);const toca=lado==='n'?Math.abs(bq.y1-c)<30:lado==='s'?Math.abs(bq.y0-c)<30:lado==='o'?Math.abs(bq.x1-c)<30:Math.abs(bq.x0-c)<30;if(!toca)return;
+    const s0=Math.max(hz?b.x0:b.y0,hz?bq.x0:bq.y0),e0=Math.min(hz?b.x1:b.y1,hz?bq.x1:bq.y1);if(e0-s0>1)out.push({q,lado,c,s:s0,e:e0,len:e0-s0});});return out;};
+  const ladoDe=(o,b)=>o.ori==='h'?(Math.abs(o.y-b.y0)<30?'n':Math.abs(o.y-b.y1)<30?'s':null):(Math.abs(o.x-b.x0)<30?'o':Math.abs(o.x-b.x1)<30?'l':null);
+  const salas=S.rooms.filter(r=>(r.pav||0)===pv);
+  const alcance=()=>{const ok=new Set(),adj=new Map(salas.map(r=>[r,new Set()]));
+   for(const r of salas){const b=polyBBox(r.poly);for(const o of S.ops){if((o.pav||0)!==pv||!ehPorta(o)||!naParede(o,b))continue;const l=ladoDe(o,b);if(!l)continue;const pos=o.ori==='h'?o.x:o.y;
+    if(livres(r,l).some(sg=>pos>sg.s&&pos<sg.e))ok.add(r);const v=vizinhos(r,l).find(sg=>pos>sg.s&&pos<sg.e);if(v){adj.get(r).add(v.q);adj.get(v.q)&&adj.get(v.q).add(r);}}}
+   const fila=[...ok];while(fila.length){const r=fila.shift();for(const q of adj.get(r)||[])if(!ok.has(q)){ok.add(q);fila.push(q);}}return ok;};
+  const larg=o=>(S.esq.find(e=>e.id===(o.tipo||o))||{l:900}).l;
+  /* posição livre no trecho: começa no meio e se afasta até não encostar em outra abertura da mesma linha */
+  const posLivre=(sg,w,ign)=>{const hz=sg.lado==='n'||sg.lado==='s';const outros=S.ops.filter(o=>o!==ign&&(o.pav||0)===pv&&o.ori===(hz?'h':'v')&&Math.abs((hz?o.y:o.x)-sg.c)<30);
+   const cabe=p=>p-w/2>=sg.s+150&&p+w/2<=sg.e-150&&outros.every(o=>Math.abs((hz?o.x:o.y)-p)>=(w+larg(o))/2+150);const m=Math.round((sg.s+sg.e)/2);
+   for(let d=0;d<=sg.len/2;d+=100){if(cabe(m+d))return m+d;if(cabe(m-d))return m-d;}return null;};
+  /* aberturas que a IA pôs em cima de um canto ou atravessando o fim de um trecho de parede: escorrega para dentro do trecho */
+  S.ops.slice(nO0).filter(o=>(o.pav||0)===pv).forEach(o=>{const hz=o.ori==='h',pos=hz?o.x:o.y,w=larg(o);
+   const r=salas.find(q=>naParede(o,polyBBox(q.poly))||(()=>{const b=polyBBox(q.poly);return hz?((Math.abs(o.y-b.y0)<30||Math.abs(o.y-b.y1)<30)&&o.x>=b.x0-1&&o.x<=b.x1+1):((Math.abs(o.x-b.x0)<30||Math.abs(o.x-b.x1)<30)&&o.y>=b.y0-1&&o.y<=b.y1+1);})());if(!r)return;
+   const l=ladoDe(o,polyBBox(r.poly));if(!l)return;const segs=[...livres(r,l),...vizinhos(r,l)];if(segs.some(sg=>pos-w/2>=sg.s+100&&pos+w/2<=sg.e-100))return;
+   const sg=segs.filter(x=>x.len>=w+300).sort((a,b2)=>Math.min(Math.abs(pos-a.s),Math.abs(pos-a.e))-Math.min(Math.abs(pos-b2.s),Math.abs(pos-b2.e)))[0];
+   const np=sg&&posLivre(sg,w,o);if(np!=null){if(hz)o.x=np;else o.y=np;}});
+  const porNaParede=(r,sg,tp,txt)=>{const w=larg(tp);const pos=posLivre(sg,w);if(pos==null)return false;const hz=sg.lado==='n'||sg.lado==='s';
+   S.ops.push({id:uid(),tipo:tp,ori:hz?'h':'v',x:hz?pos:sg.c,y:hz?sg.c:pos,lado:(sg.lado==='n'||sg.lado==='o')?-1:1,dob:0,pav:pv});res.push({c:`(automático) porta ${tp} ${txt}`,ok:true,msg:''});return true;};
+  for(let volta=0;volta<novos.length+2;volta++){const ok=alcance();const sem=novos.filter(r=>!ok.has(r));if(!sem.length)break;let feito=false;
+   /* primeiro os ambientes "de passagem" (vestiário, sala…) ganham saída externa; sanitário e depósito abrem para um vizinho que já tem acesso */
+   const interno=r=>/sanit|banh|wc|deposit|almox/.test(normTxt(r.nome+' '+r.tipo));
+   for(const r of sem.sort((a,b)=>interno(a)-interno(b))){const tp=tipoPorta(r);if(!tp)continue;const w=(S.esq.find(e=>e.id===tp)||{l:900}).l;
+    const ext=LADOS.flatMap(l=>livres(r,l)).filter(sg=>sg.len>=w+400).sort((a,b2)=>b2.len-a.len);
+    const viz=LADOS.flatMap(l=>vizinhos(r,l)).filter(sg=>ok.has(sg.q)&&sg.len>=w+400).sort((a,b2)=>b2.len-a.len);
+    const tenta=(lst,f)=>lst.some(sg=>porNaParede(r,sg,tp,f(sg)));const txV=sg=>`entre ${r.nome} e ${sg.q.nome}`,txE=sg=>`na parede ${NOME_L[sg.lado]} de ${r.nome}`;
+    if((interno(r)&&tenta(viz,txV))||tenta(ext,txE)||tenta(viz,txV)){feito=true;break;}}
+   if(!feito)break;}}catch(e){console.warn('acesso',e);}
  /* equipamentos inseridos no mesmo ambiente ficariam empilhados no centro: distribui ao longo do maior lado */
  const porSala={};(S.equip||[]).forEach(q=>{const rm=S.rooms.find(x=>(x.pav||0)===(q.pav||0)&&pip(x.poly,q.x,q.y));if(rm)(porSala[rm.id]=porSala[rm.id]||{rm,eq:[]}).eq.push(q);});
  Object.values(porSala).forEach(({rm,eq})=>{const pos=eq.map(q=>q.x+','+q.y);if(new Set(pos).size===pos.length)return;const b=polyBBox(rm.poly),hz=(b.x1-b.x0)>=(b.y1-b.y0);
@@ -7970,10 +8011,15 @@ function iaHtmlEscopo(){
  return `<p class="d">A IA lê o memorial descritivo calculado pelo PlantaCalc (áreas, fundações, estrutura, quantitativos, prazo e custo) e redige o <b>escopo técnico para contratação</b>, pronto para mandar às empreiteiras. Ela não inventa quantidades: usa só os dados do estudo.</p>
  <button class="go" id="iaGoE">${IA.escopo?'Redigir de novo':'Redigir escopo técnico'}</button><div class="msg" id="iaMsg"></div><div id="iaDoc">${IA.escopo?iaDocHtml(IA.escopo):''}</div>
  <p class="av">Revise antes de enviar: o texto é gerado por IA a partir de um estudo preliminar. O memorial do estudo é enviado ao provedor de IA (sem uso para treinamento).</p>`;}
-function iaMemorialTxt(){const D=memorialDoc(S,M,Q,CH);let s='';
- for(const d of D){if(d.h!=null)s+=`\n${'#'.repeat((d.l||0)+1)} ${d.h}\n`;else if(d.p)s+=d.p+'\n';else if(d.ul)s+=d.ul.map(x=>'- '+x).join('\n')+'\n';
-  else if(d.table){s+=d.table.head.join(' | ')+'\n'+d.table.rows.slice(0,40).map(r=>r.join(' | ')).join('\n')+'\n';}}
- return s.slice(0,24000);}
+/* resumo compacto do memorial: o limite gratuito do provedor é de poucos milhares de palavras por minuto,
+   então o espaço é dividido entre as seções (nenhuma fica de fora) */
+function iaMemorialTxt(){const D=memorialDoc(S,M,Q,CH),TOT=8600;const cut=(t,n)=>{t=String(t);return t.length>n?t.slice(0,n)+'…':t;};const secs=[];let cur=null;
+ for(const d of D){if(d.h!=null&&(d.l||0)<=1){cur={h:d.h,l:d.l||0,b:''};secs.push(cur);continue;}if(!cur){cur={h:'',l:1,b:''};secs.push(cur);}
+  if(d.h!=null)cur.b+=`### ${d.h}\n`;else if(d.p)cur.b+=cut(d.p,320)+'\n';else if(d.ul)cur.b+=d.ul.slice(0,6).map(x=>'- '+cut(x,150)).join('\n')+'\n';
+  else if(d.table)cur.b+=d.table.head.join(' | ')+'\n'+d.table.rows.slice(0,3).map(r=>r.map(c=>cut(c,30)).join(' | ')).join('\n')+(d.table.rows.length>3?`\n(+${d.table.rows.length-3} linhas)`:'')+'\n';}
+ let rest=TOT-secs.reduce((a,x)=>a+x.h.length+6,0);const ord=secs.slice().sort((a,b)=>a.b.length-b.b.length);let n=ord.length;
+ for(const x of ord){const cota=Math.floor(rest/n);if(x.b.length>cota)x.b=x.b.slice(0,Math.max(0,cota-1))+'…';rest-=x.b.length;n--;}
+ return secs.map(x=>(x.h?`${'#'.repeat(x.l+1)} ${x.h}\n`:'')+x.b).join('\n');}
 function iaDocHtml(E){return `<div class="doc"><h3 style="font-size:16px">${esc(E.titulo)}</h3>${E.secoes.map(s=>`<h3>${esc(s.titulo)}</h3>${s.paragrafos.map(p=>`<p>${esc(p)}</p>`).join('')}${s.itens.length?`<ul>${s.itens.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>`:''}`).join('')}</div>
  <div class="acts"><button data-iae="docx" class="p">Baixar Word (.docx)</button><button data-iae="pdf">Baixar PDF</button><button data-iae="copiar">Copiar texto</button></div>`;}
 function iaEscopoD(E){const D=[{h:E.titulo,l:0},{p:`${S.meta.obra} — documento ${S.meta.codigo}, rev. ${S.meta.rev}. Escopo redigido com apoio de IA a partir do estudo preliminar do PlantaCalc (modelo #${modelHash(S)}). Não é projeto executivo: revise antes de enviar.`}];
@@ -7986,7 +8032,7 @@ function iaLigarEscopo(){const pro=$('#iaOv [data-ia="pro"]');if(pro)pro.onclick
   else{try{await navigator.clipboard.writeText(iaEscopoTxt(E));b.textContent='Copiado ✓';}catch(e){b.textContent='Não foi possível copiar';}setTimeout(()=>{if(b.isConnected)b.textContent='Copiar texto';},2200);}});};
  ligarDoc();
  const go=$('#iaGoE');if(!go)return;go.onclick=async()=>{IA.ocupado=true;go.disabled=true;go.innerHTML='<span class="sp"></span>A IA está redigindo… (até 1 minuto)';iaMsg('');
-  try{const d=await iaChamar({acao:'escopo',memorial:iaMemorialTxt()});IA.cota={usados:d.usados,limite:d.limite,pro:true};iaCotaTxt();IA.escopo={titulo:d.titulo,secoes:d.secoes};IA.escopoPj=typeof PJ!=='undefined'?PJ.atual:null;
+  try{const d=await iaChamar({acao:'escopo',memorial:iaMemorialTxt()});IA.cota={usados:d.usados,limite:d.limite,pro:true};iaCotaTxt();IA.escopo={titulo:d.titulo,secoes:(d.secoes||[]).filter(x=>(x.titulo||'').trim()&&(x.paragrafos.length||x.itens.length))};IA.escopoPj=typeof PJ!=='undefined'?PJ.atual:null;
    $('#iaDoc').innerHTML=iaDocHtml(IA.escopo);ligarDoc();iaMsg('Escopo redigido. Revise e baixe.',true);}
   catch(e){iaMsg(iaErro(e));}
   finally{IA.ocupado=false;const g=$('#iaGoE');if(g){g.disabled=false;g.textContent=IA.escopo?'Redigir de novo':'Redigir escopo técnico';}}};}
