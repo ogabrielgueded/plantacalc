@@ -57,8 +57,9 @@ function prepara(D){const pf=Object.fromEntries(D.perfis.map(p=>[p.id,p])),cad=O
  const ss={};for(const s of D.sessoes){(ss[s.user_id]=ss[s.user_id]||[]).push(s);}
  const agora=new Date(D.agora),mesIA=D.agora.slice(0,7);
  D.U=D.usuarios.map(u=>{const p=pf[u.id]||{},c=cad[u.id]||{},S=ss[u.id]||[];const val=p.validade?new Date(p.validade):null;const pro=p.plano==='pro'&&val&&val>agora;
-  const pago=pro&&['authorized','pix'].includes(String(p.mp_status));const cort=pro&&!pago&&p.cortesia_ate&&new Date(p.cortesia_ate)>agora;
-  const plano=u.banido||p.bloqueado?'bloqueado':pago?'pro':cort?'cortesia':pro?'pro':'gratis';
+  /* pagante = assinatura autorizada ou Pix pago; Pro sem pagamento registrado (cortesia ou liberação manual) conta como cortesia */
+  const pago=pro&&['authorized','pix'].includes(String(p.mp_status));const cort=pro&&!pago;
+  const plano=u.banido||p.bloqueado?'bloqueado':pago?'pro':cort?'cortesia':'gratis';
   const ult=S.length?S[0].fim:u.ultimo_login;const seg=S.reduce((a,s)=>a+(s.segundos||0),0);
   const cid=conta(S.filter(s=>s.cidade),s=>s.cidade+(s.uf?' – '+s.uf:''),s=>Math.max(1,s.segundos||0))[0];
   return {id:u.id,email:u.email,nome:c.nome||'',prof:c.profissao||'',emp:c.empresa||'',cidCad:c.cidade?(c.cidade+(c.uf?' – '+c.uf:'')):'',ufCad:c.uf||'',tel:c.telefone||'',novid:!!c.novidades,cadOk:!!(c.nome&&c.profissao),
@@ -95,7 +96,7 @@ async function telaDash(){carregando('Carregando indicadores…');let D;try{D=aw
   ${kp('Usuários cadastrados',fmt(U.length),`<i>${fmt(U.filter(u=>!u.cadOk).length)} com cadastro incompleto</i>`)}
   ${kp('Novos no período',fmt(novos.length),dlt(novos.length,novosAnt.length),novos.length>=novosAnt.length?'up':'dn')}
   ${kp('Pro pagantes',fmt(pagantes.length),`<i>${pct(pagantes.length,U.length)} dos usuários</i>`)}
-  ${kp('Pro cortesia',fmt(cort.length))}
+  ${kp('Pro cortesia / sem pagamento',fmt(cort.length))}
   ${kp('Gratuitos',fmt(gratis.length))}
   ${kp('Bloqueados',fmt(bloq.length))}
   ${kp('Receita mensal recorrente (MRR)',brl(mrr),`<i>anual equivalente ${brl(mrr*12)}</i>`)}
@@ -131,7 +132,7 @@ async function telaDash(){carregando('Carregando indicadores…');let D;try{D=aw
 
 /* ---------- USUÁRIOS ---------- */
 let FU={q:'',pl:'todos',ord:'ult',dir:-1,sel:null};
-function linhaPlano(u){return u.plano==='bloqueado'?'<span class="bdg b-blo">bloqueado</span>':u.plano==='pro'?`<span class="bdg b-pro">Pro ${u.ciclo||''}</span>`:u.plano==='cortesia'?'<span class="bdg b-cor">Pro cortesia</span>':'<span class="bdg b-fre">Gratuito</span>';}
+function linhaPlano(u){return u.plano==='bloqueado'?'<span class="bdg b-blo">bloqueado</span>':u.plano==='pro'?`<span class="bdg b-pro">Pro ${u.ciclo||''}</span>`:u.plano==='cortesia'?`<span class="bdg b-cor">${u.p.cortesia_ate?'Pro cortesia':'Pro sem pagamento'}</span>`:'<span class="bdg b-fre">Gratuito</span>';}
 function tabelaUsu(L,curta){if(!L.length)return '<div class="tw"><div class="vazio">Nenhum usuário.</div></div>';
  const th=(k,n,cl)=>`<th class="${cl||''}" data-ord="${k}">${n}${FU.ord===k&&!curta?(FU.dir>0?' ▲':' ▼'):''}</th>`;
  return `<div class="tw"><table class="t"><thead><tr>${th('nome','Usuário')}${th('prof','Profissão')}${th('plano','Plano')}${th('criado','Cadastro')}${th('ult','Último uso')}${th('nSess','Sessões','n')}${th(curta?'segP':'seg',curta?'Tempo no período':'Tempo total','n')}${th('cidUso','Onde mais usa')}${th('nProj','Projetos','n')}${th('ia','IA no mês','n')}</tr></thead><tbody>
