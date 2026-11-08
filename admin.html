@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Administração — PlantaCalc</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="img/icone.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+<style>
+.adm{max-width:1080px;margin:28px auto 60px;padding:0 16px}
+.adm .card{max-width:none}
+.adm h1{font-size:26px;margin:0 0 4px}.adm h2{font-size:19px;margin:0 0 6px}
+.drop{border:2px dashed #b9c4cc;border-radius:14px;padding:30px 16px;text-align:center;color:var(--mut);cursor:pointer;transition:.15s;margin:14px 0}
+.drop.on,.drop:hover{border-color:var(--g2);background:#f3faf3;color:var(--g2)}
+.drop b{display:block;font-size:17px;color:var(--ink,#1b2733);margin-bottom:4px}
+.barra{height:10px;background:#e8edf0;border-radius:6px;overflow:hidden;margin:8px 0 4px}.barra i{display:block;height:100%;width:0;background:var(--g2);transition:width .2s}
+.st{font-size:14px;color:var(--mut);min-height:20px}
+.tb{width:100%;border-collapse:collapse;font-size:14px;margin:10px 0}
+.tb th{text-align:left;font-weight:600;color:var(--mut);font-size:12.5px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1.5px solid var(--line);padding:7px 8px}
+.tb td{border-bottom:1px solid var(--line);padding:7px 8px;font-variant-numeric:tabular-nums}
+.tb td.n{text-align:right;font-family:'IBM Plex Mono',monospace;font-size:13px}
+.ok{color:#1b7a2a;font-weight:600}.av{color:#9a5b00;font-weight:600}.er{color:#a3241a;font-weight:600}
+.box{border-radius:12px;padding:12px 14px;margin:12px 0;font-size:14.5px}
+.box.ok{background:#eef8ef;border:1px solid #cfe8d2;color:#1b5e20;font-weight:400}.box.av{background:#fff7e6;border:1px solid #f1d9a6;color:#6b4300;font-weight:400}.box.er{background:#fdeeee;border:1px solid #f2c5c2;color:#7d1a12;font-weight:400}
+.acoes{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.scroll{overflow-x:auto}
+.hist li{margin:4px 0}
+.tag{display:inline-block;font-size:12px;font-weight:600;border-radius:20px;padding:2px 9px;background:#e8f3e9;color:#1b5e20;margin-left:6px}
+</style>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="sinapi_parse.js"></script>
+</head>
+<body>
+<header class="nav"><div class="wrap">
+  <a class="logo" href="index.html"><img src="img/icone.svg" alt="">PlantaCalc</a>
+  <div class="sp"></div>
+  <a class="btn sm" href="app.html">Abrir o PlantaCalc</a>
+</div></header>
+
+<div class="adm"><div class="card" id="box"><p class="m">Carregando…</p></div></div>
+
+<script type="module">
+import * as pdfjs from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs';
+pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
+const C=window.PC_CFG||{},P=window.SINAPI_PARSE,box=document.getElementById('box');
+const ADMINS=(C.admins||[C.contato]).map(e=>String(e).toLowerCase());
+const BUCKET='sinapi';
+const UFS=['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
+const sb=window.supabase.createClient(C.supabaseUrl,C.supabaseKey);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>n==null?'—':Number(n).toLocaleString('pt-BR');
+const mesChave=m=>{const x=String(m||'').match(/(\d{2})\/(\d{4})/);return x?x[2]+'-'+x[1]:null;};
+const mesNome=k=>{const [a,m]=k.split('-');return ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][+m-1]+'/'+a;};
+let user=null,R=null;
+
+async function indice(){try{const r=await fetch(sb.storage.from(BUCKET).getPublicUrl('index.json').data.publicUrl+'?t='+Date.now(),{cache:'no-store'});if(r.ok)return await r.json();}catch(e){}return {atual:null,meses:{}};}
+
+async function inicio(){const {data}=await sb.auth.getSession();user=data.session&&data.session.user;
+ if(!user){box.innerHTML='<h1>Administração</h1><p class="m">Entre com a sua conta de administrador para continuar.</p><a class="btn pri" href="conta.html?volta=admin">Entrar</a>';return;}
+ if(!ADMINS.includes(String(user.email).toLowerCase())){box.innerHTML='<h1>Administração</h1><p class="m">Esta área é restrita ao administrador do PlantaCalc. Você entrou como <b>'+esc(user.email)+'</b>.</p><a class="btn" href="app.html">Voltar ao PlantaCalc</a>';return;}
+ telaInicial();}
+
+async function telaInicial(){const I=await indice();const ms=Object.keys(I.meses||{}).sort().reverse();
+ box.innerHTML='<h1>Base SINAPI</h1><p class="m">Envie o arquivo ZIP do SINAPI em PDF (o mesmo que a CAIXA publica todo mês). O PlantaCalc lê os relatórios aqui mesmo no navegador, mostra um resumo por estado para você conferir e só publica depois da sua confirmação.</p>'+
+ '<label class="drop" id="dz"><input type="file" id="fz" accept=".zip,.pdf" multiple hidden><b>Escolher o ZIP do SINAPI</b>ou arraste o arquivo para cá — também aceita os PDFs soltos</label>'+
+ '<div id="prog" hidden><div class="st" id="st"></div><div class="barra"><i id="br"></i></div></div><div id="res"></div>'+
+ '<h2 style="margin-top:26px">Meses publicados</h2>'+(ms.length?'<ul class="hist">'+ms.map(k=>{const m=I.meses[k];return '<li><b>'+mesNome(k)+'</b>'+(k===I.atual?'<span class="tag">mês atual</span>':'')+' — '+m.ufs.length+' estados, publicado em '+new Date(m.publicado).toLocaleString('pt-BR')+'</li>';}).join('')+'</ul>':'<p class="m">Nenhum mês publicado ainda.</p>');
+ const dz=document.getElementById('dz'),fz=document.getElementById('fz');
+ fz.onchange=()=>fz.files.length&&ler([...fz.files]);
+ dz.ondragover=e=>{e.preventDefault();dz.classList.add('on');};dz.ondragleave=()=>dz.classList.remove('on');
+ dz.ondrop=e=>{e.preventDefault();dz.classList.remove('on');if(e.dataTransfer.files.length)ler([...e.dataTransfer.files]);};}
+
+function prog(t,f){document.getElementById('prog').hidden=false;document.getElementById('st').textContent=t;if(f!=null)document.getElementById('br').style.width=Math.round(f*100)+'%';}
+
+async function ler(files){document.getElementById('res').innerHTML='';document.getElementById('dz').hidden=true;
+ try{let pdfs=[];
+  for(const f of files){if(/\.zip$/i.test(f.name)){prog('Abrindo '+f.name+'…',0);const z=await JSZip.loadAsync(f);
+    for(const n of Object.keys(z.files))if(/\.pdf$/i.test(n)&&!z.files[n].dir)pdfs.push({nome:n.split('/').pop(),get:()=>z.files[n].async('uint8array')});}
+   else if(/\.pdf$/i.test(f.name))pdfs.push({nome:f.name,get:async()=>new Uint8Array(await f.arrayBuffer())});}
+  if(!pdfs.length)throw new Error('Nenhum PDF encontrado no arquivo.');
+  /* o analítico é o maior: lê primeiro para o progresso ficar honesto */
+  pdfs.sort((a,b)=>(/Analitico/i.test(b.nome)?1:0)-(/Analitico/i.test(a.nome)?1:0)||a.nome.localeCompare(b.nome));
+  const rel=[];const t0=Date.now();
+  for(let k=0;k<pdfs.length;k++){const p=pdfs[k];
+   prog('Lendo '+(k+1)+' de '+pdfs.length+': '+p.nome,k/pdfs.length);
+   const r=await P.lerRelatorio(pdfjs,await p.get(),(pg,tot)=>prog('Lendo '+(k+1)+' de '+pdfs.length+': '+p.nome+' — página '+pg+' de '+tot,(k+pg/tot)/pdfs.length));
+   r.nome=p.nome;rel.push(r);await new Promise(o=>setTimeout(o,0));}
+  prog('Leitura concluída em '+Math.round((Date.now()-t0)/1000)+' s. Conferindo…',1);
+  R=montar(rel);resumo();
+ }catch(e){document.getElementById('res').innerHTML='<div class="box er">'+esc(e.message||e)+'</div><div class="acoes"><button class="btn" id="bV">Escolher outro arquivo</button></div>';document.getElementById('bV').onclick=telaInicial;}}
+
+/* junta os relatórios em: catálogo do mês (descrições + analítico) e um arquivo de preços por estado */
+function montar(rel){const erros=[],avisos=[];
+ const an=rel.find(r=>r.meta.tipo==='analitico');const comp={},ins={};const desconhecidos=[];
+ for(const r of rel){if(r.meta.tipo==='composicoes'&&r.meta.uf)comp[r.meta.uf]=r;else if(r.meta.tipo==='insumos'&&r.meta.uf)ins[r.meta.uf]=r;else if(r.meta.tipo!=='analitico')desconhecidos.push(r.nome);}
+ const meses=[...new Set(rel.map(r=>r.meta.mes).filter(Boolean))];
+ if(meses.length!==1)erros.push(meses.length?'Os arquivos são de meses diferentes: '+meses.join(', ')+'.':'Não foi possível identificar o mês de referência.');
+ const mes=meses[0];const chave=mesChave(mes);
+ if(!an)erros.push('Falta o Relatório Analítico de Composições (sem ele não há composição analítica nem horas de mão de obra).');
+ if(desconhecidos.length)avisos.push('Arquivos ignorados (não são relatórios SINAPI reconhecidos): '+desconhecidos.join(', ')+'.');
+ const ufs=UFS.filter(u=>comp[u]&&ins[u]);
+ const so=UFS.filter(u=>(comp[u]||ins[u])&&!(comp[u]&&ins[u]));if(so.length)erros.push('Estados com só um dos dois relatórios (composições e insumos): '+so.join(', ')+'.');
+ const faltam=UFS.filter(u=>!comp[u]&&!ins[u]);if(faltam.length)avisos.push('Estados ausentes neste envio: '+faltam.join(', ')+'.');
+ if(!comp.SP||!ins.SP)erros.push('Falta São Paulo — ele é a referência quando um estado não tem preço.');
+ for(const r of rel)if(r.falhas&&r.falhas.length)avisos.push(r.nome+': '+r.falhas.length+' linha(s) não reconhecida(s), ex.: “'+r.falhas[0].linha.slice(0,90)+'” (pág. '+r.falhas[0].pag+').');
+ /* catálogo */
+ const cat={mes,c:{},i:{},a:{}};const base=comp.SP||Object.values(comp)[0],bi=ins.SP||Object.values(ins)[0];
+ if(base)base.itens.forEach(c=>cat.c[c.cod]=[c.desc,c.un,c.grupo]);
+ if(bi)bi.itens.forEach(i=>cat.i[i.cod]=[i.desc,i.un]);
+ if(an)an.itens.forEach(a=>{cat.a[a.cod]=a.itens.map(i=>[i.t,i.cod,i.coef]);if(!cat.c[a.cod])cat.c[a.cod]=[a.desc,a.un,a.grupo];});
+ for(const u of ufs){const n=comp[u].itens.length;if(base&&Math.abs(n-base.itens.length)>0)avisos.push(u+': '+n+' composições (SP tem '+base.itens.length+').');}
+ /* preços por estado, com o de São Paulo onde o estado não tem (marcado) */
+ const sp={c:{},i:{}};if(comp.SP)comp.SP.itens.forEach(c=>sp.c[c.cod]=c);if(ins.SP)ins.SP.itens.forEach(i=>sp.i[i.cod]=i);
+ const arq={};const linhas=[];
+ for(const u of ufs){const M=comp[u].meta,o={uf:u,mes,localidade:M.localidade||'',emissao:M.emissao||'',encargos:M.encargos,c:{},i:{}};let cSP=0,iSP=0,cNada=0,iNada=0;
+  for(const c of comp[u].itens){let v=[c.sem,c.com,c.asSem,c.asCom];
+   if(c.sem==null&&c.com==null){const s=sp.c[c.cod];if(s&&(s.sem!=null||s.com!=null)){v=[s.sem,s.com,100,100,1];cSP++;}else{cNada++;continue;}}
+   o.c[c.cod]=v;}
+  for(const i of ins[u].itens){let v=[i.sem,i.com];
+   if(i.sem==null&&i.com==null){const s=sp.i[i.cod];if(s&&(s.sem!=null||s.com!=null)){v=[s.sem,s.com,1];iSP++;}else{iNada++;continue;}}
+   o.i[i.cod]=v;}
+  arq[u]=o;
+  linhas.push({u,loc:M.localidade,nc:comp[u].itens.length,nci:Object.keys(o.c).length,cSP,cAS:comp[u].itens.filter(c=>c.asSem).length,cNada,ni:ins[u].itens.length,iSP,iNada,enc:M.encargos,fal:comp[u].falhas.length+ins[u].falhas.length,ok:conferir(cat,o)});}
+ return {mes,chave,cat,arq,ufs,linhas,erros,avisos,an:an?{n:an.itens.length,itens:an.itens.reduce((s,c)=>s+c.itens.length,0)}:null};}
+
+/* refaz o custo de uma amostra de composições pelo analítico (coeficiente × preço) e compara com o custo publicado */
+function conferir(cat,o){let n=0,ok=0;const cods=Object.keys(cat.a);
+ for(let k=0;k<cods.length&&n<400;k+=7){const cod=cods[k];const ref=o.c[cod];if(!ref||ref[0]==null||ref[4])continue;let t=0,f=false;
+  for(const [tp,c,coef] of cat.a[cod]){const p=tp==='C'?o.c[c]:o.i[c];if(!p||p[0]==null||coef==null){f=true;break;}t+=coef*p[0];}
+  if(f)continue;n++;if(Math.abs(t-ref[0])<=Math.max(0.02,ref[0]*0.01))ok++;}
+ return n?ok/n:null;}
+
+function resumo(){const r=R;const res=document.getElementById('res');
+ const pc=v=>v==null?'—':(v*100).toFixed(1).replace('.',',')+'%';
+ const enc=e=>e&&e.semH!=null?String(e.semH).replace('.',',')+'% / '+String(e.semM).replace('.',',')+'%':'—';
+ const conf=r.linhas.length?Math.min(...r.linhas.map(l=>l.ok==null?1:l.ok)):0;
+ const ruim=r.linhas.filter(l=>l.ok!=null&&l.ok<0.97);
+ if(ruim.length)r.erros.push('A conferência pelo analítico ficou abaixo de 97% em: '+ruim.map(l=>l.u+' ('+pc(l.ok)+')').join(', ')+'. Algo pode ter sido lido errado.');
+ res.innerHTML='<h2>Resumo — referência '+esc(r.mes||'?')+'</h2>'+
+  (r.erros.length?'<div class="box er"><b>Não dá para publicar:</b><br>'+r.erros.map(esc).join('<br>')+'</div>':'<div class="box ok">Tudo lido e conferido: '+r.ufs.length+' estados'+(r.an?', analítico com '+fmt(r.an.n)+' composições e '+fmt(r.an.itens)+' itens':'')+'. A conferência refaz o custo de uma amostra de composições pelo analítico e compara com o custo publicado pela CAIXA (pior estado: '+pc(conf)+').</div>')+
+  (r.avisos.length?'<div class="box av">'+r.avisos.map(esc).join('<br>')+'</div>':'')+
+  '<div class="scroll"><table class="tb"><thead><tr><th>UF</th><th>Localidade</th><th style="text-align:right">Composições</th><th style="text-align:right">com %AS</th><th style="text-align:right">preço de SP</th><th style="text-align:right">sem custo</th><th style="text-align:right">Insumos</th><th style="text-align:right">preço de SP</th><th>Encargos (H / M) sem deson.</th><th style="text-align:right">Conferência</th></tr></thead><tbody>'+
+  r.linhas.map(l=>'<tr><td><b>'+l.u+'</b></td><td>'+esc(l.loc)+'</td><td class="n">'+fmt(l.nc)+'</td><td class="n">'+fmt(l.cAS)+'</td><td class="n">'+fmt(l.cSP)+'</td><td class="n">'+fmt(l.cNada)+'</td><td class="n">'+fmt(l.ni)+'</td><td class="n">'+fmt(l.iSP)+'</td><td>'+enc(l.enc)+'</td><td class="n '+(l.ok==null?'':l.ok>=0.97?'ok':'er')+'">'+pc(l.ok)+'</td></tr>').join('')+
+  '</tbody></table></div>'+
+  '<p class="m" style="font-size:13.5px">“com %AS”: a própria CAIXA completou parte do custo com preços de São Paulo. “preço de SP”: o estado não tem custo e o PlantaCalc usa o de São Paulo (fica marcado no orçamento). “sem custo”: nem São Paulo tem — o usuário digita o preço.</p>'+
+  '<div class="acoes">'+(r.erros.length?'':'<button class="btn pri" id="bPub">Publicar '+esc(r.mes)+' para os usuários</button>')+'<button class="btn" id="bV">Cancelar</button></div><div id="pubst"></div>';
+ document.getElementById('bV').onclick=()=>{R=null;telaInicial();};
+ const bp=document.getElementById('bPub');if(bp)bp.onclick=publicar;}
+
+async function enviar(caminho,obj,cache){const blob=new Blob([JSON.stringify(obj)],{type:'application/json'});
+ const {error}=await sb.storage.from(BUCKET).upload(caminho,blob,{upsert:true,contentType:'application/json',cacheControl:cache||'3600'});
+ if(error)throw new Error(caminho+': '+error.message);}
+
+async function publicar(){const r=R;const bp=document.getElementById('bPub'),st=document.getElementById('pubst');
+ const I=await indice();
+ if(I.meses&&I.meses[r.chave]&&!confirmarSubst){st.innerHTML='<div class="box av">O mês '+esc(r.mes)+' já está publicado. Publicar de novo substitui os dados desse mês (os orçamentos já feitos continuam com os valores que tinham). <button class="btn sm" id="bSub">Substituir</button></div>';document.getElementById('bSub').onclick=()=>{confirmarSubst=true;publicar();};return;}
+ bp.disabled=true;bp.textContent='Publicando…';
+ try{const pasta=r.chave+'/';const tot=r.ufs.length+2;let k=0;
+  const passo=t=>{k++;st.innerHTML='<div class="st">'+esc(t)+'</div><div class="barra"><i style="width:'+Math.round(k/tot*100)+'%"></i></div>';};
+  passo('Enviando catálogo e composição analítica…');await enviar(pasta+'catalogo.json',r.cat);
+  for(const u of r.ufs){passo('Enviando preços de '+u+'…');await enviar(pasta+u+'.json',r.arq[u]);}
+  const meses=Object.assign({},I.meses||{});
+  meses[r.chave]={mes:r.mes,ufs:r.ufs,publicado:new Date().toISOString(),emissao:(r.arq.SP||{}).emissao||'',v:Date.now()};
+  const atual=Object.keys(meses).sort().pop();
+  passo('Atualizando o índice de meses…');await enviar('index.json',{atual,meses},'60');
+  st.innerHTML='<div class="box ok"><b>Publicado.</b> '+esc(r.mes)+' já está disponível no PlantaCalc'+(atual===r.chave?' como mês atual':'')+'. Orçamentos feitos em meses anteriores continuam no mês deles e mostram a opção “Atualizar para o mês atual”.</div>';
+  bp.remove();document.getElementById('bV').textContent='Concluir';confirmarSubst=false;
+ }catch(e){bp.disabled=false;bp.textContent='Tentar publicar de novo';st.innerHTML='<div class="box er">Não foi possível publicar: '+esc(e.message||e)+'</div>';}}
+let confirmarSubst=false;
+
+inicio();
+</script>
+</body>
+</html>

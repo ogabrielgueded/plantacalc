@@ -141,7 +141,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')fecharChecko
 
 async function cadastro(){var r=await sb.from('cadastros').select('nome,profissao,empresa,cidade,uf,telefone,novidades').eq('id',user.id).maybeSingle();return r.data||{};}
 async function nProjetos(){try{var r=await sb.from('projetos').select('id',{count:'exact',head:true});return r.count||0;}catch(e){return 0;}}
-async function telaConta(sync){box.innerHTML='<p class="m">Carregando…</p>';var res=await Promise.all([perfil(sync),cadastro(),nProjetos()]);var p=res[0],cad=res[1],np=res[2];var incompleto=!cad.nome||!cad.profissao;if(VOLTA&&!incompleto&&!Q.get('assinar')){location.replace('app.html');return;}
+async function telaConta(sync){box.innerHTML='<p class="m">Carregando…</p>';if(Q.get('volta')==='admin'){location.replace('admin.html');return;}var res=await Promise.all([perfil(sync),cadastro(),nProjetos()]);var p=res[0],cad=res[1],np=res[2];var incompleto=!cad.nome||!cad.profissao;if(VOLTA&&!incompleto&&!Q.get('assinar')){location.replace('app.html');return;}
  if(VOLTA&&incompleto&&!Q.get('assinar')){box.innerHTML='<h1>Complete seu cadastro</h1><p class="m">Falta pouco: preencha seus dados para começar a usar o PlantaCalc.</p><form id="fc">'+camposCadastro(cad)+'<button class="btn pri" id="bCad">Salvar e abrir o PlantaCalc</button></form><div id="msgc" class="msg"></div><div class="alt"><button class="lnk" id="bS">Sair</button></div>';
   document.getElementById('bS').onclick=async function(){await sb.auth.signOut();user=null;modo='entrar';telaLogin();};
   document.getElementById('fc').onsubmit=async function(e){e.preventDefault();var b=document.getElementById('bCad'),mc=document.getElementById('msgc'),c=lerCadastro();
