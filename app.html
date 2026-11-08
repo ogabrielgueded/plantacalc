@@ -7707,10 +7707,24 @@ async function carregarPerfil(sync){if(!MON.sb||!MON.user){MON.plano='gratis';MO
   else{const {data,error}=await MON.sb.from('perfis').select('plano,validade,mp_status').eq('id',MON.user.id).single();if(!error&&data){MON.plano=data.plano;MON.validade=data.validade;MON.status=data.mp_status;}}}catch(e){console.warn('plano',e);}
  gravarCache();aplicarPlano();
  const perto=MON.validade&&(new Date(MON.validade)-Date.now())<3*864e5;if(!sync&&(MON.status==='pending'||(MON.plano==='pro'&&perto)))carregarPerfil(true);}
+/* ---------- acesso só com conta e cadastro (também no plano gratuito) ---------- */
+const PC_GATE=(function(){const g=document.createElement('div');g.id='pcGate';
+ g.style.cssText='position:fixed;inset:0;z-index:200;background:#f4f6f3;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+ g.innerHTML='<div style="text-align:center;max-width:380px"><div style="font-size:22px;font-weight:800;color:#1f5f20">PlantaCalc</div><p id="pcGateTx" style="color:#5b6670;font-size:15px;margin:10px 0 0">Verificando sua conta…</p></div>';
+ document.body.appendChild(g);return g;})();
+function gateErro(t){const x=document.getElementById('pcGateTx');if(x)x.innerHTML=t+'<br><button onclick="location.reload()" style="margin-top:14px;border:0;border-radius:10px;background:#1f5f20;color:#fff;font:inherit;font-weight:700;padding:10px 16px;cursor:pointer">Tentar de novo</button>';}
+function irParaConta(){location.replace('conta.html?volta=app');}
+async function cadastroOk(u){let c=null;try{const r=await MON.sb.from('cadastros').select('nome,profissao').eq('id',u.id).maybeSingle();if(!r.error)c=r.data||{};}catch(e){}
+ if(!c)c=u.user_metadata||{};return !!(String(c.nome||'').trim()&&String(c.profissao||'').trim());}
 async function iniciarConta(){lerCache();aplicarPlano();
- if(!CFG.supabaseUrl||!window.supabase)return;
- try{MON.sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey);const {data}=await MON.sb.auth.getSession();MON.user=data&&data.session?data.session.user:null;await carregarPerfil(false);
-  MON.sb.auth.onAuthStateChange((ev,ses)=>{const u=ses?ses.user:null;if((u&&u.id)!==(MON.user&&MON.user.id)){MON.user=u;carregarPerfil(false);}});}catch(e){console.warn('supabase',e);}}
+ if(!CFG.supabaseUrl){PC_GATE.remove();return;}
+ if(!window.supabase){gateErro('Não foi possível conectar ao PlantaCalc. Verifique a internet.');return;}
+ try{MON.sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey);const {data}=await MON.sb.auth.getSession();MON.user=data&&data.session?data.session.user:null;
+  if(!MON.user){irParaConta();return;}
+  if(!(await cadastroOk(MON.user))){irParaConta();return;}
+  PC_GATE.remove();await carregarPerfil(false);
+  MON.sb.auth.onAuthStateChange((ev,ses)=>{const u=ses?ses.user:null;if(!u){irParaConta();return;}if(u.id!==(MON.user&&MON.user.id)){MON.user=u;carregarPerfil(false);}});}
+ catch(e){console.warn('supabase',e);gateErro('Não foi possível verificar sua conta agora.');}}
 
 /* ---------- exportar arquivos só no Pro ---------- */
 const MSG_EXP='Exportar arquivos (PDF, Excel, Word, DXF, IFC e outros) é do plano Pro. No plano gratuito você usa tudo na tela.';
