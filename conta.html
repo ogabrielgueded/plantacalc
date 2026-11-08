@@ -18,6 +18,7 @@
 .acc h2{font-size:19px;margin:0 0 4px}
 .kv{display:flex;justify-content:space-between;gap:10px;font-size:15px;padding:6px 0;border-bottom:1px dashed var(--line)}.kv span{color:var(--mut)}
 .perigo{color:#8a1c12!important}
+.btn.pix{background:#32bcad;border-color:#32bcad;color:#fff;width:100%}.btn.pix2{border-color:#32bcad;color:#0f766e}
 details.cad summary{cursor:pointer;font-weight:600;color:var(--g2);margin-bottom:12px}
 </style>
 <script src="config.js"></script>
@@ -79,22 +80,25 @@ function telaNovaSenha(){box.innerHTML='<h1>Nova senha</h1><p class="m">Digite a
 async function perfil(sync){if(sync){try{var s=await sb.functions.invoke('assinatura',{body:{acao:'status'}});if(s.data&&s.data.plano)return s.data;}catch(e){}}
  var r=await sb.from('perfis').select('plano,validade,mp_status,ciclo').eq('id',user.id).single();return r.data||{plano:'gratis'};}
 
-async function assinar(ciclo,b){if(b)ocupado(b,'Abrindo o Mercado Pago…');try{var r=await sb.functions.invoke('assinatura',{body:{acao:'criar',ciclo:ciclo}});if(r.error||!r.data||!r.data.url)throw new Error((r.data&&r.data.erro)||'falha');location.href=r.data.url;}catch(x){if(b)livre(b);msg('Não foi possível iniciar o pagamento agora. Tente de novo em instantes.');}}
+async function motivo(r){try{if(r.data&&r.data.erro)return r.data.erro;if(r.error&&r.error.context&&r.error.context.json){var j=await r.error.context.json();return j&&j.erro;}}catch(e){}return '';}
+async function assinar(ciclo,b,pix){if(b)ocupado(b,pix?'Gerando o Pix…':'Abrindo o Mercado Pago…');try{var r=await sb.functions.invoke('assinatura',{body:{acao:pix?'pix':'criar',ciclo:ciclo}});if(r.error||!r.data||!r.data.url){var m=await motivo(r);throw new Error(m||'falha');}location.href=r.data.url;}
+ catch(x){if(b)livre(b);var t=String(x.message||'');msg('Não foi possível iniciar o pagamento agora.'+(t&&t!=='falha'?' Motivo informado pelo Mercado Pago: '+t+'.':' Tente de novo em instantes.')+(/yourself|same|mesm|collector|payer/i.test(t)?' (A conta que recebe os pagamentos não pode pagar a si mesma: teste com outro e-mail.)':''));}}
 
 async function cadastro(){var r=await sb.from('cadastros').select('nome,profissao,empresa,cidade,uf,telefone,novidades').eq('id',user.id).maybeSingle();return r.data||{};}
 async function nProjetos(){try{var r=await sb.from('projetos').select('id',{count:'exact',head:true});return r.count||0;}catch(e){return 0;}}
 async function telaConta(sync){box.innerHTML='<p class="m">Carregando…</p>';var res=await Promise.all([perfil(sync),cadastro(),nProjetos()]);var p=res[0],cad=res[1],np=res[2];var incompleto=!cad.nome||!cad.profissao;
- var ativo=p.plano==='pro'&&p.validade&&new Date(p.validade)>new Date();var ate=p.validade?new Date(p.validade).toLocaleDateString('pt-BR'):'';var cancelada=/cancel|paused/.test(p.mp_status||'');
+ var ativo=p.plano==='pro'&&p.validade&&new Date(p.validade)>new Date();var ate=p.validade?new Date(p.validade).toLocaleDateString('pt-BR'):'';var pix=p.mp_status==='pix';var cancelada=pix||/cancel|paused/.test(p.mp_status||'');
  var P=C.preco||{mensal:29.9,anual:299};
  box.innerHTML='<h1>Minha conta</h1><p class="m">'+(cad.nome?esc(cad.nome)+' · ':'')+esc(user.email)+'</p>'+
-  '<div class="st"><div style="flex:1"><b>'+(ativo?'Plano Pro':'Plano Gratuito')+'</b><div class="m" style="margin:2px 0 0;font-size:14px">'+(ativo?(cancelada?'Assinatura cancelada — o Pro continua até '+ate+'.':'Renovação automática · válido até '+ate):p.mp_status==='pending'?'Pagamento em análise no Mercado Pago. Atualize em alguns minutos.':'1 projeto, metade do quantitativo, sem exportar arquivos e com anúncios.')+'</div></div><span class="pill'+(ativo?'':' f')+'">'+(ativo?'PRO':'GRÁTIS')+'</span></div>'+
-  (ativo&&!cancelada?'':'<button class="btn pri" id="bA">Assinar anual — '+brl(P.anual)+'</button><button class="btn sec" id="bM" style="margin-top:10px">Assinar mensal — '+brl(P.mensal)+'</button><p class="m" style="font-size:13.5px;margin:10px 0 0">Pagamento seguro pelo Mercado Pago. Cancele quando quiser.</p>')+
+  '<div class="st"><div style="flex:1"><b>'+(ativo?'Plano Pro':'Plano Gratuito')+'</b><div class="m" style="margin:2px 0 0;font-size:14px">'+(ativo?(pix?'Pago com Pix · válido até '+ate+' (sem renovação automática).':cancelada?'Assinatura cancelada — o Pro continua até '+ate+'.':'Renovação automática · válido até '+ate):p.mp_status==='pending'?'Você começou uma assinatura e não concluiu o pagamento. Escolha abaixo como pagar.':'1 projeto, metade do quantitativo, sem exportar arquivos e com anúncios.')+'</div></div><span class="pill'+(ativo?'':' f')+'">'+(ativo?'PRO':'GRÁTIS')+'</span></div>'+
+  (ativo&&!cancelada?'':'<p class="m" style="font-size:14px;margin:0 0 8px"><b>Cartão de crédito</b> — renova sozinho, cancele quando quiser</p><button class="btn pri" id="bA">Assinar anual — '+brl(P.anual)+'</button><button class="btn sec" id="bM" style="margin-top:10px">Assinar mensal — '+brl(P.mensal)+'</button>'+
+   '<p class="m" style="font-size:14px;margin:16px 0 8px"><b>Pix</b> — pagamento único, sem renovação automática'+(ativo?' (soma ao período atual)':'')+'</p><button class="btn pix" id="bPA">Pix: 12 meses — '+brl(P.anual)+'</button><button class="btn sec pix2" id="bPM" style="margin-top:10px">Pix: 1 mês — '+brl(P.mensal)+'</button><p class="m" style="font-size:13.5px;margin:10px 0 0">Pagamento seguro pelo Mercado Pago. Pelo Pix, o Pro é liberado assim que o pagamento é aprovado.</p>')+
   '<div id="msg" class="msg"></div><div class="sep"></div>'+
   '<h2>Meus projetos</h2><div class="kv"><span>Guardados na nuvem</span><b>'+np+(ativo?'':' de 1')+'</b></div><p class="m" style="font-size:13.5px;margin:8px 0 12px">'+(ativo?'Plano Pro: projetos ilimitados na nuvem.':'O plano gratuito permite 1 projeto, mostra metade do quantitativo e não exporta arquivos. O Pro libera tudo.')+'</p>'+
   '<a class="btn sec" href="app.html">Abrir o PlantaCalc</a><div class="sep"></div>'+
   '<details class="cad"'+(incompleto?' open':'')+'><summary>Meu cadastro'+(incompleto?' (complete, por favor)':'')+'</summary><form id="fc">'+camposCadastro(cad)+'<button class="btn pri" id="bCad">Salvar cadastro</button></form><div id="msgc" class="msg"></div></details>'+
   '<div class="alt"><button class="lnk" id="bAt">Atualizar situação</button>'+(ativo&&!cancelada?'<button class="lnk" id="bC" style="color:#8a1c12">Cancelar assinatura</button>':'')+'<button class="lnk" id="bS">Sair</button></div><div class="alt" style="justify-content:flex-end"><button class="lnk perigo" id="bX">Excluir minha conta</button></div>';
- var bA=document.getElementById('bA'),bM=document.getElementById('bM');if(bA)bA.onclick=function(){assinar('anual',bA);};if(bM)bM.onclick=function(){assinar('mensal',bM);};
+ var bA=document.getElementById('bA'),bM=document.getElementById('bM'),bPA=document.getElementById('bPA'),bPM=document.getElementById('bPM');if(bA)bA.onclick=function(){assinar('anual',bA);};if(bM)bM.onclick=function(){assinar('mensal',bM);};if(bPA)bPA.onclick=function(){assinar('anual',bPA,true);};if(bPM)bPM.onclick=function(){assinar('mensal',bPM,true);};
  document.getElementById('bAt').onclick=function(){telaConta(true);};
  document.getElementById('fc').onsubmit=async function(e){e.preventDefault();var b=document.getElementById('bCad');var c=lerCadastro();var mc=document.getElementById('msgc');
   if(!c.nome||!c.profissao){mc.textContent='Preencha o nome e a profissão.';mc.className='msg on err';return;}ocupado(b,'Salvando…');c.id=user.id;c.atualizado=new Date().toISOString();
@@ -105,9 +109,9 @@ async function telaConta(sync){box.innerHTML='<p class="m">Carregando…</p>';va
   try{await sb.auth.signOut();}catch(e){}try{localStorage.removeItem('pc_plano_v1');}catch(e){}user=null;box.innerHTML='<h1>Conta excluída</h1><p class="m">Sua conta e seus dados na nuvem foram apagados. Obrigado por usar o PlantaCalc.</p><a class="btn pri" href="index.html">Voltar ao início</a>';};
  document.getElementById('bS').onclick=async function(){await sb.auth.signOut();try{localStorage.removeItem('pc_plano_v1');}catch(e){}user=null;modo='entrar';telaLogin();};
  var bC=document.getElementById('bC');if(bC)bC.onclick=async function(){if(!confirm('Cancelar a renovação do PlantaCalc Pro? Você continua com o Pro até '+ate+'.'))return;ocupado(bC,'Cancelando…');var r=await sb.functions.invoke('assinatura',{body:{acao:'cancelar'}});livre(bC);if(r.error)msg('Não foi possível cancelar agora. Tente de novo.');else telaConta(false);};
- if(Q.get('retorno'))msg(ativo?'Pagamento confirmado. Bem-vindo ao PlantaCalc Pro!':'Recebemos o seu retorno do Mercado Pago. Se o pagamento ainda estiver em análise, toque em “Atualizar situação” em alguns minutos.',ativo);
+ if(Q.get('retorno'))msg(ativo?'Pagamento confirmado. Bem-vindo ao PlantaCalc Pro!':'Recebemos o seu retorno do Mercado Pago. Se você pagou com Pix e ainda não liberou, toque em “Atualizar situação” em 1 ou 2 minutos.',ativo);
  try{localStorage.setItem('pc_plano_v1',JSON.stringify({plano:p.plano,validade:p.validade,ts:Date.now()}));}catch(e){}
- var ass=Q.get('assinar');if(ass&&!ativo&&(ass==='mensal'||ass==='anual')){history.replaceState(null,'','conta.html');assinar(ass,ass==='anual'?bA:bM);}}
+ var ass=Q.get('assinar');if(ass&&!ativo&&(ass==='mensal'||ass==='anual')){history.replaceState(null,'','conta.html');assinar(ass,ass==='anual'?bA:bM);}else if(ass&&!ativo&&/^pix-/.test(ass)){history.replaceState(null,'','conta.html');var c2=ass==='pix-mensal'?'mensal':'anual';assinar(c2,c2==='anual'?bPA:bPM,true);}}
 
 async function carregar(){var s=await sb.auth.getSession();user=s.data.session?s.data.session.user:null;if(Q.get('nova')&&user){telaNovaSenha();return;}if(user)telaConta(!!Q.get('retorno'));else telaLogin();}
 sb.auth.onAuthStateChange(function(ev,ses){if(ev==='PASSWORD_RECOVERY'){user=ses.user;telaNovaSenha();return;}var u=ses?ses.user:null;if(ev==='SIGNED_IN'&&(!user||user.id!==u.id)){user=u;telaConta(false);}});
