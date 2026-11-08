@@ -7488,7 +7488,20 @@ function fundA1(St,M,C,L){const folha=folhaOf(L,'fundA1');const Fd=M.fund||{};co
  // ligações
  ligacoesFund(P,478,yl,St,M,sap[0]||blo[0]);
  return o;}
-function ligacoesFund(P,x,y,St,M,e){const P0=St.params;P.secTit(x,y,'DETALHES DE LIGAÇÃO',155);
+function baseEquip(P,x,y0,St,M){const Fd=M.fund||{};const dn=(Fd.dinamicas||[])[0];let me=dn?dn.me:(M.equip||[])[0];if(!me)return;
+ const L=dn?dn.L:me.r.L+200,W=dn?dn.W:me.r.W+200,h=dn?dn.h:((me.e.base??me.T.base)||200);const nome=trunc(me.e.nome||me.T.nome||'equipamento',26);
+ P.subTit(x,y0,`BASE DE EQUIPAMENTO – ${nome.toUpperCase()}`,dn?`bloco de inércia ${fm(L)}×${fm(W)}×${fm(h)} m · massa ${nf(dn.massa,0)} kN ≥ 3×${nf(dn.peso,0)} kN`:`base ${fm(L)}×${fm(W)} m · h ${fcm(h)} cm`);
+ const k=Math.min(28/(L/10),20/(W/10));const pw=L/10*k,ph=W/10*k;const gx=x+4,gy=y0+9;P.R(gx,gy,pw,ph,0.35,PCOR.concL,PCOR.conc);const ew=me.r.L/10*k,eh=me.r.W/10*k;P.R(gx+(pw-ew)/2,gy+(ph-eh)/2,ew,eh,0.3,'#1d4f7a','#dbeafe');
+ [[0.12,0.15],[0.88,0.15],[0.12,0.85],[0.88,0.85]].forEach(q=>P.C(gx+(pw-ew)/2+q[0]*ew,gy+(ph-eh)/2+q[1]*eh,0.7,'#fff','#334155',0.35));P.T(gx+pw/2,gy+ph+3.6,'PLANTA',1.7,'middle',true);
+ const kv=Math.min(0.06,22/h);const sx=x+48,sy=y0+20,sw=Math.min(70,L/10*0.5),sh=Math.max(6,h*kv);
+ P.R(sx-10,sy,10,3,0.2,'#a8a29e',PCOR.lastro);P.R(sx+sw,sy,10,3,0.2,'#a8a29e',PCOR.lastro);
+ P.R(sx,sy,sw,sh,0.35,PCOR.concL,PCOR.conc);if(dn){P.L(sx-0.6,sy,sx-0.6,sy+sh,0.6,'#f59e0b');P.L(sx+sw+0.6,sy,sx+sw+0.6,sy+sh,0.6,'#f59e0b');}
+ P.R(sx+sw*0.15,sy-1.2,sw*0.7,1.2,0.2,'#64748b','#e2e8f0');P.R(sx+sw*0.2,sy-9,sw*0.6,7.8,0.3,'#1d4f7a','#dbeafe');
+ [sx+sw*0.25,sx+sw*0.75].forEach(xx=>{P.L(xx,sy-3,xx,sy+sh*0.75,0.55,'#475569');P.L(xx,sy+sh*0.75,xx+2.4,sy+sh*0.75,0.55,'#475569');});
+ P.L(sx+1.5,sy+sh-1.5,sx+sw-1.5,sy+sh-1.5,0.45,PCOR.pos);P.L(sx+1.5,sy+1.5,sx+sw-1.5,sy+1.5,0.45,PCOR.porta);
+ if(dn)P.cham(sx+sw+0.6,sy+sh*0.4,sx+sw+8,sy+sh*0.4+6,'junta de isolamento',PCOR.estr);P.cham(sx+sw*0.75,sy+sh*0.5,sx+sw+8,sy-6,'chumbadores + grout',PCOR.chapa);
+ P.T(sx+sw/2,sy+sh+4,'CORTE',1.7,'middle',true);}
+function ligacoesFund(P,x,y,St,M,e){const P0=St.params;P.secTit(x,y,'DETALHES DE LIGAÇÃO',155);try{baseEquip(P,x,y+190,St,M);}catch(err){console.error(err);}
  const pil=M.pillars[0]||{b:200,h:200};const pe=e&&e.pos.find(p=>p.forma==='L');const dE=pe?pe.d:10,trasp=pe?Math.round(4.5*dE):45;
  // (a) arranque do pilar
  let y0=y+9;P.subTit(x,y0,'ARRANQUE DO PILAR NA FUNDAÇÃO',`pilar ${fcm(pil.b)}×${fcm(pil.h)} · esperas ø${pdTxt(dE)} · traspasse ${trasp} cm`);
@@ -7523,12 +7536,13 @@ function elevViga(P,e,x0,y0,kH,kV){const bm=e.bm||{};const Lc=(bm.len||4000)/10,
  const kS=Math.min(0.75,24/hh),sx=x0+LW+8,sy=y0-1,SW=b*kS,SH=hh*kS,c=Math.max(1.2,3*kS);P.R(sx,sy,SW,SH,0.3,PCOR.vigaL,PCOR.viga);P.R(sx+c,sy+c,SW-2*c,SH-2*c,0.4,PCOR.estr);
  const nb=pP?Math.min(pP.nSec||pP.q,6):3;for(let i=0;i<nb;i++)P.C(sx+c+0.8+i*(SW-2*c-1.6)/Math.max(1,nb-1),sy+SH-c-0.8,0.5,PCOR.pos);[0,1].forEach(i=>P.C(sx+c+0.8+i*(SW-2*c-1.6),sy+c+0.8,0.45,PCOR.porta));
  if(pN){const qn=Math.min(4,Math.round(pN.q/Math.max(1,sup.length-2)));for(let i=0;i<qn;i++)P.C(sx+c+1.6+i*(SW-2*c-3.2)/Math.max(1,qn-1),sy+c+2.2,0.45,PCOR.neg);}
- let xx=x0,yy=y0+HV+14;[[pP,PCOR.pos],[pN,PCOR.neg],[pT,PCOR.porta],[pE,PCOR.estr]].forEach(([p,col])=>{if(!p)return;const t=barTxt(p);P.sw(xx,yy,col);P.T(xx+4,yy,t,1.7);xx+=textW(t,1.7,false)+10;});
- return HV+19;}
+ const wLim=Math.max(LW+8+SW,78);let xx=x0,yy=y0+HV+14;[[pP,PCOR.pos],[pN,PCOR.neg],[pT,PCOR.porta],[pE,PCOR.estr]].forEach(([p,col])=>{if(!p)return;const t=barTxt(p);const tw=textW(t,1.7,false)+10;if(xx>x0&&xx-x0+tw>wLim){xx=x0;yy+=3.6;}P.sw(xx,yy,col);P.T(xx+4,yy,t,1.7);xx+=tw;});
+ return yy-y0+5;}
 const vigaAlt=(e,kV)=>((e.bm&&e.bm.h)||400)/10*kV+24;
 function vigaDim(e,kH,kV){const bm=e.bm||{};const Lc=(bm.len||4000)/10,hh=(bm.h||400)/10,b=(bm.b_||150)/10;const kS=Math.min(0.75,24/hh);
- const leg=sum(e.pos.filter(p=>/positiva|inferior|negativa|porta|superior/i.test(p.obs)||p.forma==='estribo').slice(0,4),p=>textW(barTxt(p),1.7,false)+10);
- return{w:Math.max(Lc*kH+8+b*kS+6,leg,textW(`VIGA ${e.id} (00×00) – ELEVAÇÃO`,2.4,true)),h:hh*kV+26};}
+ const wLim=Math.max(Lc*kH+8+b*kS,78);const its=e.pos.filter(p=>/positiva|inferior|negativa|porta|superior/i.test(p.obs)||p.forma==='estribo').slice(0,4).map(p=>textW(barTxt(p),1.7,false)+10);
+ let x=0,lin=1;its.forEach(w=>{if(x>0&&x+w>wLim){x=0;lin++;}x+=w;});
+ return{w:Math.max(wLim+6,textW(`VIGA ${e.id} (00×00) – ELEVAÇÃO`,2.4,true)),h:hh*kV+22+lin*3.6};}
 function cartaoLaje(P,x0,y0,e,k){const lj=e.lj||{};const lx=(lj.lx||4000)/1000,ly=(lj.ly||3000)/1000;const w=lx*k,h=ly*k;
  P.subTit(x0,y0,trunc(`${e.id} – ${String(e.titulo||'').replace(/^Laje\s*/,'').split(' ').slice(0,3).join(' ').toUpperCase()}`,34),`${fm(lj.lx||4000)}×${fm(lj.ly||3000)} m · ${e.sec}`);
  const y1=y0+7;P.R(x0,y1,w,h,0.3,PCOR.lajeL,PCOR.laje);const pM=e.pos.find(p=>/vão menor/.test(p.obs)),pX=e.pos.find(p=>/vão maior/.test(p.obs)),pN=e.pos.find(p=>/negativa/.test(p.obs));const xMain=lx<=ly;
@@ -7596,14 +7610,15 @@ function estrA1(St,M,C,L,pav,pg){const floors=M.floors||[M];const f=floors.find(
  if(pgD.lajes.length){const la=pgD.la;P.secTit(la.x,la.y,pg?'LAJES (CONTINUAÇÃO)':'LAJES – ARMAÇÃO POSITIVA E NEGATIVA',la.w);let x=la.x+4,y=la.y+12;pgD.lajes.forEach(e=>{const r=cartaoLaje(P,x,y,e,pl.kL);x+=r.w+14;});}
  return o;}
 function estrPlano(St,M,pav){const A=M.arm||{elems:[]};const vigas=A.elems.filter(e=>e.tipo==='viga'&&(e.pav||0)===pav&&e.bm);const lajes=A.elems.filter(e=>(e.tipo==='laje'||e.tipo==='lajenerv')&&(e.pav||0)===pav);
- const Lmax=Math.max(100,...vigas.map(e=>(e.bm.len||0)/10));const kH=Math.min(0.3,330/Lmax);const kV=0.42;
- const Lmx=Math.max(1,...lajes.map(e=>Math.max((e.lj||{}).lx||0,(e.lj||{}).ly||0)/1000));const kL=Math.min(14,150/Lmx);
- const pages=[];let i=0,j=0;
- const packV=(W,H)=>{const out=[];let x=0,y=12,rowH=0;while(i<vigas.length){const d=vigaDim(vigas[i],kH,kV);if(x>0&&x+d.w>W){x=0;y+=rowH+6;rowH=0;}if(y+d.h>H&&out.length)break;out.push({e:vigas[i],x,y:y+6});x+=d.w+12;rowH=Math.max(rowH,d.h);i++;}return out;};
- const packL=W=>{const out=[];let x=4;while(j<lajes.length){const lj=lajes[j].lj||{};const ww=Math.max(46,((lj.lx||4000)/1000)*kL)+14;if(out.length&&x+ww>W)break;out.push(lajes[j]);x+=ww;j++;}return out;};
- pages.push({vigas:packV(390,232),lajes:packL(440),va:{x:440,y:24,w:390},la:{x:18,y:372,w:440}});
- let guard=0;while((i<vigas.length||j<lajes.length)&&guard++<20){const restoL=j<lajes.length;const vg=packV(612,restoL?340:545);pages.push({vigas:vg,lajes:packL(612),va:{x:18,y:24,w:612},la:{x:18,y:vg.length?372:24,w:612}});}
- return{pages,kH,kV,kL};}
+ const Lmax=Math.max(100,...vigas.map(e=>(e.bm.len||0)/10));const Lmx=Math.max(1,...lajes.map(e=>Math.max((e.lj||{}).lx||0,(e.lj||{}).ly||0)/1000));
+ const montar=f=>{const kH=Math.min(0.3,330/Lmax)*f,kV=0.42*Math.max(0.75,f),kL=Math.min(14,150/Lmx)*Math.max(0.7,f);const pages=[];let i=0,j=0;
+  const packV=(W,H)=>{const out=[];let x=0,y=12,rowH=0;while(i<vigas.length){const d=vigaDim(vigas[i],kH,kV);if(x>0&&x+d.w>W){x=0;y+=rowH+5;rowH=0;}if(y+d.h>H&&out.length)break;out.push({e:vigas[i],x,y:y+6});x+=d.w+10;rowH=Math.max(rowH,d.h);i++;}return out;};
+  const packL=W=>{const out=[];let x=4;while(j<lajes.length){const lj=lajes[j].lj||{};const ww=Math.max(46,((lj.lx||4000)/1000)*kL)+14;if(out.length&&x+ww>W)break;out.push(lajes[j]);x+=ww;j++;}return out;};
+  pages.push({vigas:packV(390,234),lajes:packL(440),va:{x:440,y:24,w:390},la:{x:18,y:372,w:440}});
+  let guard=0;while((i<vigas.length||j<lajes.length)&&guard++<20){const restoL=j<lajes.length;const vg=packV(612,restoL?340:545);pages.push({vigas:vg,lajes:packL(612),va:{x:18,y:24,w:612},la:{x:18,y:vg.length?372:24,w:612}});}
+  return{pages,kH,kV,kL};};
+ let best=montar(1);if(best.pages.length>1){for(const f of [0.85,0.72,0.62]){const t=montar(f);if(t.pages.length<best.pages.length){best=t;if(t.pages.length===1)break;}}}
+ return best;}
 /* ---------- integração na lista de pranchas ---------- */
 (function(){const _sl=sheetList;sheetList=function(St,M){const L=_sl(St,M);const out=L.filter(x=>!/^(estr\d|fund$|qestr|qarm|raco|arm\d)/.test(x.id));
  const edif=!M.empty;if(edif){let at=out.findIndex(x=>x.id==='cortes');at=at<0?1:at;const add=[];
