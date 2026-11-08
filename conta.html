@@ -9,6 +9,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="site.css">
+<style>
+.fld select{width:100%;font:inherit;font-size:16px;padding:12px 14px;border:1.5px solid #d3d9de;border-radius:11px;background:#fff}
+.fld select:focus{outline:0;border-color:var(--g2);box-shadow:0 0 0 4px rgba(46,125,50,.12)}
+.fld small{display:block;color:var(--mut);font-size:12.5px;margin-top:4px}
+.g2{display:grid;grid-template-columns:1fr 92px;gap:10px}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--mut);margin:2px 0 14px}.chk input{width:18px;height:18px;margin-top:2px;flex:none}
+.acc h2{font-size:19px;margin:0 0 4px}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:15px;padding:6px 0;border-bottom:1px dashed var(--line)}.kv span{color:var(--mut)}
+.perigo{color:#8a1c12!important}
+details.cad summary{cursor:pointer;font-weight:600;color:var(--g2);margin-bottom:12px}
+</style>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -34,12 +45,23 @@ function msg(t,ok){var m=document.getElementById('msg');if(!m)return;m.textConte
 function ocupado(b,t){b.disabled=true;b.dataset.t=b.textContent;b.textContent=t;}
 function livre(b){b.disabled=false;if(b.dataset.t)b.textContent=b.dataset.t;}
 
+var PROF=['Engenheiro(a) civil','Engenheiro(a) de outra área','Arquiteto(a)','Técnico(a) em edificações','Projetista / desenhista','Construtor(a) / empreiteiro(a)','Orçamentista','Estudante','Outra'];
+var UFS='AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ');
+function opts(l,v){return '<option value="">Selecione…</option>'+l.map(function(o){return '<option'+(o===v?' selected':'')+'>'+esc(o)+'</option>';}).join('');}
+function camposCadastro(c){c=c||{};return '<label class="fld"><span>Nome completo *</span><input id="cNome" autocomplete="name" required maxlength="120" value="'+esc(c.nome)+'"></label>'+
+ '<label class="fld"><span>Profissão *</span><select id="cProf" required>'+opts(PROF,c.profissao)+'</select></label>'+
+ '<label class="fld"><span>Empresa ou escritório</span><input id="cEmp" autocomplete="organization" maxlength="120" value="'+esc(c.empresa)+'"><small>Opcional.</small></label>'+
+ '<div class="g2"><label class="fld"><span>Cidade</span><input id="cCid" autocomplete="address-level2" maxlength="80" value="'+esc(c.cidade)+'"></label><label class="fld"><span>UF</span><select id="cUf">'+opts(UFS,c.uf)+'</select></label></div>'+
+ '<label class="fld"><span>WhatsApp</span><input id="cTel" type="tel" autocomplete="tel" maxlength="20" placeholder="(31) 99999-9999" value="'+esc(c.telefone)+'"><small>Opcional — só para suporte.</small></label>'+
+ '<label class="chk"><input type="checkbox" id="cNov"'+(c.novidades?' checked':'')+'><span>Quero receber por e-mail novidades e dicas do PlantaCalc (no máximo 2 por mês; dá para sair a qualquer momento).</span></label>';}
+function lerCadastro(){var v=function(i){return (document.getElementById(i).value||'').trim();};return {nome:v('cNome'),profissao:v('cProf'),empresa:v('cEmp'),cidade:v('cCid'),uf:v('cUf'),telefone:v('cTel'),novidades:document.getElementById('cNov').checked};}
+
 function telaLogin(){
  var titulo={entrar:'Entrar',criar:'Criar conta',senha:'Recuperar senha'}[modo];
  var assinar=Q.get('assinar');
- box.innerHTML='<h1>'+titulo+'</h1><p class="m">'+(assinar?'Entre ou crie sua conta para assinar o PlantaCalc Pro.':modo==='senha'?'Enviaremos um link para você criar uma nova senha.':'A conta é necessária apenas para o plano Pro. O plano gratuito funciona sem cadastro.')+'</p>'+
-  '<form id="f"><label class="fld"><span>E-mail</span><input type="email" id="em" autocomplete="email" required></label>'+
-  (modo!=='senha'?'<label class="fld"><span>Senha</span><input type="password" id="pw" minlength="8" autocomplete="'+(modo==='criar'?'new-password':'current-password')+'" required></label>':'')+
+ box.innerHTML='<h1>'+titulo+'</h1><p class="m">'+(assinar?'Entre ou crie sua conta para assinar o PlantaCalc Pro.':modo==='senha'?'Enviaremos um link para você criar uma nova senha.':modo==='criar'?'Grátis. Com a conta, seus projetos ficam guardados na nuvem e abrem em qualquer computador ou tablet.':'Entre para ver seus projetos na nuvem e o seu plano.')+'</p>'+
+  '<form id="f">'+(modo==='criar'?camposCadastro():'')+'<label class="fld"><span>E-mail</span><input type="email" id="em" autocomplete="email" required></label>'+
+  (modo!=='senha'?'<label class="fld"><span>Senha</span><input type="password" id="pw" minlength="8" autocomplete="'+(modo==='criar'?'new-password':'current-password')+'" required>'+(modo==='criar'?'<small>Mínimo de 8 caracteres.</small>':'')+'</label>':'')+
   (modo==='criar'?'<p class="m" style="font-size:13.5px;margin:-4px 0 12px">Ao criar a conta você concorda com os <a href="termos.html" target="_blank">Termos de uso</a> e a <a href="privacidade.html" target="_blank">Política de privacidade</a>.</p>':'')+
   '<button class="btn pri" id="go">'+({entrar:'Entrar',criar:'Criar conta',senha:'Enviar link'}[modo])+'</button></form><div id="msg" class="msg"></div>'+
   '<div class="alt">'+(modo==='entrar'?'<button class="lnk" data-m="criar">Criar uma conta</button><button class="lnk" data-m="senha">Esqueci a senha</button>':'<button class="lnk" data-m="entrar">Já tenho conta — entrar</button>')+'</div>';
@@ -47,7 +69,7 @@ function telaLogin(){
  document.getElementById('f').onsubmit=async function(e){e.preventDefault();var b=document.getElementById('go');var em=document.getElementById('em').value.trim();var pw=(document.getElementById('pw')||{}).value;ocupado(b,'Aguarde…');
   try{var r;var volta=base+'/conta.html'+(assinar?'?assinar='+encodeURIComponent(assinar):'');
    if(modo==='entrar'){r=await sb.auth.signInWithPassword({email:em,password:pw});if(r.error)throw r.error;}
-   else if(modo==='criar'){r=await sb.auth.signUp({email:em,password:pw,options:{emailRedirectTo:volta}});if(r.error)throw r.error;if(!r.data.session){livre(b);msg('Conta criada. Enviamos um e-mail de confirmação para '+em+' — abra o link para ativar e voltar aqui.',true);return;}}
+   else if(modo==='criar'){var cad=lerCadastro();if(!cad.nome||!cad.profissao){livre(b);msg('Preencha o nome e a profissão.');return;}r=await sb.auth.signUp({email:em,password:pw,options:{emailRedirectTo:volta,data:cad}});if(r.error)throw r.error;if(!r.data.session){livre(b);msg('Conta criada. Enviamos um e-mail de confirmação para '+em+' — abra o link para ativar e voltar aqui.',true);return;}}
    else{r=await sb.auth.resetPasswordForEmail(em,{redirectTo:base+'/conta.html?nova=1'});if(r.error)throw r.error;livre(b);msg('Se existir uma conta com esse e-mail, o link chega em alguns minutos.',true);return;}
   }catch(x){livre(b);var t=String(x.message||x);msg(/Invalid login/i.test(t)?'E-mail ou senha incorretos.':/already registered/i.test(t)?'Já existe uma conta com esse e-mail. Use “Entrar”.':/Email not confirmed/i.test(t)?'Confirme o e-mail antes de entrar (veja sua caixa de entrada).':'Não foi possível concluir: '+t);}};}
 
@@ -59,17 +81,28 @@ async function perfil(sync){if(sync){try{var s=await sb.functions.invoke('assina
 
 async function assinar(ciclo,b){if(b)ocupado(b,'Abrindo o Mercado Pago…');try{var r=await sb.functions.invoke('assinatura',{body:{acao:'criar',ciclo:ciclo}});if(r.error||!r.data||!r.data.url)throw new Error((r.data&&r.data.erro)||'falha');location.href=r.data.url;}catch(x){if(b)livre(b);msg('Não foi possível iniciar o pagamento agora. Tente de novo em instantes.');}}
 
-async function telaConta(sync){box.innerHTML='<p class="m">Carregando…</p>';var p=await perfil(sync);
+async function cadastro(){var r=await sb.from('cadastros').select('nome,profissao,empresa,cidade,uf,telefone,novidades').eq('id',user.id).maybeSingle();return r.data||{};}
+async function nProjetos(){try{var r=await sb.from('projetos').select('id',{count:'exact',head:true});return r.count||0;}catch(e){return 0;}}
+async function telaConta(sync){box.innerHTML='<p class="m">Carregando…</p>';var res=await Promise.all([perfil(sync),cadastro(),nProjetos()]);var p=res[0],cad=res[1],np=res[2];var incompleto=!cad.nome||!cad.profissao;
  var ativo=p.plano==='pro'&&p.validade&&new Date(p.validade)>new Date();var ate=p.validade?new Date(p.validade).toLocaleDateString('pt-BR'):'';var cancelada=/cancel|paused/.test(p.mp_status||'');
  var P=C.preco||{mensal:29.9,anual:299};
- box.innerHTML='<h1>Minha conta</h1><p class="m">'+esc(user.email)+'</p>'+
+ box.innerHTML='<h1>Minha conta</h1><p class="m">'+(cad.nome?esc(cad.nome)+' · ':'')+esc(user.email)+'</p>'+
   '<div class="st"><div style="flex:1"><b>'+(ativo?'Plano Pro':'Plano Gratuito')+'</b><div class="m" style="margin:2px 0 0;font-size:14px">'+(ativo?(cancelada?'Assinatura cancelada — o Pro continua até '+ate+'.':'Renovação automática · válido até '+ate):p.mp_status==='pending'?'Pagamento em análise no Mercado Pago. Atualize em alguns minutos.':'Com anúncios e marca d\'água nas pranchas.')+'</div></div><span class="pill'+(ativo?'':' f')+'">'+(ativo?'PRO':'GRÁTIS')+'</span></div>'+
   (ativo&&!cancelada?'':'<button class="btn pri" id="bA">Assinar anual — '+brl(P.anual)+'</button><button class="btn sec" id="bM" style="margin-top:10px">Assinar mensal — '+brl(P.mensal)+'</button><p class="m" style="font-size:13.5px;margin:10px 0 0">Pagamento seguro pelo Mercado Pago. Cancele quando quiser.</p>')+
   '<div id="msg" class="msg"></div><div class="sep"></div>'+
-  '<a class="btn sec" href="app.html">Abrir o PlantaCalc</a>'+
-  '<div class="alt"><button class="lnk" id="bAt">Atualizar situação</button>'+(ativo&&!cancelada?'<button class="lnk" id="bC" style="color:#8a1c12">Cancelar assinatura</button>':'')+'<button class="lnk" id="bS">Sair</button></div>';
+  '<h2>Meus projetos</h2><div class="kv"><span>Guardados na nuvem</span><b>'+np+(ativo?'':' de 3')+'</b></div><p class="m" style="font-size:13.5px;margin:8px 0 12px">'+(ativo?'Plano Pro: projetos ilimitados na nuvem.':'No plano gratuito ficam até 3 projetos na nuvem; os demais ficam salvos no aparelho onde foram criados.')+'</p>'+
+  '<a class="btn sec" href="app.html">Abrir o PlantaCalc</a><div class="sep"></div>'+
+  '<details class="cad"'+(incompleto?' open':'')+'><summary>Meu cadastro'+(incompleto?' (complete, por favor)':'')+'</summary><form id="fc">'+camposCadastro(cad)+'<button class="btn pri" id="bCad">Salvar cadastro</button></form><div id="msgc" class="msg"></div></details>'+
+  '<div class="alt"><button class="lnk" id="bAt">Atualizar situação</button>'+(ativo&&!cancelada?'<button class="lnk" id="bC" style="color:#8a1c12">Cancelar assinatura</button>':'')+'<button class="lnk" id="bS">Sair</button></div><div class="alt" style="justify-content:flex-end"><button class="lnk perigo" id="bX">Excluir minha conta</button></div>';
  var bA=document.getElementById('bA'),bM=document.getElementById('bM');if(bA)bA.onclick=function(){assinar('anual',bA);};if(bM)bM.onclick=function(){assinar('mensal',bM);};
  document.getElementById('bAt').onclick=function(){telaConta(true);};
+ document.getElementById('fc').onsubmit=async function(e){e.preventDefault();var b=document.getElementById('bCad');var c=lerCadastro();var mc=document.getElementById('msgc');
+  if(!c.nome||!c.profissao){mc.textContent='Preencha o nome e a profissão.';mc.className='msg on err';return;}ocupado(b,'Salvando…');c.id=user.id;c.atualizado=new Date().toISOString();
+  var r=await sb.from('cadastros').upsert(c);livre(b);if(r.error){mc.textContent='Não foi possível salvar: '+r.error.message;mc.className='msg on err';}else{mc.textContent='Cadastro salvo.';mc.className='msg on ok';}};
+ document.getElementById('bX').onclick=async function(){var bX=this;var t=prompt('Isto apaga a sua conta, o seu cadastro e os projetos guardados na nuvem, e cancela a assinatura (se houver). Não dá para desfazer.\n\nOs projetos salvos neste aparelho continuam no aparelho.\n\nPara confirmar, digite EXCLUIR:');
+  if(!t||t.trim().toUpperCase()!=='EXCLUIR')return;ocupado(bX,'Excluindo…');var r=await sb.functions.invoke('assinatura',{body:{acao:'excluir'}});
+  if(r.error||(r.data&&r.data.erro)){livre(bX);msg('Não foi possível excluir agora. Tente de novo ou escreva para '+(C.contato||'o suporte')+'.');return;}
+  try{await sb.auth.signOut();}catch(e){}try{localStorage.removeItem('pc_plano_v1');}catch(e){}user=null;box.innerHTML='<h1>Conta excluída</h1><p class="m">Sua conta e seus dados na nuvem foram apagados. Obrigado por usar o PlantaCalc.</p><a class="btn pri" href="index.html">Voltar ao início</a>';};
  document.getElementById('bS').onclick=async function(){await sb.auth.signOut();try{localStorage.removeItem('pc_plano_v1');}catch(e){}user=null;modo='entrar';telaLogin();};
  var bC=document.getElementById('bC');if(bC)bC.onclick=async function(){if(!confirm('Cancelar a renovação do PlantaCalc Pro? Você continua com o Pro até '+ate+'.'))return;ocupado(bC,'Cancelando…');var r=await sb.functions.invoke('assinatura',{body:{acao:'cancelar'}});livre(bC);if(r.error)msg('Não foi possível cancelar agora. Tente de novo.');else telaConta(false);};
  if(Q.get('retorno'))msg(ativo?'Pagamento confirmado. Bem-vindo ao PlantaCalc Pro!':'Recebemos o seu retorno do Mercado Pago. Se o pagamento ainda estiver em análise, toque em “Atualizar situação” em alguns minutos.',ativo);

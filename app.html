@@ -220,7 +220,6 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}svg text{-webkit-text-s
 #perfWrap .pft{flex:1.4;overflow:auto}#perfWrap .pfs{flex:1;min-width:300px}#perfWrap .pfs .t3{width:100%;border-collapse:collapse;font-size:12px}#perfWrap .pfs .t3 td{padding:3px 4px;border-bottom:1px solid #eee}#perfWrap .pfs .t3 td:last-child{text-align:right}
 </style>
 <meta name="description" content="PlantaCalc: desenhe ou responda algumas perguntas e gere planta, cortes, fundações, quantitativo, custo, prazo, memorial e 3D para estudos preliminares de obras civis.">
-<meta name="google-adsense-account" content="ca-pub-8681311606179270">
 <link rel="icon" href="img/icone.svg" type="image/svg+xml">
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -235,7 +234,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}svg text{-webkit-text-s
  <button id="bSalvar" title="Salvar projeto (.json) — Ctrl+S">Salvar</button>
  <div class="menu"><button id="bExp">Exportar ▾</button><div class="dd" id="ddExp">
   <button id="bPdf">Pranchas em PDF (A3)</button><button id="bPdfQ">Quantitativo em PDF (A4)</button><button id="bMemD">Memorial descritivo (Word .docx)</button><button id="bMemP">Memorial descritivo (PDF)</button>
-  <button id="bDxf">DXF R2000 (pavimento atual + implantação)</button><button id="bIfc">IFC 4 (BIM)</button><button id="bXlsx">Excel (quantitativo, LM por disciplina, memória, cronograma)</button><button id="bCsv">CSV para o Múltipla</button><button id="bLibExp">Biblioteca (.json)</button></div></div>
+  <button id="bDxf">DXF R2000 (pavimento atual + implantação)</button><button id="bIfc">IFC 4 (BIM)</button><button id="bXlsx">Excel (quantitativo, LM por disciplina, memória, cronograma)</button><button id="bCsv">CSV (planilha simples)</button><button id="bLibExp">Biblioteca (.json)</button></div></div>
  <button id="b3D" title="Vista 3D do projeto: terreno, edificação, implantação e perfis">3D</button>
  <button id="bRev" title="Congelar a revisão atual e iniciar a próxima">Emitir revisão</button>
  <button id="ptoggle" title="Painel">Painel</button>
@@ -394,7 +393,7 @@ function defaultEquipTipos(){return[
  {id:'outro',nome:'Outro equipamento',l:1500,w:1000,h:1500,peso:10,pot:5,calor:1,af:[800,800,800],base:150}];}
 function defaultState(){return{
  schema:SCHEMA,
- meta:{titulo:'Estudo Preliminar',obra:'Nova edificação',os:'',codigo:'EP-001',empresa:'Usiminas – Usina de Ipatinga',autor:'Gabriel E. O. Guedes',data:todayISO(),rev:'0',salvamentos:0},
+ meta:{titulo:'Estudo Preliminar',obra:'Nova edificação',os:'',codigo:'EP-001',empresa:'',autor:'',data:todayISO(),rev:'0',salvamentos:0},
  params:defaultParams(),tipos:defaultTipos(),esq:defaultEsq(),blocos:defaultBlocos(),equipTipos:defaultEquipTipos(),
  pavs:1,rooms:[],ops:[],equip:[],cortes:{a:null,b:null},under:null,guides:null,precos:{},
  terreno:{on:false,poly:[],cotas:[],plato:0,norte:0,afast:{frente:5000,fundos:3000,lat:1500},pavFrac:0.6,cerca:true,drenagem:true},
@@ -2306,7 +2305,7 @@ function frameOps(St,titulo,folha,escala,C){
  const m=St.meta,o=[];const T=(x,y,s,h,bold,col='#000',anc='start')=>o.push({t:'tx',x,y,s,h,bold,col,anc,base:'auto'});
  o.push({t:'r',x:20,y:7,w:393,h:283,stroke:'#000',sw:0.5});o.push({t:'l',x1:COL.x-1,y1:7,x2:COL.x-1,y2:290,w:0.25});
  const x=COL.x+1,y=236,w=COL.w;const lab=(tx,ty,s)=>T(tx,ty,s,1.6,false,'#555');
- o.push({t:'r',x,y,w,h:52,fill:'#fff',stroke:'#000',sw:0.35});o.push({t:'r',x,y,w,h:7,fill:'#257126'});T(x+2.5,y+4.9,trunc(m.empresa,60),2.8,true,'#fff');
+ o.push({t:'r',x,y,w,h:52,fill:'#fff',stroke:'#000',sw:0.35});o.push({t:'r',x,y,w,h:7,fill:'#257126'});T(x+2.5,y+4.9,trunc(m.empresa||m.obra||'',60),2.8,true,'#fff');
  lab(x+2.5,y+10,'TÍTULO');T(x+2.5,y+14,trunc(titulo,58),2.9,true);lab(x+2.5,y+18.2,'OBRA / PROJETO');T(x+2.5,y+22,trunc(m.obra,68),2.3,false);
  o.push({t:'l',x1:x,y1:y+24,x2:x+w,y2:y+24,w:0.2});
  lab(x+2.5,y+27,'OS');T(x+2.5,y+30.6,trunc(m.os||'—',22),2.3,false);lab(x+40,y+27,'DESENHO Nº');T(x+40,y+30.6,trunc(m.codigo+'-'+folha.split('/')[0],26),2.3,true);lab(x+80,y+27,'REV.');T(x+80,y+30.6,String(m.rev),2.3,true);
@@ -2915,7 +2914,7 @@ function quantPDFPages(){
  const cols=[{w:11,a:'start'},{w:84,a:'start'},{w:8,a:'start'},{w:19,a:'end'},{w:20,a:'end'},{w:22,a:'end'},{w:18,a:'end'}];const heads=['Item','Descrição','Un','Quant.','Preço (R$)','Total (R$)','Hh'];
  const C=checks(S,M,Q),pl=plano(S,Q,M);
  const newPage=()=>{pg++;o=[];pages.push({W,H,ops:o});y=top;
-  o.push({t:'r',x:mL,y:y-8,w:W-mL-mR,h:6,fill:'#257126'});o.push({t:'tx',x:mL+2,y:y-3.8,s:trunc(`${S.meta.empresa} · ${S.meta.obra}`,95),h:2.6,bold:true,col:'#fff',base:'auto'});
+  o.push({t:'r',x:mL,y:y-8,w:W-mL-mR,h:6,fill:'#257126'});o.push({t:'tx',x:mL+2,y:y-3.8,s:trunc([S.meta.empresa,S.meta.obra].filter(Boolean).join(' · '),95),h:2.6,bold:true,col:'#fff',base:'auto'});
   o.push({t:'tx',x:W-mR-2,y:y-3.8,s:`${S.meta.codigo} · Rev. ${S.meta.rev} · ${brDate(S.meta.data)} · #${modelHash(S)} · pág. ${pg}`,h:2.2,col:'#fff',anc:'end',base:'auto'});y+=2;};
  const need=h=>{if(y+h>H-bot)newPage();};
  const row=(cells,opt={})=>{need(opt.h||4.2);let x=mL;const hh=opt.h||4.2;if(opt.fill)o.push({t:'r',x:mL,y:y-hh+1,w:W-mL-mR,h:hh,fill:opt.fill});
@@ -3166,7 +3165,7 @@ function memorialDoc(St,M,Q,C){
  const P=St.params,R=M.resumo,floors=M.floors||[M],sol=M.solo||{},pl=plano(St,Q,M),mc=montecarlo(St,Q,M),san=sanidade(St,Q,M),TE=M.terreno;const D=[];
  const H=(t,l=1)=>D.push({h:t,l}),Pg=t=>D.push({p:t}),UL=a=>D.push({ul:a}),TB=(head,rows)=>D.push({table:{head,rows}});
  H(`MEMORIAL DESCRITIVO – ESTUDO PRELIMINAR`,0);
- Pg(`${St.meta.obra}. Documento ${St.meta.codigo}, revisão ${St.meta.rev}, de ${brDate(St.meta.data)}. Elaborado por ${St.meta.autor} – ${St.meta.empresa}. Modelo #${modelHash(St)}.`);
+ Pg(`${St.meta.obra}. Documento ${St.meta.codigo}, revisão ${St.meta.rev}, de ${brDate(St.meta.data)}. ${(St.meta.autor||St.meta.empresa)?`Elaborado por ${[St.meta.autor,St.meta.empresa].filter(Boolean).join(' – ')}. `:''}Modelo #${modelHash(St)}.`);
  let n;if(M.empty){H('1. Objeto');Pg(`Este memorial descreve o estudo preliminar de implantação: ${(St.indus||[]).length} peça(s) e elemento(s) inseridos no croqui${(St.perfis||[]).length?` e ${St.perfis.length} perfil(is) longitudinal(is)`:''}, com pré-dimensionamento simplificado, armaduras, quantitativo, custo de referência e prazo. Não há edificação desenhada neste estudo.`);n=1;}else{
  H('1. Objeto');Pg(`Este memorial descreve o estudo preliminar de uma edificação de ${nf(R.areaTot)} m² de área construída (${floors.length} pavimento${floors.length>1?'s':''}), com ${nf(R.areaU)} m² de área útil distribuídos em ${St.rooms.length} ambientes, gerado a partir de croqui paramétrico. As quantidades têm precisão de estudo preliminar (classe ${mc.classe} AACE, ${mc.faixa}) e não substituem projeto executivo.`);
  if(TE){H('2. Implantação e terreno');Pg(`Terreno com ${nf(TE.areaT,0)} m², taxa de ocupação de ${nf(TE.taxaOcup*100,0)}%. Platô de implantação na cota ${fm(TE.zDesign)} m, com terreno natural variando de ${fm(TE.zMin)} a ${fm(TE.zMax)} m: corte de ${nf(TE.corte,0)} m³ e aterro de ${nf(TE.aterro,0)} m³ (volumes geométricos). Afastamentos ${TE.viol.length?'NÃO atendidos em: '+TE.viol.join(', '):'atendidos'}. Norte a ${St.terreno.norte||0}° do topo do croqui.`);
@@ -4405,7 +4404,7 @@ if(typeof buildInsBar==='function'){buildInsBar();buildInsModal();}
 <script>
 /* ===================== p16b — estruturas de processo e metálicas: galeria/túnel, SAO, bacias químicas, piso pesado, muro corta-fogo/explosão, plataforma metálica, torre de iluminação, pipe rack metálico dimensionado, proteção de aço ===================== */
 INDUS_CATS.push(['proc','Estruturas de processo (galerias, SAO, pisos pesados, proteções)'],['metal','Estruturas metálicas dimensionadas']);INDUS_CAT_COR.proc='#0b5d6b';INDUS_CAT_COR.metal='#3b4a8a';INDUS_GRUPO.proc='IMPLANTAÇÃO – ESTRUTURAS DE PROCESSO';INDUS_GRUPO.metal='IMPLANTAÇÃO – ESTRUTURAS METÁLICAS';
-/* ---------- perfis laminados (Gerdau W) — kg/m, Wx (cm³), Ix (cm⁴), A (cm²), rx, ry (cm) ---------- */
+/* ---------- perfis laminados série W (tabela de fabricante) — kg/m, Wx (cm³), Ix (cm⁴), A (cm²), rx, ry (cm) ---------- */
 const W_TAB=[['W150x13',13,83.3,635,16.6,6.18,1.86],['W150x18',18,120,939,23.4,6.34,2.32],['W200x19.3',19.3,162,1686,25.1,8.19,2.14],['W200x26.6',26.6,249,2611,34.2,8.73,3.10],['W250x25.3',25.3,266,3473,32.6,10.3,2.14],['W250x32.7',32.7,380,4937,42.1,10.8,3.30],['W310x32.7',32.7,415,6570,42.1,12.5,2.68],['W310x38.7',38.7,547,8581,49.7,13.1,3.60],['W360x44',44,693,12258,57.7,14.6,3.77],['W410x53',53,926,18734,68.4,16.5,3.47],['W460x60',60,1121,25652,76.2,18.3,3.23],['W530x74',74,1548,41072,95.1,20.8,4.10],['W610x101',101,2524,77003,130,24.3,4.70],['W610x140',140,3640,112600,179,25.1,5.5]];
 const H_TAB=[['W150x22.5',22.5,159,1229,29,6.51,3.65],['W200x35.9',35.9,342,3437,45.7,8.67,5.1],['W200x46.1',46.1,448,4543,58.6,8.81,5.18],['W250x62',62,805,8699,79.6,10.5,6.46],['W250x73',73,983,11344,92.7,11.1,6.47],['W310x97',97,1440,22284,123,13.5,7.69],['W360x122',122,2020,36599,155,15.4,9.07],['W360x179',179,3120,57400,228,15.9,9.42]];
 const FY=345,E_ACO=200000; // MPa (ASTM A572 Gr.50)
@@ -5074,7 +5073,7 @@ function memoriaPecaDoc(r,num,P){const T=r.T,v=r.v,D=r.D||{};const out=[];const 
  const msgs=(r.msgs||[]);if(msgs.length)UL(msgs.map(m=>`${m.sev==='erro'?'ERRO':m.sev==='alerta'?'Alerta':'Nota'}: ${m.msg}`));
  Pg(`Normas e referências: ${normasDe(T.id).join('; ')}.`);return out;}
 function memoriaPecasDoc(St,M){const D=[];const P=St.params;D.push({h:'MEMÓRIA DE CÁLCULO — PEÇAS DE IMPLANTAÇÃO E ELEMENTOS INDUSTRIAIS',l:0});
- D.push({p:`${St.meta.obra}. Documento ${St.meta.codigo}, revisão ${St.meta.rev}, de ${brDate(St.meta.data)}. Elaborado por ${St.meta.autor} – ${St.meta.empresa}. Modelo #${modelHash(St)}. Pré-dimensionamento de estudo preliminar: critérios simplificados das normas citadas em cada peça; não substitui o projeto executivo.`});
+ D.push({p:`${St.meta.obra}. Documento ${St.meta.codigo}, revisão ${St.meta.rev}, de ${brDate(St.meta.data)}. ${(St.meta.autor||St.meta.empresa)?`Elaborado por ${[St.meta.autor,St.meta.empresa].filter(Boolean).join(' – ')}. `:''}Modelo #${modelHash(St)}. Pré-dimensionamento de estudo preliminar: critérios simplificados das normas citadas em cada peça; não substitui o projeto executivo.`});
  const sol=M.solo||{};D.push({h:'1. Premissas gerais',l:1});D.push({ul:[`Solo: ${sol.on?`sondagem informada, σ adm ${sol.sigma} kPa${sol.Nmed?`, N médio ${nf(sol.Nmed,1)}`:''}`:`tensão admissível adotada ${P.sigmaSolo} kPa (sem sondagem)`}.`,`Concreto de referência fck ${P.fck} MPa; aço CA-50/CA-60 (fyd = fyk/1,15); γf = 1,4; cobrimentos conforme classe de agressividade por peça.`,`Aço metálico ASTM A572 Gr.50 / A36 (σ ≤ 0,6 fy, flecha L/250); vento NBR 6123 conforme parâmetros do projeto.`,`Unidades SI; cotas em metros; cargas características salvo indicação.`]});
  const res=M.indus||[];D.push({h:'2. Peças',l:1});res.forEach((r,i)=>D.push(...memoriaPecaDoc(r,`2.${i+1}`,P)));
  const A=M.arm;if(A&&A.elems.some(e=>e.sub==='imp')){D.push({h:'3. Quadro de armaduras das peças',l:1});A.elems.filter(e=>e.sub==='imp').forEach(e=>{D.push({h:`${e.id} — ${e.titulo}${e.qtd>1?` (${e.qtd} un.)`:''}`,l:2});D.push({table:{head:['Pos.','Ø (mm)','Quant.','C. unit. (cm)','C. total (m)','Forma','Observação'],rows:e.pos.map(p=>[String(p.n),String(p.d).replace('.',','),String(p.q),String(p.c),nf(p.ct,1),p.forma,p.obs||p.dims||''])}});D.push({p:`Massa por unidade ${nf(e.kgUn,0)} kg${e.qtd>1?` · total ${nf(e.kg,0)} kg`:''}. ${e.nota||''}`});});}
@@ -5756,8 +5755,8 @@ function modelosLer(){try{return JSON.parse(localStorage.getItem(MODELOS_KEY)||'
 function modelosGravar(a){try{localStorage.setItem(MODELOS_KEY,JSON.stringify(a));}catch(e){toast('Não foi possível gravar o modelo (armazenamento cheio).');}}
 function modeloDoProjeto(nome){return{nome,data:new Date().toISOString().slice(0,10),obra:S.meta.obra,conf:deep({params:S.params,tipos:S.tipos,esq:S.esq,blocos:S.blocos,equipTipos:S.equipTipos,precos:S.precos,estr:S.estr,fund:Object.assign({},S.fund,{porPilar:{}}),meta:{empresa:S.meta.empresa,autor:S.meta.autor,titulo:S.meta.titulo},acabTipos:null})};}
 function modeloAplicar(mo){mark();Object.assign(S,deep(mo.conf));S.fund=Object.assign({},S.fund,{porPilar:S.fund.porPilar||{}});if(mo.conf.meta)Object.assign(S.meta,mo.conf.meta);refresh();toast(`Modelo "${mo.nome}" aplicado: parâmetros, tipologias, esquadrias, preços e critérios.`);}
-function modelosHTML(){const ms=modelosLer();return `<h4>Modelos de projeto (meus padrões)</h4><div class="hint">Um modelo guarda parâmetros, tipologias, esquadrias, blocos, catálogo de equipamentos, preços, critérios de estrutura e fundação e o carimbo — não guarda o desenho. Ex.: "Padrão Coqueria", "Padrão Aciaria".</div><div class="btns"><button class="btn" id="bModSave">Salvar o projeto atual como modelo…</button><button class="btn" id="bModImp">Importar modelo (.json)</button></div>${ms.length?`<div class="rlist">${ms.map((mo,i)=>`<div class="r"><b>${esc(mo.nome)}</b><span style="color:var(--mut);font-size:11px">${mo.data}${mo.obra?' · '+esc(mo.obra):''}</span><span><button class="btn" data-modapl="${i}">Aplicar</button> <button class="btn" data-modexp="${i}">Exportar</button> <button class="btn dan" data-moddel="${i}">✕</button></span></div>`).join('')}</div>`:'<div class="hint">Nenhum modelo salvo neste aparelho ainda.</div>'}`;}
-function bindModelos(pn){const b=$('#bModSave');if(b)b.onclick=()=>{const nome=prompt('Nome do modelo (ex.: Padrão Coqueria):',S.meta.obra||'Meu padrão');if(!nome)return;const ms=modelosLer().filter(m=>m.nome!==nome);ms.unshift(modeloDoProjeto(nome));modelosGravar(ms);renderPanel();toast('Modelo salvo neste aparelho. Use "Exportar" para levar a outro computador.');};
+function modelosHTML(){const ms=modelosLer();return `<h4>Modelos de projeto (meus padrões)</h4><div class="hint">Um modelo guarda parâmetros, tipologias, esquadrias, blocos, catálogo de equipamentos, preços, critérios de estrutura e fundação e o carimbo — não guarda o desenho. Ex.: "Meu padrão de galpão", "Padrão do cliente A".</div><div class="btns"><button class="btn" id="bModSave">Salvar o projeto atual como modelo…</button><button class="btn" id="bModImp">Importar modelo (.json)</button></div>${ms.length?`<div class="rlist">${ms.map((mo,i)=>`<div class="r"><b>${esc(mo.nome)}</b><span style="color:var(--mut);font-size:11px">${mo.data}${mo.obra?' · '+esc(mo.obra):''}</span><span><button class="btn" data-modapl="${i}">Aplicar</button> <button class="btn" data-modexp="${i}">Exportar</button> <button class="btn dan" data-moddel="${i}">✕</button></span></div>`).join('')}</div>`:'<div class="hint">Nenhum modelo salvo neste aparelho ainda.</div>'}`;}
+function bindModelos(pn){const b=$('#bModSave');if(b)b.onclick=()=>{const nome=prompt('Nome do modelo (ex.: Meu padrão de galpão):',S.meta.obra||'Meu padrão');if(!nome)return;const ms=modelosLer().filter(m=>m.nome!==nome);ms.unshift(modeloDoProjeto(nome));modelosGravar(ms);renderPanel();toast('Modelo salvo neste aparelho. Use "Exportar" para levar a outro computador.');};
  $$('[data-modapl]',pn).forEach(x=>x.onclick=()=>modeloAplicar(modelosLer()[+x.dataset.modapl]));$$('[data-moddel]',pn).forEach(x=>x.onclick=()=>{const ms=modelosLer();if(!confirm(`Excluir o modelo "${ms[+x.dataset.moddel].nome}"?`))return;ms.splice(+x.dataset.moddel,1);modelosGravar(ms);renderPanel();});
  $$('[data-modexp]',pn).forEach(x=>x.onclick=()=>{const mo=modelosLer()[+x.dataset.modexp];download(new Blob([JSON.stringify({plantacalc_modelo:1,...mo},null,1)],{type:'application/json'}),`modelo-${mo.nome.replace(/[^\w-]+/g,'_')}.json`);});
  const bi=$('#bModImp');if(bi)bi.onclick=()=>{const f=document.createElement('input');f.type='file';f.accept='.json,application/json';f.onchange=()=>{const fr=new FileReader();fr.onload=()=>{try{const mo=JSON.parse(fr.result);if(!mo.conf)throw 0;const ms=modelosLer().filter(m=>m.nome!==mo.nome);ms.unshift({nome:mo.nome||'Importado',data:mo.data||'',obra:mo.obra||'',conf:mo.conf});modelosGravar(ms);renderPanel();toast('Modelo importado.');}catch(e){toast('Arquivo não é um modelo do PlantaCalc.');}};fr.readAsText(f.files[0]);};f.click();};}
@@ -6979,10 +6978,10 @@ function updWelcome(){const w=$('#sWelcome');const show=isSimples()&&view==='cro
  <button class="pri" data-w="wiz">${ic24('wiz')}<div><b>Responder algumas perguntas</b><span>O assistente monta o estudo pronto (casa de bombas, sala elétrica, galpão, pátio…).</span></div></button>
  <button data-w="ret">${ic24('room')}<div><b>Desenhar uma sala</b><span>Arraste no desenho ou digite as medidas, por exemplo 8 x 6.</span></div></button>
  <button data-w="fundo">${ic24('pdf')}<div><b>Usar uma planta existente</b><span>Carregue um PDF ou foto e coloque na escala para desenhar por cima.</span></div></button>
- <button data-w="abrir">${ic24('open')}<div><b>Abrir um estudo salvo</b><span>Arquivo .json do PlantaCalc (ou DXF).</span></div></button>
+ <button data-w="abrir">${ic24('open')}<div><b>Meus projetos</b><span>Abra um projeto salvo, ou um arquivo .json / DXF do computador.</span></div></button>
  <button data-w="ex">${ic24('ex')}<div><b>Ver um exemplo pronto</b><span>Casa de bombas com sala elétrica, para explorar.</span></div></button></div><button class="x" data-w="x">Fechar e começar com a tela em branco</button></div>`;w.classList.add('on');}
 $('#sWelcome').addEventListener('click',e=>{const b=e.target.closest('[data-w]');if(!b)return;const a=b.dataset.w;SIM.welcomeOff=true;$('#sWelcome').classList.remove('on');
- if(a==='wiz')wizOpen();else if(a==='ret')startIns(INS.find(o=>o.k==='ambiente'));else if(a==='fundo')$('#fImg').click();else if(a==='abrir')$('#fOpen').click();else if(a==='ex'){mark();const u=S.under;S=exemplo();S.under=u;ed.sel=null;ed.pav=0;refresh();fitView();}simUpd();});
+ if(a==='wiz')wizOpen();else if(a==='ret')startIns(INS.find(o=>o.k==='ambiente'));else if(a==='fundo')$('#fImg').click();else if(a==='abrir'){if(typeof abrirProjetos==='function')abrirProjetos();else $('#fOpen').click();}else if(a==='ex'){if(typeof pjNovo==='function'&&temConteudo()){pjNovo('exemplo');}else{mark();const u=S.under;S=exemplo();S.under=u;ed.sel=null;ed.pav=0;refresh();fitView();}}simUpd();});
 
 function simUpd(force){document.body.classList.toggle('vw-pranchas',view==='pranchas');document.body.classList.toggle('vw-quant',view==='quant');document.body.classList.toggle('vw-perfil',view==='perfil');
  if(!isSimples()){$('#sCard').classList.remove('on');return;}
@@ -7053,7 +7052,7 @@ function wizForm(w){const m=wizModal();const P=w.perguntas;const a={};P.forEach(
   if((b=t.closest('[data-wk]'))){keep=b.dataset.wk==='1';draw();return;}
   if(!(b=t.closest('[data-wg]')))return;const g=b.dataset.wg;
   if(g==='list'){m.onclick=null;wizOpen();return;}if(g==='back'){k=Math.max(0,k-1);draw();return;}if(g==='next'){k++;draw();return;}
-  if(g==='go'){const u=S.under;const {St,resumo}=wizEstado(w,a,keep);mark();S=St;S.under=keep?u:(u||null);m.classList.remove('on');m.onclick=null;ed.sel=null;ed.pav=0;SIM.welcomeOff=true;refresh();fitView();toast(resumo);}};
+  if(g==='go'){const u=S.under;const {St,resumo}=wizEstado(w,a,keep);const novoPj=!keep&&temConteudo()&&typeof pjNovoId==='function';if(novoPj)pjNovoId();mark();if(novoPj)undoS.length=0;S=St;S.under=keep?u:(u||null);m.classList.remove('on');m.onclick=null;ed.sel=null;ed.pav=0;SIM.welcomeOff=true;refresh();fitView();toast(resumo);}};
  draw();m.classList.add('on');}
 (function(){const _wo=wizOpen;wizOpen=function(){wizModal().onclick=null;_wo();};})();
 
@@ -7073,6 +7072,141 @@ function wizForm(w){const m=wizModal();const P=w.perguntas;const a={};P.forEach(
  let m0='simples';try{m0=localStorage.getItem(MODO_KEY)||'simples';}catch(e){}setModo(m0==='eng'?'eng':'simples',true);
 })();
 </script>
+<script>
+/* ===================== p26 — MEUS PROJETOS: vários projetos com salvamento automático.
+   Sempre no aparelho (IndexedDB, sem limite). Com conta (versão online): também na nuvem (Supabase) — Gratuito até 3, Pro ilimitado. ===================== */
+const PJ={db:null,atual:null,locais:{},nuvem:{},status:'',limite:false,trocando:false,tSave:null,tNuvem:null,busca:''};
+const PJ_KEY='pc_proj_atual_v1',PJ_LIM=3;
+const pjUUID=()=>(crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);}));
+const pjLogado=()=>typeof MON!=='undefined'&&MON&&MON.sb&&MON.user;
+const pjPro=()=>typeof isPro==='function'&&isPro();
+function pjIDB(){return new Promise((ok,err)=>{if(PJ.db)return ok(PJ.db);if(!window.indexedDB)return err(new Error('sem IndexedDB'));const r=indexedDB.open('plantacalc',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('projetos'))r.result.createObjectStore('projetos',{keyPath:'id'});};r.onsuccess=()=>{PJ.db=r.result;ok(PJ.db);};r.onerror=()=>err(r.error);});}
+async function pjTx(modo,fn){const d=await pjIDB();return new Promise((ok,err)=>{const t=d.transaction('projetos',modo);const st=t.objectStore('projetos');const q=fn(st);t.oncomplete=()=>ok(q&&q.result);t.onerror=()=>err(t.error);});}
+const pjTodos=()=>pjTx('readonly',s=>s.getAll());
+const pjGrava=o=>pjTx('readwrite',s=>s.put(o));
+const pjApaga=id=>pjTx('readwrite',s=>s.delete(id));
+function pjNome(St){const m=(St||S).meta||{};return (m.obra&&m.obra!=='Nova edificação'?m.obra:'')||m.titulo||'Projeto sem nome';}
+function pjMini(){try{const rs=S.rooms.filter(r=>(r.pav||0)===0);if(rs.length&&typeof miniSVG==='function')return miniSVG(rs,S.ops.filter(o=>(o.pav||0)===0),160,110);}catch(e){}
+ return `<svg viewBox="0 0 160 110" xmlns="http://www.w3.org/2000/svg"><rect x="40" y="25" width="80" height="60" fill="#f4f8ee" stroke="#9ab88a" stroke-dasharray="4 3"/><path d="M70 55h20M80 45v20" stroke="#9ab88a" stroke-width="3"/></svg>`;}
+function pjQuando(t){const s=(Date.now()-new Date(t).getTime())/1000;if(s<60)return 'agora';if(s<3600)return `há ${Math.round(s/60)} min`;if(s<86400)return `há ${Math.round(s/3600)} h`;if(s<86400*7)return `há ${Math.round(s/86400)} dia(s)`;return new Date(t).toLocaleDateString('pt-BR');}
+
+/* ---------- salvar ---------- */
+async function pjSalvarLocal(){if(!PJ.atual||PJ.trocando)return;let dados;try{dados=JSON.stringify(S);}catch(e){dados=snapS();}
+ const prev=PJ.locais[PJ.atual]||{};const rec={id:PJ.atual,nome:pjNome(),atualizado:Date.now(),criado:prev.criado||Date.now(),dados,mini:pjMini(),nuvem:prev.nuvem||null};
+ PJ.locais[PJ.atual]=rec;try{await pjGrava(rec);if(!pjLogado())pjStatus('aparelho');}catch(e){console.warn(e);pjStatus('erro');}}
+function pjAgendar(){if(PJ.trocando)return;clearTimeout(PJ.tSave);pjStatus('salvando');PJ.tSave=setTimeout(async()=>{await pjSalvarLocal();pjAgendarNuvem();},1200);}
+function pjAgendarNuvem(){if(!pjLogado())return;clearTimeout(PJ.tNuvem);PJ.tNuvem=setTimeout(pjSalvarNuvem,3500);}
+async function pjSalvarNuvem(){if(!pjLogado()||!PJ.atual)return;const rec=PJ.locais[PJ.atual];if(!rec)return;
+ if(!PJ.nuvem[PJ.atual]&&!pjPro()&&Object.keys(PJ.nuvem).length>=PJ_LIM){PJ.limite=true;pjStatus('limite');return;}
+ let dados;try{dados=JSON.parse(snapS());}catch(e){return;}
+ const pl={id:PJ.atual,user_id:MON.user.id,nome:rec.nome,dados,miniatura:rec.mini,tamanho:rec.dados.length,atualizado:new Date().toISOString()};
+ pjStatus('nuvem-salvando');const {error}=await MON.sb.from('projetos').upsert(pl);
+ if(error){if(/LIMITE_GRATIS/.test(error.message||'')){PJ.limite=true;pjStatus('limite');}else{console.warn(error);pjStatus('offline');}return;}
+ PJ.nuvem[PJ.atual]={id:PJ.atual,nome:rec.nome,miniatura:rec.mini,atualizado:pl.atualizado};rec.nuvem=pl.atualizado;pjGrava(rec).catch(()=>{});pjStatus('nuvem');}
+async function pjSalvarAgora(){clearTimeout(PJ.tSave);clearTimeout(PJ.tNuvem);await pjSalvarLocal();if(pjLogado())await pjSalvarNuvem();}
+async function pjListarNuvem(){if(!pjLogado())return;try{const {data,error}=await MON.sb.from('projetos').select('id,nome,miniatura,atualizado,tamanho').order('atualizado',{ascending:false});if(error)throw error;PJ.nuvem={};(data||[]).forEach(p=>PJ.nuvem[p.id]=p);}catch(e){console.warn('nuvem',e);}}
+
+/* ---------- indicador no topo ---------- */
+const PJ_ST={salvando:['Salvando…','#f0ad4e'],aparelho:['Salvo neste aparelho','#8bc34a'],'nuvem-salvando':['Salvando na nuvem…','#f0ad4e'],nuvem:['Salvo na nuvem','#8bc34a'],limite:['Salvo neste aparelho (limite da nuvem)','#ffc107'],offline:['Sem internet: salvo neste aparelho','#ffc107'],erro:['Não foi possível salvar','#e57373']};
+function pjStatus(s){PJ.status=s;const b=$('#bProj');if(!b)return;const st=PJ_ST[s]||PJ_ST.aparelho;b.innerHTML=`<span class="pjn">📁 ${esc(pjNome())}</span><i style="background:${st[1]}" title="${esc(st[0])}"></i><small>${esc(st[0])}</small>`;b.title='Meus projetos — '+st[0];}
+(function(){const st=document.createElement('style');st.textContent=`
+#bProj{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.12)!important;border:1px solid rgba(255,255,255,.35)!important;color:#fff!important;max-width:min(360px,40vw);padding:6px 10px!important;border-radius:9px}
+#bProj .pjn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}#bProj i{width:8px;height:8px;border-radius:50%;flex:none}#bProj small{font-size:11px;opacity:.85;white-space:nowrap}
+@media (max-width:1100px){#bProj small{display:none}}
+@media (max-width:1400px){header .brand small{display:none}}
+#pjOv{position:fixed;inset:0;z-index:63;display:none;background:#eef1f4;overflow:auto}#pjOv.on{display:block}
+#pjOv .w{width:min(1180px,100%);margin:0 auto;padding:18px 18px 50px}
+#pjOv .t{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}#pjOv .t h2{margin:0 8px 0 0;font-size:24px;color:var(--g1)}
+#pjOv .t input{font:inherit;font-size:15px;padding:10px 12px;border-radius:11px;border:1px solid var(--line);min-width:200px;flex:1}
+#pjOv .bt{border:0;border-radius:11px;padding:11px 16px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;background:#fff;color:var(--ink);border:1px solid var(--line)}
+#pjOv .bt.pri{background:var(--g1);color:#fff;border-color:var(--g1)}#pjOv .bt.am{background:#ffc107;border-color:#ffc107}
+#pjOv .info{background:#fff;border-radius:14px;padding:12px 16px;margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--mut);border:1px solid var(--line)}
+#pjOv .info b{color:var(--ink)}#pjOv .info .sp{flex:1}
+#pjOv .novo{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:18px}
+#pjOv .novo button{border:2px dashed #b9cfa4;background:#f8fbf3;border-radius:14px;padding:14px;text-align:left;cursor:pointer;font:inherit;color:var(--ink)}
+#pjOv .novo button:hover{border-color:var(--g1)}#pjOv .novo b{display:block;font-size:15px}#pjOv .novo span{font-size:12.5px;color:var(--mut)}
+#pjOv .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+#pjOv .c{background:#fff;border-radius:16px;border:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column}
+#pjOv .c.at{border:2px solid var(--g1)}
+#pjOv .c .mi{background:#fafbf8;height:130px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-bottom:1px solid #eef0f2}#pjOv .c .mi svg{max-width:90%;max-height:110px}
+#pjOv .c .b{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;flex:1}
+#pjOv .c .n{font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pjOv .c .m{font-size:12.5px;color:var(--mut);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+#pjOv .chip{font-size:11px;padding:2px 7px;border-radius:10px;background:#eef1f4;color:#46515a}#pjOv .chip.n{background:#e6f1fb;color:#1d4f7a}#pjOv .chip.a{background:#eaf3df;color:var(--g1);font-weight:700}
+#pjOv .c .ac{display:flex;gap:5px;margin-top:auto}
+#pjOv .c .ac button{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 8px;font:inherit;font-size:12.5px;cursor:pointer;white-space:nowrap}#pjOv .c .ac .ab{flex:1}
+#pjOv .c .ac .ab{background:var(--g1);color:#fff;border-color:var(--g1);font-weight:600}#pjOv .c .ac .ex{color:#8a1c12}#pjOv .c .ac .ex.cf{background:#8a1c12;color:#fff}
+#pjOv .vz{padding:40px;text-align:center;color:var(--mut)}
+`;document.head.appendChild(st);
+ const hdr=document.querySelector('header');const b=document.createElement('button');b.id='bProj';const br=hdr.querySelector('.brand');hdr.insertBefore(b,br?br.nextSibling:hdr.firstChild);b.onclick=()=>abrirProjetos();
+ const ov=document.createElement('div');ov.id='pjOv';document.body.appendChild(ov);
+ const dd=$('#ddExp');if(dd){const bj=document.createElement('button');bj.id='bJson';bj.textContent='Arquivo do projeto (.json) — cópia de segurança';dd.insertBefore(bj,dd.firstChild);}
+})();
+
+/* ---------- tela Meus projetos ---------- */
+async function abrirProjetos(){await pjSalvarLocal();try{(await pjTodos()).forEach(r=>PJ.locais[r.id]=r);}catch(e){}await pjListarNuvem();pjRender();$('#pjOv').classList.add('on');}
+function pjRender(){const ov=$('#pjOv');const ids=[...new Set([...Object.keys(PJ.locais),...Object.keys(PJ.nuvem)])];
+ const it=ids.map(id=>{const l=PJ.locais[id],n=PJ.nuvem[id];const t=Math.max(l?l.atualizado:0,n?new Date(n.atualizado).getTime():0);return{id,nome:(l&&l.nome)||(n&&n.nome)||'Projeto',mini:(l&&l.mini)||(n&&n.miniatura)||'',t,l,n};})
+  .filter(p=>!PJ.busca||p.nome.toLowerCase().includes(PJ.busca.toLowerCase())).sort((a,b)=>(b.id===PJ.atual)-(a.id===PJ.atual)||b.t-a.t);
+ const nN=Object.keys(PJ.nuvem).length;const online=typeof MON!=='undefined';
+ let info='';if(online){if(!pjLogado())info=`<div class="info"><span>💻 Seus projetos ficam salvos <b>neste aparelho</b>. Crie uma conta grátis para guardá-los também <b>na nuvem</b> e abrir em qualquer computador ou tablet.</span><span class="sp"></span><button class="bt pri" data-pj="conta">Entrar ou criar conta</button></div>`;
+  else if(pjPro())info=`<div class="info"><span>☁ <b>Plano Pro:</b> projetos ilimitados na nuvem, em qualquer aparelho.</span></div>`;
+  else info=`<div class="info"><span>☁ Nuvem: <b>${nN} de ${PJ_LIM}</b> projetos no plano gratuito. Os demais ficam salvos neste aparelho.</span><span class="sp"></span><button class="bt am" data-pj="pro">Projetos ilimitados com o Pro</button></div>`;}
+ const card=p=>{const at=p.id===PJ.atual;return `<div class="c${at?' at':''}"><div class="mi" data-pjo="${p.id}">${p.mini}</div><div class="b"><div class="n" title="${esc(p.nome)}">${esc(p.nome)}</div><div class="m">${at?'<span class="chip a">Aberto agora</span>':''}${p.l?'<span class="chip">💻 neste aparelho</span>':''}${p.n?'<span class="chip n">☁ na nuvem</span>':''}<span>· ${pjQuando(p.t)}</span></div>
+  <div class="ac">${at?'':`<button class="ab" data-pjo="${p.id}">${p.l?'Abrir':'Baixar e abrir'}</button>`}<button data-pjr="${p.id}">Renomear</button><button data-pjd="${p.id}">Duplicar</button><button class="ex" data-pjx="${p.id}" title="Excluir">🗑</button></div></div></div>`;};
+ ov.innerHTML=`<div class="w"><div class="t"><h2>Meus projetos</h2><input id="pjBusca" placeholder="Procurar projeto…" value="${esc(PJ.busca)}"><button class="bt" data-pj="arquivo">Abrir arquivo do computador</button><button class="bt pri" data-pj="x">◀ Voltar ao projeto</button></div>${info}
+ <div class="novo"><button data-pjn="branco"><b>＋ Projeto em branco</b><span>Desenhe do zero ou use uma planta de fundo.</span></button><button data-pjn="assistente"><b>★ Novo com o assistente</b><span>Responda perguntas e receba o estudo pronto.</span></button><button data-pjn="exemplo"><b>⧉ Novo a partir do exemplo</b><span>Casa de bombas com sala elétrica, para explorar.</span></button></div>
+ ${it.length?`<div class="g">${it.map(card).join('')}</div>`:'<div class="vz">Nenhum projeto encontrado.</div>'}</div>`;
+ const bs=$('#pjBusca');bs.oninput=()=>{PJ.busca=bs.value;const pos=bs.selectionStart;pjRender();const nb=$('#pjBusca');nb.focus();nb.setSelectionRange(pos,pos);};}
+$('#pjOv').addEventListener('click',async e=>{const t=e.target;let b;const fechar=()=>$('#pjOv').classList.remove('on');
+ if((b=t.closest('[data-pj]'))){const a=b.dataset.pj;if(a==='x')fechar();else if(a==='conta')location.href='conta.html';else if(a==='pro'){fechar();if(typeof abrirPlanos==='function')abrirPlanos();}else if(a==='arquivo'){fechar();$('#fOpen').click();}return;}
+ if((b=t.closest('[data-pjn]'))){fechar();await pjNovo(b.dataset.pjn);return;}
+ if((b=t.closest('[data-pjo]'))){fechar();await pjAbrir(b.dataset.pjo);return;}
+ if((b=t.closest('[data-pjr]'))){const id=b.dataset.pjr;const atual=(PJ.locais[id]||PJ.nuvem[id]||{}).nome||'';const n=prompt('Nome do projeto:',atual);if(n&&n.trim())await pjRenomear(id,n.trim());pjRender();return;}
+ if((b=t.closest('[data-pjd]'))){await pjDuplicar(b.dataset.pjd);pjRender();return;}
+ if((b=t.closest('[data-pjx]'))){if(!b.classList.contains('cf')){b.classList.add('cf');b.textContent='Excluir?';setTimeout(()=>{if(b.isConnected){b.classList.remove('cf');b.textContent='🗑';}},4000);return;}await pjExcluir(b.dataset.pjx);pjRender();return;}});
+
+/* ---------- ações ---------- */
+function pjNovoId(){clearTimeout(PJ.tSave);clearTimeout(PJ.tNuvem);pjSalvarLocal();if(pjLogado())pjSalvarNuvem();PJ.atual=pjUUID();try{localStorage.setItem(PJ_KEY,PJ.atual);}catch(e){}}
+function pjCarregar(obj,id){PJ.trocando=true;try{const u=obj.under||null;S=migrate(obj);S.under=u;}finally{PJ.trocando=false;}PJ.atual=id;try{localStorage.setItem(PJ_KEY,id);}catch(e){}undoS.length=0;redoS.length=0;ed.sel=null;ed.pav=0;if(typeof setView==='function'&&view!=='croqui')setView('croqui');refresh();fitView();pjStatus(PJ.nuvem[id]?'nuvem':'aparelho');}
+async function pjAbrir(id){if(id===PJ.atual)return;await pjSalvarAgora();const l=PJ.locais[id],n=PJ.nuvem[id];
+ try{let obj=null;if(n&&(!l||new Date(n.atualizado).getTime()>l.atualizado+2000)&&pjLogado()){const {data,error}=await MON.sb.from('projetos').select('dados').eq('id',id).single();if(error)throw error;obj=data.dados;if(l){try{obj.under=JSON.parse(l.dados).under||null;}catch(e){}}}
+  else if(l)obj=JSON.parse(l.dados);if(!obj)throw new Error('projeto vazio');pjCarregar(obj,id);await pjSalvarLocal();toast(`Projeto “${pjNome()}” aberto.`);}catch(e){console.warn(e);toast('Não foi possível abrir este projeto agora.');}}
+async function pjNovo(tipo){await pjSalvarAgora();const keep={tipos:S.tipos,esq:S.esq,blocos:S.blocos,equipTipos:S.equipTipos,params:S.params,indices:S.indices,precos:S.precos,estr:S.estr};
+ let St;if(tipo==='exemplo'){St=exemplo();}else{St=defaultState();Object.assign(St,deep(keep));St.fund=Object.assign({},deep(S.fund),{porPilar:{}});}
+ const n=Object.keys(PJ.locais).length+1;St.meta.obra=tipo==='exemplo'?'Exemplo — casa de bombas':`Projeto ${n}`;St.under=null;
+ const id=pjUUID();pjCarregar(JSON.parse(JSON.stringify(St)),id);await pjSalvarLocal();pjAgendarNuvem();if(typeof SIM!=='undefined')SIM.welcomeOff=tipo!=='branco';
+ if(tipo==='assistente'&&typeof wizOpen==='function')wizOpen();else toast(`“${pjNome()}” criado. Ele é salvo automaticamente.`);}
+async function pjRenomear(id,nome){if(id===PJ.atual){edit(()=>{S.meta.obra=nome;});await pjSalvarAgora();return;}
+ const l=PJ.locais[id];if(l){l.nome=nome;try{const o=JSON.parse(l.dados);o.meta=o.meta||{};o.meta.obra=nome;l.dados=JSON.stringify(o);}catch(e){}await pjGrava(l);}
+ if(PJ.nuvem[id]&&pjLogado()){PJ.nuvem[id].nome=nome;await MON.sb.from('projetos').update({nome}).eq('id',id);}}
+async function pjDuplicar(id){if(id===PJ.atual)await pjSalvarLocal();let l=PJ.locais[id];
+ if(!l&&PJ.nuvem[id]&&pjLogado()){const {data}=await MON.sb.from('projetos').select('dados').eq('id',id).single();if(data)l={dados:JSON.stringify(data.dados),mini:PJ.nuvem[id].miniatura,nome:PJ.nuvem[id].nome};}
+ if(!l)return;const o=JSON.parse(l.dados);o.meta=o.meta||{};o.meta.obra=(l.nome||'Projeto')+' (cópia)';const rec={id:pjUUID(),nome:o.meta.obra,atualizado:Date.now(),criado:Date.now(),dados:JSON.stringify(o),mini:l.mini,nuvem:null};PJ.locais[rec.id]=rec;await pjGrava(rec);toast('Cópia criada (salva neste aparelho). Abra para guardar na nuvem.');}
+async function pjExcluir(id){try{await pjApaga(id);}catch(e){}delete PJ.locais[id];if(PJ.nuvem[id]&&pjLogado()){await MON.sb.from('projetos').delete().eq('id',id);delete PJ.nuvem[id];PJ.limite=false;}
+ if(id===PJ.atual){const outro=Object.values(PJ.locais).sort((a,b)=>b.atualizado-a.atualizado)[0];if(outro){PJ.atual=null;await pjAbrir(outro.id);}else{PJ.atual=null;await pjNovo('branco');}}toast('Projeto excluído.');}
+
+/* ---------- ganchos nos botões existentes ---------- */
+(function(){
+ const _as=autosave;autosave=function(){_as.apply(this,arguments);pjAgendar();};
+ const _salvarArquivo=salvar;
+ salvar=async function(){S.meta.salvamentos=(S.meta.salvamentos||0)+1;await pjSalvarAgora();renderPanel();toast(pjLogado()&&PJ.status==='nuvem'?'Projeto salvo na nuvem.':'Projeto salvo neste aparelho.');};
+ $('#bSalvar').onclick=()=>salvar();$('#bSalvar').title='Salvar o projeto (também salva sozinho a cada alteração)';
+ const bj=$('#bJson');if(bj)bj.onclick=()=>{const dd=$('#ddExp');if(dd)dd.classList.remove('open');_salvarArquivo();};
+ novo=function(){pjNovo('branco');};$('#bNovo').onclick=()=>novo();
+ $('#bAbrir').onclick=()=>abrirProjetos();$('#bAbrir').title='Meus projetos: abrir, criar, duplicar ou excluir';$('#bAbrir').textContent='Meus projetos';
+ const _aj=abrirJSON;abrirJSON=function(o){if(o&&o.tipo==='plantacalc-biblioteca')return _aj.apply(this,arguments);pjNovoId();PJ.trocando=true;try{_aj.apply(this,arguments);}finally{PJ.trocando=false;}undoS.length=0;pjSalvarLocal().then(pjAgendarNuvem);};
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#pjOv').classList.contains('on'))$('#pjOv').classList.remove('on');});
+ window.addEventListener('pc-conta',async()=>{if(!pjLogado())return;await pjListarNuvem();if(PJ.atual&&PJ.locais[PJ.atual])pjAgendarNuvem();});
+ window.addEventListener('beforeunload',()=>{try{localStorage.setItem('plantacalc_v4',snapS());}catch(e){}});
+})();
+
+/* ---------- início ---------- */
+(async function(){try{const todos=await pjTodos();todos.forEach(r=>PJ.locais[r.id]=r);}catch(e){console.warn(e);}
+ let id=null;try{id=localStorage.getItem(PJ_KEY);}catch(e){}
+ if(!id||!PJ.locais[id]){id=pjUUID();try{localStorage.setItem(PJ_KEY,id);}catch(e){}}
+ PJ.atual=id;await pjSalvarLocal();pjStatus(PJ.status||'aparelho');})();
+</script>
 
 <script>
 /* ===================== p25 — VERSÃO ONLINE: plano Gratuito (anúncios + marca d'água nas pranchas) e plano Pro (sem anúncios).
@@ -7085,7 +7219,7 @@ const brl=v=>'R$ '+nf(v,2);
 
 /* ---------- dados padrão neutros (sem empresa/autor pré-preenchidos) ---------- */
 (function(){const _ds=defaultState;defaultState=function(){const s=_ds.apply(this,arguments);s.meta.empresa='';s.meta.autor='';return s;};
- if(S&&S.meta&&/Usiminas/.test(S.meta.empresa||'')){S.meta.empresa='';S.meta.autor='';}const bc=$('#bCsv');if(bc)bc.remove();})();
+ })();
 
 /* ---------- estilo ---------- */
 (function(){const st=document.createElement('style');st.textContent=`
@@ -7132,7 +7266,7 @@ body.plano-pro #bPro{display:none}
  const bc=document.createElement('button');bc.id='bConta';bc.textContent='Entrar';hdr.insertBefore(bc,ref);bc.onclick=()=>{location.href='conta.html';};
  ['pcCk','mPro','pcUp'].forEach(id=>{const e=document.createElement('div');e.id=id;document.body.appendChild(e);});})();
 
-function aplicarPlano(){document.body.classList.toggle('plano-pro',isPro());document.body.classList.toggle('plano-gratis',!isPro());
+function aplicarPlano(){try{window.dispatchEvent(new Event('pc-conta'));}catch(e){}document.body.classList.toggle('plano-pro',isPro());document.body.classList.toggle('plano-gratis',!isPro());
  const bc=$('#bConta');if(bc)bc.textContent=MON.user?(isPro()?'★ Pro · Minha conta':'Minha conta'):'Entrar';
  if(isPro()){$$('.pc-ad').forEach(e=>e.remove());$('#pcCk').classList.remove('on');}else{cookiesAviso();}
  if(typeof renderAll==='function'&&view==='pranchas')renderAll();}
@@ -7153,8 +7287,8 @@ async function iniciarConta(){lerCache();aplicarPlano();
 /* ---------- planos e assinatura ---------- */
 function abrirPlanos(msg){const m=$('#mPro');const P=CFG.preco;const eco=Math.round((1-P.anual/(P.mensal*12))*100);
  m.innerHTML=`<div class="bx"><button class="x" data-pp="x">✕</button><h2>PlantaCalc Pro</h2><p class="sub">Trabalhe sem anúncios e entregue pranchas limpas, sem marca d'água. Você também ajuda a manter o PlantaCalc evoluindo.</p>
- <div class="pl"><div class="pc"><h3>Gratuito</h3><div class="pr">R$ 0</div><ul><li>Todas as ferramentas, assistentes e cálculos</li><li>Pranchas, quantitativo, cronograma, memorial, 3D</li><li>Exporta PDF, Excel, Word, DXF e IFC</li><li class="n">Com anúncios</li><li class="n">Pranchas com marca d'água “versão gratuita”</li></ul></div>
- <div class="pc pro"><h3>Pro</h3><div class="pr">${brl(P.mensal)}<small> /mês</small></div><div style="font-size:13px;color:#46515a">ou ${brl(P.anual)} por ano${eco>0?` (economia de ${eco}%)`:''}</div><ul><li>Tudo do Gratuito</li><li>Sem nenhum anúncio</li><li>Pranchas e PDF sem marca d'água</li><li>Cancele quando quiser</li></ul></div></div>
+ <div class="pl"><div class="pc"><h3>Gratuito</h3><div class="pr">R$ 0</div><ul><li>Todas as ferramentas, assistentes e cálculos</li><li>Pranchas, quantitativo, cronograma, memorial, 3D</li><li>Exporta PDF, Excel, Word, DXF e IFC</li><li>Projetos ilimitados no aparelho e até 3 na nuvem (com conta grátis)</li><li class="n">Com anúncios</li><li class="n">Pranchas com marca d'água “versão gratuita”</li></ul></div>
+ <div class="pc pro"><h3>Pro</h3><div class="pr">${brl(P.mensal)}<small> /mês</small></div><div style="font-size:13px;color:#46515a">ou ${brl(P.anual)} por ano${eco>0?` (economia de ${eco}%)`:''}</div><ul><li>Tudo do Gratuito</li><li>Sem nenhum anúncio</li><li>Pranchas e PDF sem marca d'água</li><li>Projetos ilimitados na nuvem, em qualquer aparelho</li><li>Cancele quando quiser</li></ul></div></div>
  ${isPro()?`<div class="bt"><small>Seu plano Pro está ativo até ${new Date(MON.validade).toLocaleDateString('pt-BR')}.</small><button class="sec" data-pp="conta">Minha conta</button></div>`:`<div class="bt"><button data-pp="anual">Assinar anual — ${brl(P.anual)}</button><button class="sec" data-pp="mensal">Assinar mensal — ${brl(P.mensal)}</button><small>Pagamento seguro pelo Mercado Pago. ${MON.user?'':'Você vai criar uma conta (ou entrar) antes de pagar.'}</small></div>`}
  <div class="msg">${msg?esc(msg):''}</div></div>`;m.classList.add('on');}
 $('#mPro').addEventListener('click',async e=>{const m=$('#mPro');if(e.target===m){m.classList.remove('on');return;}const b=e.target.closest('[data-pp]');if(!b)return;const a=b.dataset.pp;
