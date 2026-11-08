@@ -22,7 +22,7 @@ window.PC_CFG = {
   slots: { inicio: '', resultados: '', pranchas: '' },
 
   // Dados de quem vende (aparecem nos Termos de uso e na Política de privacidade)
-  responsavel: '[Seu nome completo ou razão social]',
-  documento: '[CPF ou CNPJ]',
-  cidade: '[Cidade – UF]'
+  responsavel: 'Gabriel Ernesto Oliveira Guedes',
+  documento: ''   // CNPJ, quando houver (não publique CPF),
+  cidade: 'Ipatinga – MG'
 };

@@ -14,7 +14,7 @@
 <header class="nav"><div class="wrap"><a class="logo" href="index.html"><img src="img/icone.svg" alt="">PlantaCalc</a><div class="sp"></div><a class="btn pri sm" href="app.html">Abrir o PlantaCalc</a></div></header>
 <main class="doc">
 <h1>Política de privacidade</h1><div class="dt">Última atualização: 8 de novembro de 2026</div>
-<p>Esta política explica como o PlantaCalc trata dados pessoais, conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018 – LGPD). Controlador: <span data-cfg="responsavel"></span>, <span data-cfg="documento"></span>, <span data-cfg="cidade"></span>. Contato do encarregado: <a data-mail href="#">e-mail</a>.</p>
+<p>Esta política explica como o PlantaCalc trata dados pessoais, conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018 – LGPD). Controlador: <span data-titular></span>. Contato do encarregado: <a data-mail href="#">e-mail</a>.</p>
 
 <h2>1. Quais dados tratamos</h2>
 <ul>
@@ -53,6 +53,6 @@
 <p>A comunicação é criptografada (HTTPS), o acesso aos dados da conta é restrito por regras de segurança no banco de dados e o pagamento ocorre no ambiente do Mercado Pago.</p>
 </main>
 <footer><div class="wrap"><nav><a href="index.html">Início</a><a href="termos.html">Termos de uso</a><a href="privacidade.html">Privacidade</a></nav><span>© <span id="ano"></span> PlantaCalc</span></div></footer>
-<script>(function(){var C=window.PC_CFG||{};document.querySelectorAll('[data-cfg]').forEach(function(e){var v=C[e.dataset.cfg];if(v){e.textContent=v;if(/^\[/.test(v))e.classList.add('ph');}});document.querySelectorAll('[data-mail]').forEach(function(a){if(C.contato){a.href='mailto:'+C.contato;a.textContent=C.contato;}});document.getElementById('ano').textContent=new Date().getFullYear();})();</script>
+<script>(function(){var C=window.PC_CFG||{};document.querySelectorAll('[data-cfg]').forEach(function(e){var v=C[e.dataset.cfg];if(v){e.textContent=v;if(/^\[/.test(v))e.classList.add('ph');}});document.querySelectorAll('[data-titular]').forEach(function(e){e.textContent=[C.responsavel,C.documento,C.cidade].filter(function(v){return v&&!/^\[/.test(v);}).join(', ');});document.querySelectorAll('[data-mail]').forEach(function(a){if(C.contato){a.href='mailto:'+C.contato;a.textContent=C.contato;}});document.getElementById('ano').textContent=new Date().getFullYear();})();</script>
 </body>
 </html>
