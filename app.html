@@ -221,7 +221,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}svg text{-webkit-text-s
 </style>
 <meta name="description" content="PlantaCalc: desenhe ou responda algumas perguntas e gere planta, cortes, fundações, quantitativo, custo, prazo, memorial e 3D para estudos preliminares de obras civis.">
 <link rel="icon" href="img/icone.svg" type="image/svg+xml">
-<script>window.PC_BUILD="20261108-202053";</script>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f5f20"><link rel="apple-touch-icon" href="img/icon-192.png">
+<script>window.PC_BUILD="20261108-203103";</script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -7123,7 +7124,7 @@ const pjDono=()=>pjLogado()?MON.user.id:null;
 const pjMeu=r=>!PJ_WEB||(r&&r.dono&&r.dono===pjDono());
 const pjTotal=()=>new Set([...Object.keys(PJ.locais),...Object.keys(PJ.nuvem)]).size;
 const pjPodeCriar=()=>!pjOnline()||pjPro()||pjTotal()<PJ_LIM;
-function pjBloqueio(){if(typeof abrirPlanos==='function')abrirPlanos('No plano gratuito você tem 1 projeto. Assine o Pro para criar projetos ilimitados — ou exclua o projeto atual em “Meus projetos” para começar outro.');else toast('O plano gratuito permite 1 projeto.');}
+function pjBloqueio(){if(typeof abrirPlanos==='function')abrirPlanos('No plano gratuito você tem 1 projeto. '+(typeof NO_APP!=='undefined'&&NO_APP?'Com o plano Pro os projetos são ilimitados':'Assine o Pro para criar projetos ilimitados')+' — ou exclua o projeto atual em “Meus projetos” para começar outro.');else toast('O plano gratuito permite 1 projeto.');}
 function pjIDB(){return new Promise((ok,err)=>{if(PJ.db)return ok(PJ.db);if(!window.indexedDB)return err(new Error('sem IndexedDB'));const r=indexedDB.open('plantacalc',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('projetos'))r.result.createObjectStore('projetos',{keyPath:'id'});};r.onsuccess=()=>{PJ.db=r.result;ok(PJ.db);};r.onerror=()=>err(r.error);});}
 async function pjTx(modo,fn){const d=await pjIDB();return new Promise((ok,err)=>{const t=d.transaction('projetos',modo);const st=t.objectStore('projetos');const q=fn(st);t.oncomplete=()=>ok(q&&q.result);t.onerror=()=>err(t.error);});}
 const pjTodos=()=>pjTx('readonly',s=>s.getAll());
@@ -7714,6 +7715,9 @@ const CFG=Object.assign({site:location.origin,nome:'PlantaCalc',preco:{mensal:29
 const MON={plano:'gratis',validade:null,user:null,sb:null,status:null};
 const PLANO_KEY='pc_plano_v1',COOKIE_KEY='pc_cookies_v1';
 const isPro=()=>MON.plano==='pro'&&MON.validade&&new Date(MON.validade)>new Date();
+/* aberto pelo app Android (Play Store): sem anúncios e sem venda dentro do app (a assinatura fica na conta e vale em todos os aparelhos) */
+const NO_APP=(()=>{try{const q=new URLSearchParams(location.search);if(q.get('origem')==='android'||String(document.referrer).startsWith('android-app://'))sessionStorage.setItem('pc_canal','android');return sessionStorage.getItem('pc_canal')==='android';}catch(e){return false;}})();
+if(NO_APP)document.documentElement.classList.add('no-app');
 const brl=v=>'R$ '+nf(v,2);
 
 /* ---------- dados padrão neutros (sem empresa/autor pré-preenchidos) ---------- */
@@ -7813,19 +7817,21 @@ function quantParcial(h){const d=document.createElement('div');d.innerHTML=h;con
  const rows=[...t.tBodies[0].rows];const k=Math.min(rows.length,Math.max(3,Math.ceil(rows.length/2)));const ocultas=rows.slice(k);
  ocultas.forEach(r=>{r.className='pc-oculto';[...r.cells].forEach(c=>{const L=(c.textContent||'').trim().length;c.textContent=L?'▆'.repeat(Math.min(16,Math.max(3,Math.round(L*0.5)))):'';});});
  const nc=t.tHead&&t.tHead.rows[0]?t.tHead.rows[0].cells.length:10;
- const lk=document.createElement('tr');lk.className='pc-lockrow';lk.innerHTML=`<td colspan="${nc}"><div class="pc-lockbox"><b>🔒 Você está vendo metade do quantitativo</b><span>Assine o PlantaCalc Pro para ver a tabela completa — com todos os itens, o total estimado, ambientes, pilares e fundações — e exportar em Excel e PDF.</span><button data-pcpro>Assinar o Pro e ver tudo</button></div></td>`;
+ const lk=document.createElement('tr');lk.className='pc-lockrow';lk.innerHTML=`<td colspan="${nc}"><div class="pc-lockbox"><b>🔒 Você está vendo metade do quantitativo</b><span>${NO_APP?'Com o plano Pro você vê':'Assine o PlantaCalc Pro para ver'} a tabela completa — com todos os itens, o total estimado, ambientes, pilares e fundações — e exportar em Excel e PDF.</span><button data-pcpro>${NO_APP?'Sobre o plano Pro':'Assinar o Pro e ver tudo'}</button></div></td>`;
  if(ocultas.length){ocultas[0].before(lk);if(ocultas.length>12)t.tBodies[0].appendChild(lk.cloneNode(true));}else t.tBodies[0].appendChild(lk);
  return d.innerHTML;}
 (function(){const _qh=quantHTML;quantHTML=function(){const h=_qh.apply(this,arguments);return isPro()||!temConteudo()?h:quantParcial(h);};})();
 function custoParcial(h){const d=document.createElement('div');d.innerHTML=h;const c=d.querySelector('.cards');if(!c)return h;
  let n=c.nextSibling;while(n){const x=n.nextSibling;n.remove();n=x;}
- c.insertAdjacentHTML('afterend',`<div class="pc-lockbox"><b>🔒 No plano gratuito você vê só a faixa de custo</b><span>Assine o PlantaCalc Pro para ver a distribuição do custo, a curva ABC com os itens que mais pesam, o teste de sanidade dos índices e a incerteza por grupo.</span><button data-pcpro>Assinar o Pro e ver tudo</button></div>`);
+ c.insertAdjacentHTML('afterend',`<div class="pc-lockbox"><b>🔒 No plano gratuito você vê só a faixa de custo</b><span>${NO_APP?'Com o plano Pro você vê':'Assine o PlantaCalc Pro para ver'} a distribuição do custo, a curva ABC com os itens que mais pesam, o teste de sanidade dos índices e a incerteza por grupo.</span><button data-pcpro>${NO_APP?'Sobre o plano Pro':'Assinar o Pro e ver tudo'}</button></div>`);
  return d.innerHTML;}
 (function(){const _ch=custoHTML;custoHTML=function(){const h=_ch.apply(this,arguments);return isPro()||!temConteudo()?h:custoParcial(h);};})();
 document.addEventListener('click',e=>{if(e.target.closest('[data-pcpro]'))abrirPlanos('O quantitativo completo e a análise de custo são do plano Pro.');});
 
 /* ---------- planos e assinatura ---------- */
-function abrirPlanos(msg){const m=$('#mPro');const P=CFG.preco;const eco=Math.round((1-P.anual/(P.mensal*12))*100);
+function abrirPlanos(msg){const m=$('#mPro');
+ if(NO_APP){m.innerHTML=`<div class="bx"><button class="x" data-pp="x">✕</button><h2>PlantaCalc Pro</h2>${msg?`<div class="aviso">🔒 ${esc(msg)}</div>`:''}${isPro()?`<p class="sub">Seu plano Pro está ativo até ${new Date(MON.validade).toLocaleDateString('pt-BR')}.</p>`:'<p class="sub">Este recurso faz parte do plano Pro. Se você já é assinante, entre com a mesma conta: o plano vale em todos os aparelhos.</p>'}<div class="bt"><button class="sec" data-pp="conta">Minha conta</button><button class="sec" data-pp="x">Fechar</button></div><div class="msg"></div></div>`;m.classList.add('on');return;}
+const P=CFG.preco;const eco=Math.round((1-P.anual/(P.mensal*12))*100);
  m.innerHTML=`<div class="bx"><button class="x" data-pp="x">✕</button><h2>PlantaCalc Pro</h2>${msg?`<div class="aviso">🔒 ${esc(msg)}</div>`:''}<p class="sub">Veja o quantitativo completo, exporte PDF, Excel, Word, DXF e IFC e crie quantos projetos quiser — sem anúncios nem marca d'água.</p>
  <div class="pl"><div class="pc"><h3>Gratuito</h3><div class="pr">R$ 0</div><ul><li>Todas as ferramentas, assistentes e cálculos</li><li>Pranchas, 3D, cronograma e memorial na tela</li><li class="n">Quantitativo parcial (metade da tabela) e só a faixa de custo</li><li class="n">1 projeto</li><li class="n">Sem exportar arquivos</li><li class="n">Com anúncios</li><li class="n">Pranchas com marca d'água “versão gratuita”</li></ul></div>
  <div class="pc pro"><h3>Pro</h3><div class="pr">${brl(P.mensal)}<small> /mês</small></div><div style="font-size:13px;color:#46515a">ou ${brl(P.anual)} por ano${eco>0?` (economia de ${eco}%)`:''}</div><ul><li>Tudo do Gratuito</li><li>Quantitativo completo, curva ABC e análise de custo</li><li>Orçamento pelo SINAPI do seu estado, com BDI do TCU e composições analíticas</li><li>Projetos ilimitados, na nuvem e em qualquer aparelho</li><li>Assistente de IA: desenha o croqui a partir de uma descrição e redige o escopo técnico</li><li>Exporta PDF, Excel, Word, DXF e IFC</li><li>Sem nenhum anúncio</li><li>Pranchas e PDF sem marca d'água</li><li>Cancele quando quiser</li></ul></div></div>
@@ -7836,13 +7842,13 @@ $('#mPro').addEventListener('click',async e=>{const m=$('#mPro');if(e.target===m
  location.href='conta.html?assinar='+a;});
 
 /* ---------- consentimento de cookies (LGPD) e AdSense ---------- */
-function cookiesAviso(){if(isPro())return;let c=null;try{c=localStorage.getItem(COOKIE_KEY);}catch(e){}if(c){carregarAds();return;}
+function cookiesAviso(){if(isPro()||NO_APP)return;let c=null;try{c=localStorage.getItem(COOKIE_KEY);}catch(e){}if(c){carregarAds();return;}
  const k=$('#pcCk');k.innerHTML=`<p>Usamos cookies para exibir anúncios (Google AdSense) que mantêm o plano gratuito. Você pode aceitar anúncios personalizados ou ficar só com os essenciais. <a href="privacidade.html" target="_blank" rel="noopener">Política de privacidade</a></p><button class="no" data-ck="ess">Só essenciais</button><button class="ok" data-ck="all">Aceitar</button>`;k.classList.add('on');}
 $('#pcCk').addEventListener('click',e=>{const b=e.target.closest('[data-ck]');if(!b)return;try{localStorage.setItem(COOKIE_KEY,b.dataset.ck);}catch(x){}$('#pcCk').classList.remove('on');carregarAds();});
-function carregarAds(){if(isPro()||MON.adsLoaded||!CFG.adsense)return;MON.adsLoaded=true;let c='ess';try{c=localStorage.getItem(COOKIE_KEY)||'ess';}catch(e){}
+function carregarAds(){if(isPro()||NO_APP||MON.adsLoaded||!CFG.adsense)return;MON.adsLoaded=true;let c='ess';try{c=localStorage.getItem(COOKIE_KEY)||'ess';}catch(e){}
  window.adsbygoogle=window.adsbygoogle||[];if(c!=='all')window.adsbygoogle.requestNonPersonalizedAds=1;
  const s=document.createElement('script');s.async=true;s.crossOrigin='anonymous';s.src=`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(CFG.adsense)}`;document.head.appendChild(s);}
-function adBox(slot){if(isPro())return null;const d=document.createElement('div');d.className='pc-ad';const id=CFG.slots[slot];
+function adBox(slot){if(isPro()||NO_APP)return null;const d=document.createElement('div');d.className='pc-ad';const id=CFG.slots[slot];
  if(CFG.adsense&&id){d.innerHTML=`<span class="lb">Publicidade</span><ins class="adsbygoogle" data-ad-client="${esc(CFG.adsense)}" data-ad-slot="${esc(id)}" data-ad-format="horizontal" data-full-width-responsive="true"></ins>`;setTimeout(()=>{try{(window.adsbygoogle=window.adsbygoogle||[]).push({});}catch(e){}},50);}
  else d.innerHTML=`<div class="pc-house"><div><b>⭐ PlantaCalc Pro</b><span>Quantitativo completo, exportação em PDF e Excel e projetos ilimitados — ${brl(CFG.preco.mensal)}/mês.</span></div><button data-hp>Conhecer o Pro</button></div>`;
  d.addEventListener('click',e=>{if(e.target.closest('[data-hp]'))abrirPlanos();});return d;}
@@ -7957,7 +7963,7 @@ function iaHtmlCroqui(){const tem=typeof temConteudo==='function'&&temConteudo()
  <button class="go" id="iaGo">Gerar croqui</button><div class="msg" id="iaMsg"></div><div id="iaRes"></div>
  <p class="av">A IA pode errar: confira o desenho. Dá para desfazer tudo com Ctrl+Z. O texto que você escreve e a lista de ambientes do desenho são enviados ao provedor de IA (sem uso para treinamento).</p>`;}
 function iaMsg(t,ok){const m=$('#iaMsg');if(!m)return;m.textContent=t||'';m.className='msg'+(t?' on '+(ok?'ok':'err'):'');}
-function iaErro(e){if(e.cod==='LIMITE'){const d=e.d||{};return d.pro?`Você usou os ${d.limite} usos de IA deste mês. A cota renova no dia 1º.`:`Você usou os ${d.limite} usos de IA do plano gratuito neste mês. Assine o Pro para usar bem mais.`;}return e.message;}
+function iaErro(e){if(e.cod==='LIMITE'){const d=e.d||{};return d.pro?`Você usou os ${d.limite} usos de IA deste mês. A cota renova no dia 1º.`:`Você usou os ${d.limite} usos de IA do plano gratuito neste mês. ${typeof NO_APP!=='undefined'&&NO_APP?'No plano Pro a cota é bem maior.':'Assine o Pro para usar bem mais.'}`;}return e.message;}
 function iaLigarCroqui(){const t=$('#iaTxt');$$('#iaOv [data-iax]').forEach(b=>b.onclick=()=>{t.value=IA_EX[+b.dataset.iax];t.focus();});
  $('#iaGo').onclick=async()=>{const txt=t.value.trim();if(txt.length<8){iaMsg('Descreva a edificação com um pouco mais de detalhe.');return;}
   const modo=(document.querySelector('input[name=iaModo]:checked')||{}).value||'add';IA.ultimo=txt;

@@ -1,0 +1,19 @@
+{
+  "name": "PlantaCalc — estudo preliminar de obras civis",
+  "short_name": "PlantaCalc",
+  "description": "Desenhe o croqui e gere planta, quantitativo, orçamento SINAPI, prazo, memorial e 3D para estudos preliminares de obras civis.",
+  "lang": "pt-BR",
+  "id": "/app.html",
+  "start_url": "/app.html?origem=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f7f4",
+  "theme_color": "#1f5f20",
+  "categories": ["productivity", "business", "utilities"],
+  "icons": [
+    { "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "img/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

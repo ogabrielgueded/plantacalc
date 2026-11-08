@@ -6,6 +6,7 @@
 <title>Minha conta — PlantaCalc</title>
 <meta name="robots" content="noindex">
 <link rel="icon" href="img/icone.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f5f20">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="site.css">
@@ -47,7 +48,9 @@ details.cad summary{cursor:pointer;font-weight:600;color:var(--g2);margin-bottom
 
 <script>
 (function(){
-var C=window.PC_CFG||{};var box=document.getElementById('box');var Q=new URLSearchParams(location.search);var VOLTA=Q.get('volta')==='app';
+var C=window.PC_CFG||{};var box=document.getElementById('box');var Q=new URLSearchParams(location.search);
+/* aberto pelo app Android (Play Store): sem venda dentro do app — só mostra a situação do plano */
+var APP=(function(){try{if(Q.get('origem')==='android'||String(document.referrer).indexOf('android-app://')===0)sessionStorage.setItem('pc_canal','android');return sessionStorage.getItem('pc_canal')==='android';}catch(e){return false;}})();if(APP)Q.delete('assinar');var VOLTA=Q.get('volta')==='app';
 var brl=function(v){return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});};
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
 var base=(C.site||location.origin).replace(/\/$/,'');
@@ -151,8 +154,8 @@ async function telaConta(sync){box.innerHTML='<p class="m">Carregando…</p>';if
  var ativo=p.plano==='pro'&&p.validade&&new Date(p.validade)>new Date();var ate=p.validade?new Date(p.validade).toLocaleDateString('pt-BR'):'';var pix=p.mp_status==='pix';var cancelada=pix||/cancel|paused/.test(p.mp_status||'');
  var P=C.preco||{mensal:29.9,anual:299};
  box.innerHTML='<h1>Minha conta</h1><p class="m">'+(cad.nome?esc(cad.nome)+' · ':'')+esc(user.email)+'</p>'+
-  '<div class="st"><div style="flex:1"><b>'+(ativo?'Plano Pro':'Plano Gratuito')+'</b><div class="m" style="margin:2px 0 0;font-size:14px">'+(ativo?(pix?'Pago com Pix · válido até '+ate+' (sem renovação automática).':cancelada?'Assinatura cancelada — o Pro continua até '+ate+'.':'Renovação automática · válido até '+ate):p.mp_status==='pending'?'Você começou uma assinatura e não concluiu o pagamento. Escolha abaixo como pagar.':'1 projeto, metade do quantitativo, sem exportar arquivos e com anúncios.')+'</div></div><span class="pill'+(ativo?'':' f')+'">'+(ativo?'PRO':'GRÁTIS')+'</span></div>'+
-  (ativo&&!cancelada?'':'<p class="m" style="font-size:14px;margin:0 0 8px"><b>Cartão de crédito</b> — renova sozinho, cancele quando quiser</p><button class="btn pri" id="bA">Assinar anual — '+brl(P.anual)+'</button><button class="btn sec" id="bM" style="margin-top:10px">Assinar mensal — '+brl(P.mensal)+'</button>'+
+  '<div class="st"><div style="flex:1"><b>'+(ativo?'Plano Pro':'Plano Gratuito')+'</b><div class="m" style="margin:2px 0 0;font-size:14px">'+(ativo?(pix?'Pago com Pix · válido até '+ate+' (sem renovação automática).':cancelada?'Assinatura cancelada — o Pro continua até '+ate+'.':'Renovação automática · válido até '+ate):p.mp_status==='pending'&&!APP?'Você começou uma assinatura e não concluiu o pagamento. Escolha abaixo como pagar.':'1 projeto, metade do quantitativo, sem exportar arquivos e com anúncios.')+'</div></div><span class="pill'+(ativo?'':' f')+'">'+(ativo?'PRO':'GRÁTIS')+'</span></div>'+
+  (ativo&&!cancelada||APP?'':'<p class="m" style="font-size:14px;margin:0 0 8px"><b>Cartão de crédito</b> — renova sozinho, cancele quando quiser</p><button class="btn pri" id="bA">Assinar anual — '+brl(P.anual)+'</button><button class="btn sec" id="bM" style="margin-top:10px">Assinar mensal — '+brl(P.mensal)+'</button>'+
    '<p class="m" style="font-size:14px;margin:16px 0 8px"><b>Pix</b> — pagamento único, sem renovação automática'+(ativo?' (soma ao período atual)':'')+'</p><button class="btn pix" id="bPA">Pix: 12 meses — '+brl(P.anual)+'</button><button class="btn sec pix2" id="bPM" style="margin-top:10px">Pix: 1 mês — '+brl(P.mensal)+'</button><p class="m" style="font-size:13.5px;margin:10px 0 0">Você paga aqui mesmo, sem sair do site (processado pelo Mercado Pago). O Pro é liberado assim que o pagamento é aprovado.</p>')+
   '<div id="msg" class="msg"></div><div class="sep"></div>'+
   '<h2>Meus projetos</h2><div class="kv"><span>Guardados na nuvem</span><b>'+np+(ativo?'':' de 1')+'</b></div><p class="m" style="font-size:13.5px;margin:8px 0 12px">'+(ativo?'Plano Pro: projetos ilimitados na nuvem.':'O plano gratuito permite 1 projeto, mostra metade do quantitativo e não exporta arquivos. O Pro libera tudo.')+'</p>'+

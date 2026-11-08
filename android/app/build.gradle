@@ -1,0 +1,26 @@
+// PlantaCalc para Android: Trusted Web Activity que abre https://plantacalc.com.br/app.html
+// (mesma conta e mesmos projetos do site). O AAB sai sem assinatura e é assinado fora do GitHub.
+plugins { id 'com.android.application' }
+
+def vc = (System.getenv('VERSION_CODE') ?: '1') as Integer
+
+android {
+  namespace 'br.com.plantacalc.app'
+  compileSdk 36
+  defaultConfig {
+    applicationId 'br.com.plantacalc.app'
+    minSdk 23
+    targetSdk 36
+    versionCode vc
+    versionName "1.0.${vc}"
+  }
+  buildTypes { release { minifyEnabled false } }
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+}
+
+dependencies {
+  implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+}

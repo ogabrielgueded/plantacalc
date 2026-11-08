@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "br.com.plantacalc.app",
+    "sha256_cert_fingerprints": [
+      "D2:30:E1:AF:78:7E:E5:77:18:F9:DD:9F:BC:A3:E6:15:06:A5:C2:60:D8:F5:A3:44:15:13:22:34:21:02:03:FF"
+    ]
+  }
+}]
