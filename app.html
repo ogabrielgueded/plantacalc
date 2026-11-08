@@ -221,7 +221,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}svg text{-webkit-text-s
 </style>
 <meta name="description" content="PlantaCalc: desenhe ou responda algumas perguntas e gere planta, cortes, fundações, quantitativo, custo, prazo, memorial e 3D para estudos preliminares de obras civis.">
 <link rel="icon" href="img/icone.svg" type="image/svg+xml">
-<script>window.PC_BUILD="20261108-183611";</script>
+<script>window.PC_BUILD="20261108-190235";</script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -1554,7 +1554,7 @@ function quant(St,M){
  const ARM=(P.acoModo!=='taxa'&&typeof armaduraProjeto==='function')?armaduraProjeto(St,M):null;M.arm=ARM;const AK=(tipo,fb)=>ARM?armKg(ARM,null,tipo):fb;const AM=(tipo,fb)=>ARM&&armKg(ARM,null,tipo)>0?armMem(ARM,tipo):fb;
  g=grp('INFRAESTRUTURA – FUNDAÇÕES');
  const byT={};G0.pillars.forEach(p=>(byT[p.fundTipo||'sapata']=byT[p.fundTipo||'sapata']||[]).push(p));
- let escS=0,vSap=0,vLastS=0,fSap=0,vPesc=0,vBlo=0,fBlo=0,Lest=0,nEst=0,vCic=0,vTub=0,vRad=0,vCor=0,vFund=0,acoFund=0;
+ let escS=0,vSap=0,vLastS=0,fSap=0,vPesc=0,vBlo=0,fBlo=0,Lest=0,nEst=0,vCic=0,vTub=0,vRad=0,vCor=0,vFund=0,acoFund=0,vBurRad=0,vBurTub=0,escFora=0;
  const sap=[...(byT.sapata||[]),...(byT.assoc||[])];
  const cava=(B1,B2,hs)=>{const bot1=B1+2*m(P.folgaEsc),bot2=B2+2*m(P.folgaEsc),A1=bot1*bot2,A2=(bot1+2*tal*D)*(bot2+2*tal*D);return D/3*(A1+A2+Math.sqrt(A1*A2));};
  for(const p of sap){const B=m(p.B);escS+=cava(B,B,p.hs);vSap+=B*B*m(p.hs);vLastS+=B*B*m(P.lastro);fSap+=4*B*m(p.hs);vPesc+=m(p.b)*m(p.h)*Math.max(0,m(P.fundProf-p.hs));}
@@ -1582,10 +1582,12 @@ function quant(St,M){
   it(g,'con.blo','Concreto estrutural fck ≥ '+P.fck+' MPa – blocos de coroamento','m³',vBlo,`${nBlo} blocos (1 a ${G0.resumoEst.nEstMax} estacas)`,4.0,'fund');vFund+=vBlo;}
  // tubulões
  const tub=byT.tubulao||[];if(tub.length){let vF=0,vB=0,escT=0;for(const p of tub){const t=p.tub;const Rf=m(t.Df)/2,Rb=m(t.Db)/2;const vfu=Math.PI*Rf*Rf*m(t.L);const vba=Math.PI/3*m(t.hBase)*(Rf*Rf+Rf*Rb+Rb*Rb)+Math.PI*Rb*Rb*0.2;vF+=vfu;vB+=vba;escT+=vfu+vba;}
+  escS+=escT;vBurTub=escT;
   it(g,'esc.tub','Escavação manual de tubulão a céu aberto (fuste + base alargada), com içamento','m³',escT,`${tub.length} tubulões Ø${tub[0].tub.Df} mm, base até Ø${Math.max(...tub.map(p=>p.tub.Db))} mm, L≈${fm(tub[0].tub.L)} m`,6.0,'fund');
   it(g,'con.tub','Concreto fck ≥ '+P.fck+' MPa – fuste e base de tubulão (lançado)','m³',vF+vB,`fustes ${nf(vF,2)} + bases ${nf(vB,2)} m³`,3.0,'fund');it(g,'aco.tub','Armadura CA-50 do fuste (mín. 0,5%, 40 kg/m³)','kg',vF*40,'',0.12,'fund');vTub=vF+vB;vFund+=vTub;acoFund+=vF*40;}
  // radier
  if(Fd.radier&&Object.values(Fd.porPilar).includes('radier')){const R=Fd.radier;vRad=R.A*m(R.h);const extP=m(G0.extPer)+2;
+  escS+=R.A*(m(R.h)+m(P.lastro)+0.25);vBurRad=R.A*(m(R.h)+m(P.lastro));escFora+=R.A*0.25; /* regularização sob radier não volta como reaterro */
   it(g,'esc.rad','Escavação/regularização para radier','m³',R.A*(m(R.h)+m(P.lastro)+0.25),`${nf(R.A)} m² × (h + lastro + 25 cm)`,0.6,'fund');it(g,'lastro.rad','Lastro de brita + concreto magro e=5cm sob radier','m³',R.A*(m(P.lastro)+0.05),'',3.0,'fund');
   it(g,'lona.rad','Lona plástica / barreira de vapor sob radier','m²',R.A*1.1,'',0.05,'fund');it(g,'for.rad','Forma perimetral do radier','m²',extP*m(R.h),`${nf(extP)} m × ${fcm(R.h)} cm`,1.5,'fund');
   it(g,'aco.rad','Armadura CA-50 do radier (2 malhas)','kg',vRad*(R.h<300?80:90),`${nf(vRad,2)} m³ × ${R.h<300?80:90} kg/m³`,0.11,'fund');acoFund+=vRad*(R.h<300?80:90);
@@ -1607,10 +1609,11 @@ function quant(St,M){
  else if(Fd.corrida)it(g,'imp.cor','Impermeabilização do respaldo das sapatas corridas','m²',Fd.corrida.L*0.5,'',0.25,'fund');
  // bases dinâmicas de equipamentos (67)
  (Fd.dinamicas||[]).forEach(d=>{if(!d.ok)return;});
- const buried=vSap+vBlo+vCic+vLastS+vLastB+vBal+vPesc+vCor+vTub,reat=Math.max(0,escS+escB-buried),bota=Math.max(0,(escS+escB)*P.empol-reat*P.fcomp*P.empol);
+ const buried=vSap+vBlo+vCic+vLastS+vLastB+vBal+vPesc+vCor+vBurTub+vBurRad,reat=Math.max(0,escS+escB-buried-escFora),bota=Math.max(0,(escS+escB)*P.empol-reat*P.fcomp*P.empol);
  const n=G0.pillars.length;
  it(g,'reat','Reaterro compactado','m³',reat,'escavação − volumes enterrados',1.5,'fund');
  it(g,'bota','Carga, transporte e bota-fora de solo (volume solto)','m³',bota,`(escavação − reaterro × ${nf(P.fcomp)}) × ${nf(P.empol)}`,0.3,'fund');
+ const emprest=Math.max(0,reat*P.fcomp*P.empol-(escS+escB)*P.empol);it(g,'emprest','Aterro com material de empréstimo para o reaterro (volume solto, fornecimento e transporte)','m³',emprest,`reaterro × ${nf(P.fcomp)} × ${nf(P.empol)} − solo escavado × ${nf(P.empol)}`,0.3,'fund');
  if(Fd.just&&Fd.just.length)g.nota=Fd.just.join(' ');
  // ---- supraestrutura por subsistema (69–72)
  g=grp('SUPRAESTRUTURA');
@@ -1648,7 +1651,7 @@ function quant(St,M){
   it(g,'pre.transp','Transporte de peças pré-moldadas (carretas)','viagem',Math.ceil(nPc/8),`${nPc} peças · 8 por carreta`,0,'pil');it(g,'pre.guind',`Guindaste ${cls} para montagem (mobilização + diárias)`,'dia',Math.max(2,Math.ceil(nPc/12)),`peça mais pesada ${nf(pesoMax,0)} kN`,8,'pil');}
  if(aEsc>0){it(g,'esc.con','Escada em concreto armado (laje inclinada + degraus)','m³',vEsc,`${nDeg} degraus · área ${nf(aEsc)} m²`,6,'laj');
   it(g,'esc.for','Forma para escada','m²',aEsc*2.2,'faces inferior, laterais e espelhos',3,'laj');it(g,'esc.aco','Armadura CA-50 para escada'+(ARM?' (detalhada)':''),'kg',AK('escada',vEsc*P.tx.escada),AM('escada',`${nf(vEsc,3)} m³ × ${P.tx.escada} kg/m³`),0.14,'laj');
-  it(g,'esc.gc','Guarda-corpo metálico h=1,10 m','m',Lgc,'lances e patamar',1.5,'laj');}
+  it(g,'esc.gc','Guarda-corpo metálico h=1,10 m','m',Lgc,'lances e patamar',1.5,'laj');it(g,'esc.acab','Acabamento cimentado desempenado antiderrapante em degraus e patamares (pisos + espelhos)','m²',aEsc*1.45,`${nf(aEsc)} m² de projeção × 1,45`,0.5,'acab');}
  // ---- ligações (71)
  g=grp('LIGAÇÕES E INTERFACES ESTRUTURAIS');ligacoes(St,M).forEach(x=>it(g,x.key,x.desc,x.un,x.q,x.mem,x.hh,'lig'));
  // ---- vedações por sistema
@@ -5098,15 +5101,30 @@ function memoriaPecasDoc(St,M){const D=[];const P=St.params;D.push({h:'MEMÓRIA 
  D.push({h:`${cr.length?5:4}. Verificações de segurança do trabalho`,l:1});if(typeof nrItens==='function'){const n=nrItens(St,M);D.push({ul:[`Espaços confinados (NR-33): ${n.conf.length?n.conf.map(c=>c.nome).join(', '):'nenhum'}.`,`Trabalho em altura (NR-35): ${n.alt.length?n.alt.map(a=>`${a.nome} (${nf(a.h,1)} m)`).join(', '):'nenhum'}.`,`Escavações > 1,25 m (NR-18): ${n.esc.length?n.esc.map(e=>`${e.nome} (${nf(e.prof,1)} m)`).join(', '):'nenhuma'}.`,`Redes ativas de gás/vapor na área: ${n.gas.length?n.gas.map(g=>g.nome).join(', '):'nenhuma'}.`]});}
  return D;}
 /* ---------- LM por disciplina ---------- */
-const DISCIPLINAS=[['demol','Demolição e provisórios',/demoli|desmontagem|entulho|res[íi]duo|destina[çc][ãa]o|caracteriza[çc][ãa]o do res|tapume|container|canteiro|escoramento|blindagem|estaca-prancha|pranch|rebaixamento|guindaste|rigging|mobiliza[çc]|placa de obra|desmobiliza|corte com fio|desligamentos/i],
- ['seg','Segurança e meio ambiente',/NR-|\bAPR\b|DDS|linha de vida|cintur|trip[ée]|laudo|\bPET\b|detector|umecta|isolamento da [áa]rea|sinaliza[çc][ãa]o e prote/i],
- ['metal','Estrutura metálica e serralheria',/perfil|perfis|W\d{3}|colunas met|travessa|longarina|contraventament|liga[çc][õo]es, chapas|parafusos|grade de piso|guarda-corpo|escada met|cantoneira|chapa de|tubo de a[çc]o|poste de a[çc]o|monovia|telha|ter[çc]a|estrutura met|plataforma|torre|bollard|alambrado|tela de alambrado|port[ãa]o/i],
+const DISCIPLINAS=[['demol','Canteiro, provisórios e demolição',/demoli|desmontagem|entulho|res[íi]duo|destina[çc][ãa]o|caracteriza[çc][ãa]o do res|tapume|container|canteiro|escoramento|blindagem|estaca-prancha|pranch|rebaixamento|guindaste|rigging|mobiliza[çc]|placa de obra|desmobiliza|corte com fio|desligamentos/i],
+ ['seg','Segurança e meio ambiente',/NR-|\bAPR\b|DDS|linha de vida|cintur|trip[ée]|laudo|\bPET\b|detector|umecta|isolamento da [áa]rea|sinaliza[çc][ãa]o e prote|sinaliza[çc][ãa]o de emerg|fotoluminesc|placas? de advert|extintor/i],
+ ['esq','Esquadrias, vidros e serralheria leve',/\bjanela|\bporta\b|porta met|porta corta|esquadria|vidro|peitoril|veneziana|brise|grelha de entrada|caixilho|soleira/i],
+ ['acab','Acabamentos: revestimentos, pisos, forros e pintura predial',/porcelanato|cer[âa]mic|cimentado|rodap[ée]|forro|azulejo|pintura acr|pintura l[áa]tex|massa corrida|gesso|contrapiso|rejunte|granit|textura|selador|epóxi autonivel|antiderrapante/i],
+ ['hidro','Instalações hidrossanitárias e pluviais',/hidross|esgoto|[áa]gua fria|[áa]gua quente|caixa d.?[áa]gua|ralo|caixa de areia|caixa de inspe|sif[ãa]o|calha|condutor|descida pluvial|lou[çc]a|metais sanit|caixa de gordura|fossa|sumidouro|descarga de fundo|skimmer|separador de [áa]gua|SAO\b/i],
+ ['metal','Estrutura metálica e serralheria',/perfil|perfis|W\d{3}|colunas? met|colunas dos p[óo]rticos|p[óo]rtico|travessa|longarina|contraventament|liga[çc][õo]es, chapas|parafusos|grade de piso|guarda-corpo|escada met|cantoneira|chapas? de|tubo de a[çc]o|poste de a[çc]o|monovia|telha|ter[çc]a|estrutura met|plataforma|torre|bollard|alambrado|tela de alambrado|port[ãa]o|cumeeira|rufo|arame galvanizado|massa de a[çc]o|escada de marinheiro|degraus de acesso/i],
  ['pint','Pintura e proteção anticorrosiva',/pintura|ep[óo]xi|poliuretano|jateamento|galvaniza[çc][ãa]o|prote[çc][ãa]o passiva|intumescente|anticorros/i],
- ['elet','Eletromecânica e utilidades',/cabo de|eletroduto|duto pead|lumin[áa]ria|ilumina[çc]|aterramento|haste|quadro|fotoc[ée]lula|bomba|v[áa]lvula|tubula[çc][ãa]o|pvc|separador|spda|tomada|exaustor|hidrante|extintor|eletrocalha|comando/i],
- ['civil','Civil – concreto, fundações e alvenaria',/concreto|forma|armadura|a[çc]o ca-|tela soldada|estaca|tubul[ãa]o|bloco|sapata|baldrame|laje|pilar|viga|alvenaria|reboco|chapisco|impermeabiliza|junta|waterstop|graute|chumbador|cura|selante|canaleta|caixa de passagem|tampa|refrat|argamassa|mureta|muro|mour[ãa]o|ensaio de estanq|escada de marinheiro|gabi[ãa]o|pedra|lastro/i],
- ['terra','Terraplenagem, drenagem e pavimentação',/escava|aterro|reaterro|compacta|corte|bota-fora|empr[ée]stimo|brita|rach[ãa]o|sub-base|subleito|dreno|galeria|tubo de concreto|po[çc]o de visita|boca de lobo|dissipador|talude|manta|bueiro|sarjeta|meio-fio|pavimento|cbuq|asf[áa]ltic|imprima|regulariza|dormente|trilho|lastro ferro|sinaliza[çc][ãa]o horizontal/i],
+ ['elet','Eletromecânica e utilidades',/cabo de|eletroduto|duto pead|dutos|lumin[áa]ria|ilumina[çc]|projetor|\bLED\b|aterramento|haste|conex[ãa]o exot|quadro|fotoc[ée]lula|bomba|v[áa]lvula|tubula[çc][ãa]o|pvc|separador|spda|tomada|exaust|ventila[çc][ãa]o for[çc]|hidrante|eletrocalha|comando|talha|nivelamento, cal[çc]os|arame guia|fita de advert|berço de areia|conex[õo]es e pe[çc]as|registros/i],
+ ['civil','Civil – concreto, fundações e alvenaria',/concreto|forma|armadura|a[çc]o ca-|tela soldada|estaca|tubul[ãa]o|bloco|sapata|baldrame|laje|pilar|viga|alvenaria|reboco|chapisco|impermeabiliza|junta|waterstop|graute|grout|chumbador|cura|selante|canaleta|caixa de passagem|tampa|refrat|argamassa|mureta|muro|mour[ãa]o|ensaio de estanq|ensaio de integ|\bPIT\b|gabi[ãa]o|pedra|lastro|lona|paredes divis[óo]rias|vertedouro|acabamento (mec[âa]nico|desempenado|polido)|endurecedor|po[çc]os de acesso|sa[íi]das de emerg|faixa antiderrapante nos boc/i],
+ ['terra','Terraplenagem, drenagem e pavimentação',/escava|aterro|reaterro|compacta|corte|bota-fora|empr[ée]stimo|brita|rach[ãa]o|sub-base|subleito|dreno|galeria|tubo de concreto|po[çc]o de visita|boca de lobo|dissipador|talude|manta|geot[êe]xtil|geogrelha|enrocamento|rip-rap|colch[ãa]o reno|grama|hidrossemeadura|limpeza e raspagem|destocamento|camada vegetal|marcos de sinaliza|bueiro|sarjeta|meio-fio|pavimento|cbuq|asf[áa]ltic|imprima|regulariza|dormente|trilho|lastro ferro|sinaliza[çc][ãa]o horizontal|loca[çc][ãa]o da obra/i],
  ['out','Outros / serviços gerais',/./]];
-function disciplinaDe(t,g){const d=t.desc||'';for(const [k,nome,re] of DISCIPLINAS){if(k==='out')return k;if(re.test(d))return k;}return 'out';}
+/* 1º pelo grupo/chave do item (determinístico), 2º pelo texto; só o que sobrar vai para "Outros" */
+function disciplinaDe(t,g){const d=t.desc||'',gn=(g&&g.nome)||'',k=t.key||'';const re=id=>(DISCIPLINAS.find(x=>x[0]===id)||[])[2];
+ if(/ESQUADRIAS/.test(gn)||/^(esq|peitoril|verga|cverga)\./.test(k))return 'esq';
+ if(/REVEST|PISOS|FORROS|PINTURA/.test(gn)||/^(rev|contrapiso|rod|forro|pint|reb|chap)\./.test(k)||k==='esc.acab')return /piso industrial|piso ind/i.test(d)?'civil':'acab';
+ if(/PLUVIA|HIDROSSANIT/.test(gn))return 'hidro';
+ if(/SPCI/.test(gn))return re('seg').test(d)?'seg':'elet';
+ if(/EL[ÉE]TRIC|VENTILA/.test(gn))return 'elet';
+ if(/COBERTURA/.test(gn))return /^cob\.(reg|imp|prot)/.test(k)?'civil':'metal';
+ if(/EQUIPAMENTOS – BASES/.test(gn))return /nivelamento|cal[çc]os|alinham/i.test(d)?'elet':'civil';
+ if(/SEGURANÇA DO TRABALHO/.test(gn))return 'seg';
+ if(/REDES ENTERRADAS/.test(gn)){if(/duto|eletro|cabo|arame guia|fita de advert.*cabo/i.test(d))return 'elet';if(/tubo|tubula|conex|registro|ber[çc]o|areia|v[áa]lvula/i.test(d))return 'hidro';}
+ if(/PRELIMIN|FINAIS/.test(gn))return /loca[çc][ãa]o|limpeza e raspagem/i.test(d)?'terra':/canteiro|tapume|placa|mobiliza/i.test(d)?'demol':'out';
+ for(const [kk,nome,rx] of DISCIPLINAS){if(kk==='out')return kk;if(rx.test(d))return kk;}return 'out';}
 function lmDisciplina(Q){const by={};DISCIPLINAS.forEach(([k,nome])=>by[k]={k,nome,itens:[],Hh:0,custo:0});Q.forEach(g=>g.itens.forEach(t=>{const k=disciplinaDe(t,g);by[k].itens.push(Object.assign({grupo:g.nome},t));by[k].Hh+=t.Hh||0;by[k].custo+=t.tot||0;}));return Object.values(by).filter(d=>d.itens.length);}
 /* ---------- cronograma por peça com sequência construtiva e janela de parada ---------- */
 const SEQ_PECA=[[/^demol$/,1],[/^escoram$|^canteiro$|^guind$/,2],[/^plato$|^interf$|^ferrovia$/,3],[/^gabiao$|^arrimo$/,4],[/^sapata$|^bloco$|^blocoest$|^basemaq$|^baseest$|^baseeq$|^reforco$|^baldrame$/,5],[/^tunel$|^canaleta$|^caixa$|^tanque$|^sao$|^galpluv$|^bocalobo$|^dissip$|^bacret$|^bancodutos$|^rede/,6],[/^laje$|^pisoind$|^murofogo$|^escada$|^rampa$|^cavalete$/,7],[/^piperack$|^platm$|^torreilum$|^telheiro$|^monovia$|^poste$/,8],[/^pav$|^cerca$|^bollard$|^bacia$/,9]];
