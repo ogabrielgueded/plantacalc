@@ -18,7 +18,7 @@ window.PC_CFG = {
 
   // Google AdSense: o seu "ID do editor" (começa com ca-pub-) e os IDs de 3 blocos de anúncio "Display"
   // Enquanto estiver vazio, o site mostra um convite ao plano Pro no lugar do anúncio.
-  adsense: '',
+  adsense: 'ca-pub-8681311606179270',
   slots: { inicio: '', resultados: '', pranchas: '' },
 
   // Dados de quem vende (aparecem nos Termos de uso e na Política de privacidade)
