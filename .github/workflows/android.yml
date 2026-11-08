@@ -1,4 +1,4 @@
-# Gera o pacote do app Android (AAB, sem assinatura) quando a pasta android/ muda.
+# Gera o pacote do app Android (AAB para a Play Store e APK para teste, sem assinatura) quando a pasta android/ muda.
 # O resultado vai para o branch "build-android"; a assinatura é feita fora do GitHub com a chave de upload.
 name: App Android
 on:
@@ -26,13 +26,14 @@ jobs:
           VERSION_CODE: ${{ github.run_number }}
         run: |
           set -o pipefail
-          gradle --no-daemon --stacktrace :app:bundleRelease 2>&1 | tee ../build.log
+          gradle --no-daemon --stacktrace :app:bundleRelease :app:assembleRelease 2>&1 | tee ../build.log
       - name: Publicar no branch build-android
         if: always()
         run: |
           mkdir -p /tmp/out
           cp build.log /tmp/out/build-${{ github.run_number }}.log || true
           cp android/app/build/outputs/bundle/release/app-release.aab /tmp/out/plantacalc-${{ github.run_number }}-sem-assinatura.aab || true
+          cp android/app/build/outputs/apk/release/app-release-unsigned.apk /tmp/out/plantacalc-${{ github.run_number }}-sem-assinatura.apk || true
           cd /tmp/out
           git init -q
           git checkout -q -b build-android

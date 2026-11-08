@@ -9,7 +9,7 @@ android {
   compileSdk 36
   defaultConfig {
     applicationId 'br.com.plantacalc.app'
-    minSdk 23
+    minSdk 24
     targetSdk 36
     versionCode vc
     versionName "1.0.${vc}"
