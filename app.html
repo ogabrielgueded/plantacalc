@@ -7099,6 +7099,9 @@ const pjUUID=()=>(crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx
 const pjLogado=()=>typeof MON!=='undefined'&&MON&&MON.sb&&MON.user;
 const pjPro=()=>typeof isPro==='function'&&isPro();
 const pjOnline=()=>typeof MON!=='undefined';
+const PJ_WEB=!!(window.PC_CFG&&window.PC_CFG.supabaseUrl); /* versão online: entra direto em Meus projetos e cada usuário vê só os seus */
+const pjDono=()=>pjLogado()?MON.user.id:null;
+const pjMeu=r=>!PJ_WEB||(r&&r.dono&&r.dono===pjDono());
 const pjTotal=()=>new Set([...Object.keys(PJ.locais),...Object.keys(PJ.nuvem)]).size;
 const pjPodeCriar=()=>!pjOnline()||pjPro()||pjTotal()<PJ_LIM;
 function pjBloqueio(){if(typeof abrirPlanos==='function')abrirPlanos('No plano gratuito você tem 1 projeto. Assine o Pro para criar projetos ilimitados — ou exclua o projeto atual em “Meus projetos” para começar outro.');else toast('O plano gratuito permite 1 projeto.');}
@@ -7113,10 +7116,10 @@ function pjMini(){try{const rs=S.rooms.filter(r=>(r.pav||0)===0);if(rs.length&&t
 function pjQuando(t){const s=(Date.now()-new Date(t).getTime())/1000;if(s<60)return 'agora';if(s<3600)return `há ${Math.round(s/60)} min`;if(s<86400)return `há ${Math.round(s/3600)} h`;if(s<86400*7)return `há ${Math.round(s/86400)} dia(s)`;return new Date(t).toLocaleDateString('pt-BR');}
 
 /* ---------- salvar ---------- */
-async function pjSalvarLocal(){if(!PJ.atual||PJ.trocando)return;let dados;try{dados=JSON.stringify(S);}catch(e){dados=snapS();}
- const prev=PJ.locais[PJ.atual]||{};const rec={id:PJ.atual,nome:pjNome(),atualizado:Date.now(),criado:prev.criado||Date.now(),dados,mini:pjMini(),nuvem:prev.nuvem||null};
+async function pjSalvarLocal(){if(!PJ.atual||PJ.trocando)return;if(PJ_WEB&&!pjDono())return;let dados;try{dados=JSON.stringify(S);}catch(e){dados=snapS();}
+ const prev=PJ.locais[PJ.atual]||{};const rec={id:PJ.atual,nome:pjNome(),atualizado:Date.now(),criado:prev.criado||Date.now(),dados,mini:pjMini(),nuvem:prev.nuvem||null,dono:prev.dono||pjDono()};
  PJ.locais[PJ.atual]=rec;try{await pjGrava(rec);if(!pjLogado())pjStatus('aparelho');}catch(e){console.warn(e);pjStatus('erro');}}
-function pjAgendar(){if(PJ.trocando)return;clearTimeout(PJ.tSave);pjStatus('salvando');PJ.tSave=setTimeout(async()=>{await pjSalvarLocal();pjAgendarNuvem();},1200);}
+function pjAgendar(){if(PJ.trocando||!PJ.atual)return;clearTimeout(PJ.tSave);pjStatus('salvando');PJ.tSave=setTimeout(async()=>{await pjSalvarLocal();pjAgendarNuvem();},1200);}
 function pjAgendarNuvem(){if(!pjLogado())return;clearTimeout(PJ.tNuvem);PJ.tNuvem=setTimeout(pjSalvarNuvem,3500);}
 async function pjSalvarNuvem(){if(!pjLogado()||!PJ.atual)return;const rec=PJ.locais[PJ.atual];if(!rec)return;
  if(!PJ.nuvem[PJ.atual]&&!pjPro()&&Object.keys(PJ.nuvem).length>=PJ_LIM){PJ.limite=true;pjStatus('limite');return;}
@@ -7130,7 +7133,7 @@ async function pjListarNuvem(){if(!pjLogado())return;try{const {data,error}=awai
 
 /* ---------- indicador no topo ---------- */
 const PJ_ST={salvando:['Salvando…','#f0ad4e'],aparelho:['Salvo neste aparelho','#8bc34a'],'nuvem-salvando':['Salvando na nuvem…','#f0ad4e'],nuvem:['Salvo na nuvem','#8bc34a'],limite:['Salvo neste aparelho (limite da nuvem)','#ffc107'],offline:['Sem internet: salvo neste aparelho','#ffc107'],erro:['Não foi possível salvar','#e57373']};
-function pjStatus(s){PJ.status=s;const b=$('#bProj');if(!b)return;const st=PJ_ST[s]||PJ_ST.aparelho;b.innerHTML=`<span class="pjn">📁 ${esc(pjNome())}</span><i style="background:${st[1]}" title="${esc(st[0])}"></i><small>${esc(st[0])}</small>`;b.title='Meus projetos — '+st[0];}
+function pjStatus(s){PJ.status=s;const b=$('#bProj');if(!b)return;if(!PJ.atual){b.innerHTML='<span class="pjn">📁 Meus projetos</span>';b.title='Meus projetos';return;}const st=PJ_ST[s]||PJ_ST.aparelho;b.innerHTML=`<span class="pjn">📁 ${esc(pjNome())}</span><i style="background:${st[1]}" title="${esc(st[0])}"></i><small>${esc(st[0])}</small>`;b.title='Meus projetos — '+st[0];}
 (function(){const st=document.createElement('style');st.textContent=`
 #bProj{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.12)!important;border:1px solid rgba(255,255,255,.35)!important;color:#fff!important;max-width:min(360px,40vw);padding:6px 10px!important;border-radius:9px}
 #bProj .pjn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}#bProj i{width:8px;height:8px;border-radius:50%;flex:none}#bProj small{font-size:11px;opacity:.85;white-space:nowrap}
@@ -7166,7 +7169,8 @@ function pjStatus(s){PJ.status=s;const b=$('#bProj');if(!b)return;const st=PJ_ST
 })();
 
 /* ---------- tela Meus projetos ---------- */
-async function abrirProjetos(){await pjSalvarLocal();try{(await pjTodos()).forEach(r=>PJ.locais[r.id]=r);}catch(e){}await pjListarNuvem();pjRender();$('#pjOv').classList.add('on');}
+async function pjLerLocais(){try{(await pjTodos()).forEach(r=>{if(pjMeu(r))PJ.locais[r.id]=r;});}catch(e){}}
+async function abrirProjetos(){await pjSalvarLocal();await pjLerLocais();await pjListarNuvem();pjRender();$('#pjOv').classList.add('on');}
 function pjRender(){const ov=$('#pjOv');const ids=[...new Set([...Object.keys(PJ.locais),...Object.keys(PJ.nuvem)])];
  const it=ids.map(id=>{const l=PJ.locais[id],n=PJ.nuvem[id];const t=Math.max(l?l.atualizado:0,n?new Date(n.atualizado).getTime():0);return{id,nome:(l&&l.nome)||(n&&n.nome)||'Projeto',mini:(l&&l.mini)||(n&&n.miniatura)||'',t,l,n};})
   .filter(p=>!PJ.busca||p.nome.toLowerCase().includes(PJ.busca.toLowerCase())).sort((a,b)=>(b.id===PJ.atual)-(a.id===PJ.atual)||b.t-a.t);
@@ -7178,14 +7182,14 @@ function pjRender(){const ov=$('#pjOv');const ids=[...new Set([...Object.keys(PJ
  const trava=pjPodeCriar()?'':'<i class="lk">🔒 Pro</i>';
  const card=p=>{const at=p.id===PJ.atual;return `<div class="c${at?' at':''}"><div class="mi" data-pjo="${p.id}">${p.mini}</div><div class="b"><div class="n" title="${esc(p.nome)}">${esc(p.nome)}</div><div class="m">${at?'<span class="chip a">Aberto agora</span>':''}${p.l?'<span class="chip">💻 neste aparelho</span>':''}${p.n?'<span class="chip n">☁ na nuvem</span>':''}<span>· ${pjQuando(p.t)}</span></div>
   <div class="ac">${at?'':`<button class="ab" data-pjo="${p.id}">${p.l?'Abrir':'Baixar e abrir'}</button>`}<button data-pjr="${p.id}">Renomear</button><button data-pjd="${p.id}">Duplicar${trava?' 🔒':''}</button><button class="ex" data-pjx="${p.id}" title="Excluir">🗑</button></div></div></div>`;};
- ov.innerHTML=`<div class="w"><div class="t"><h2>Meus projetos</h2><input id="pjBusca" placeholder="Procurar projeto…" value="${esc(PJ.busca)}"><button class="bt" data-pj="arquivo">Abrir arquivo do computador</button><button class="bt pri" data-pj="x">◀ Voltar ao projeto</button></div>${info}
+ ov.innerHTML=`<div class="w"><div class="t"><h2>Meus projetos</h2><input id="pjBusca" placeholder="Procurar projeto…" value="${esc(PJ.busca)}"><button class="bt" data-pj="arquivo">Abrir arquivo do computador</button>${PJ_WEB?'<button class="bt" data-pj="conta">'+(pjPro()?'★ Pro · ':'')+'Minha conta</button>':''}${PJ.atual?'<button class="bt pri" data-pj="x">◀ Voltar ao projeto</button>':''}</div>${info}
  <div class="novo"><button data-pjn="branco">${trava}<b>＋ Projeto em branco</b><span>Desenhe do zero ou use uma planta de fundo.</span></button><button data-pjn="assistente">${trava}<b>★ Novo com o assistente</b><span>Responda perguntas e receba o estudo pronto.</span></button><button data-pjn="exemplo">${trava}<b>⧉ Novo a partir do exemplo</b><span>Casa de bombas com sala elétrica, para explorar.</span></button></div>
- ${it.length?`<div class="g">${it.map(card).join('')}</div>`:'<div class="vz">Nenhum projeto encontrado.</div>'}</div>`;
+ ${it.length?`<div class="g">${it.map(card).join('')}</div>`:(PJ.busca?'<div class="vz">Nenhum projeto encontrado.</div>':'<div class="vz"><b style="font-size:17px;color:var(--ink)">Você ainda não tem nenhum projeto.</b><br>Escolha acima como quer começar: em branco, com o assistente ou a partir do exemplo.</div>')}</div>`;
  const bs=$('#pjBusca');bs.oninput=()=>{PJ.busca=bs.value;const pos=bs.selectionStart;pjRender();const nb=$('#pjBusca');nb.focus();nb.setSelectionRange(pos,pos);};}
-$('#pjOv').addEventListener('click',async e=>{const t=e.target;let b;const fechar=()=>$('#pjOv').classList.remove('on');
- if((b=t.closest('[data-pj]'))){const a=b.dataset.pj;if(a==='x')fechar();else if(a==='conta')location.href='conta.html';else if(a==='pro'){fechar();if(typeof abrirPlanos==='function')abrirPlanos();}else if(a==='arquivo'){fechar();$('#fOpen').click();}return;}
- if((b=t.closest('[data-pjn]'))){fechar();await pjNovo(b.dataset.pjn);return;}
- if((b=t.closest('[data-pjo]'))){fechar();await pjAbrir(b.dataset.pjo);return;}
+$('#pjOv').addEventListener('click',async e=>{const t=e.target;let b;const fechar=()=>{if(PJ.atual)$('#pjOv').classList.remove('on');};
+ if((b=t.closest('[data-pj]'))){const a=b.dataset.pj;if(a==='x')fechar();else if(a==='conta')location.href='conta.html';else if(a==='pro'){fechar();if(typeof abrirPlanos==='function')abrirPlanos();}else if(a==='arquivo'){$('#fOpen').click();}return;}
+ if((b=t.closest('[data-pjn]'))){if(PJ.atual)fechar();await pjNovo(b.dataset.pjn);fechar();return;}
+ if((b=t.closest('[data-pjo]'))){if(PJ.atual)fechar();await pjAbrir(b.dataset.pjo);fechar();return;}
  if((b=t.closest('[data-pjr]'))){const id=b.dataset.pjr;const atual=(PJ.locais[id]||PJ.nuvem[id]||{}).nome||'';const n=prompt('Nome do projeto:',atual);if(n&&n.trim())await pjRenomear(id,n.trim());pjRender();return;}
  if((b=t.closest('[data-pjd]'))){await pjDuplicar(b.dataset.pjd);pjRender();return;}
  if((b=t.closest('[data-pjx]'))){if(!b.classList.contains('cf')){b.classList.add('cf');b.textContent='Excluir?';setTimeout(()=>{if(b.isConnected){b.classList.remove('cf');b.textContent='🗑';}},4000);return;}await pjExcluir(b.dataset.pjx);pjRender();return;}});
@@ -7196,9 +7200,9 @@ function pjCarregar(obj,id){PJ.trocando=true;try{const u=obj.under||null;S=migra
 async function pjAbrir(id){if(id===PJ.atual)return;await pjSalvarAgora();const l=PJ.locais[id],n=PJ.nuvem[id];
  try{let obj=null;if(n&&(!l||new Date(n.atualizado).getTime()>l.atualizado+2000)&&pjLogado()){const {data,error}=await MON.sb.from('projetos').select('dados').eq('id',id).single();if(error)throw error;obj=data.dados;if(l){try{obj.under=JSON.parse(l.dados).under||null;}catch(e){}}}
   else if(l)obj=JSON.parse(l.dados);if(!obj)throw new Error('projeto vazio');pjCarregar(obj,id);await pjSalvarLocal();toast(`Projeto “${pjNome()}” aberto.`);}catch(e){console.warn(e);toast('Não foi possível abrir este projeto agora.');}}
-async function pjNovo(tipo,forcar){let reusa=false;if(!forcar&&!pjPodeCriar()){if(temConteudo()){pjBloqueio();return;}reusa=true;}await pjSalvarAgora();const keep={tipos:S.tipos,esq:S.esq,blocos:S.blocos,equipTipos:S.equipTipos,params:S.params,indices:S.indices,precos:S.precos,estr:S.estr};
+async function pjNovo(tipo,forcar){let reusa=false;if(!forcar&&!pjPodeCriar()){if(!PJ.atual||temConteudo()){pjBloqueio();return;}reusa=true;}await pjSalvarAgora();const keep={tipos:S.tipos,esq:S.esq,blocos:S.blocos,equipTipos:S.equipTipos,params:S.params,indices:S.indices,precos:S.precos,estr:S.estr};
  let St;if(tipo==='exemplo'){St=exemplo();}else{St=defaultState();Object.assign(St,deep(keep));St.fund=Object.assign({},deep(S.fund),{porPilar:{}});}
- const n=reusa?1:Object.keys(PJ.locais).length+1;St.meta.obra=tipo==='exemplo'?'Exemplo — casa de bombas':`Projeto ${n}`;St.under=null;
+ const n=reusa?1:pjTotal()+1;St.meta.obra=tipo==='exemplo'?'Exemplo — casa de bombas':`Projeto ${n}`;St.under=null;
  const id=reusa?PJ.atual:pjUUID();pjCarregar(JSON.parse(JSON.stringify(St)),id);await pjSalvarLocal();pjAgendarNuvem();if(typeof SIM!=='undefined')SIM.welcomeOff=tipo!=='branco';
  if(tipo==='assistente'&&typeof wizOpen==='function')wizOpen();else toast(`“${pjNome()}” criado. Ele é salvo automaticamente.`);}
 async function pjRenomear(id,nome){if(id===PJ.atual){edit(()=>{S.meta.obra=nome;});await pjSalvarAgora();return;}
@@ -7206,9 +7210,10 @@ async function pjRenomear(id,nome){if(id===PJ.atual){edit(()=>{S.meta.obra=nome;
  if(PJ.nuvem[id]&&pjLogado()){PJ.nuvem[id].nome=nome;await MON.sb.from('projetos').update({nome}).eq('id',id);}}
 async function pjDuplicar(id){if(!pjPodeCriar())return pjBloqueio();if(id===PJ.atual)await pjSalvarLocal();let l=PJ.locais[id];
  if(!l&&PJ.nuvem[id]&&pjLogado()){const {data}=await MON.sb.from('projetos').select('dados').eq('id',id).single();if(data)l={dados:JSON.stringify(data.dados),mini:PJ.nuvem[id].miniatura,nome:PJ.nuvem[id].nome};}
- if(!l)return;const o=JSON.parse(l.dados);o.meta=o.meta||{};o.meta.obra=(l.nome||'Projeto')+' (cópia)';const rec={id:pjUUID(),nome:o.meta.obra,atualizado:Date.now(),criado:Date.now(),dados:JSON.stringify(o),mini:l.mini,nuvem:null};PJ.locais[rec.id]=rec;await pjGrava(rec);toast('Cópia criada (salva neste aparelho). Abra para guardar na nuvem.');}
+ if(!l)return;const o=JSON.parse(l.dados);o.meta=o.meta||{};o.meta.obra=(l.nome||'Projeto')+' (cópia)';const rec={id:pjUUID(),nome:o.meta.obra,atualizado:Date.now(),criado:Date.now(),dados:JSON.stringify(o),mini:l.mini,nuvem:null,dono:pjDono()};PJ.locais[rec.id]=rec;await pjGrava(rec);toast('Cópia criada (salva neste aparelho). Abra para guardar na nuvem.');}
 async function pjExcluir(id){try{await pjApaga(id);}catch(e){}delete PJ.locais[id];if(PJ.nuvem[id]&&pjLogado()){await MON.sb.from('projetos').delete().eq('id',id);delete PJ.nuvem[id];PJ.limite=false;}
- if(id===PJ.atual){const outro=Object.values(PJ.locais).sort((a,b)=>b.atualizado-a.atualizado)[0];if(outro){PJ.atual=null;await pjAbrir(outro.id);}else{PJ.atual=null;await pjNovo('branco',true);}}toast('Projeto excluído.');}
+ if(id===PJ.atual&&PJ_WEB){PJ.atual=null;pjStatus('');$('#pjOv').classList.add('on');}
+ else if(id===PJ.atual){const outro=Object.values(PJ.locais).sort((a,b)=>b.atualizado-a.atualizado)[0];if(outro){PJ.atual=null;await pjAbrir(outro.id);}else{PJ.atual=null;await pjNovo('branco',true);}}toast('Projeto excluído.');}
 
 /* ---------- ganchos nos botões existentes ---------- */
 (function(){
@@ -7219,14 +7224,19 @@ async function pjExcluir(id){try{await pjApaga(id);}catch(e){}delete PJ.locais[i
  const bj=$('#bJson');if(bj)bj.onclick=()=>{const dd=$('#ddExp');if(dd)dd.classList.remove('open');_salvarArquivo();};
  novo=function(){pjNovo('branco');};$('#bNovo').onclick=()=>novo();
  $('#bAbrir').onclick=()=>abrirProjetos();$('#bAbrir').title='Meus projetos: abrir, criar, duplicar ou excluir';$('#bAbrir').textContent='Meus projetos';
- const _aj=abrirJSON;abrirJSON=function(o){if(o&&o.tipo==='plantacalc-biblioteca')return _aj.apply(this,arguments);const novoPj=pjPodeCriar();if(!novoPj&&temConteudo()&&!confirm('No plano gratuito você tem 1 projeto. Abrir este arquivo vai substituir o projeto atual (dá para desfazer com Ctrl+Z). Continuar?'))return;if(novoPj)pjNovoId();PJ.trocando=true;try{_aj.apply(this,arguments);}finally{PJ.trocando=false;}if(novoPj)undoS.length=0;pjSalvarLocal().then(pjAgendarNuvem);};
- document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#pjOv').classList.contains('on'))$('#pjOv').classList.remove('on');});
+ const _aj=abrirJSON;abrirJSON=function(o){if(o&&o.tipo==='plantacalc-biblioteca')return _aj.apply(this,arguments);if(PJ_WEB&&!PJ.atual&&!pjPodeCriar())return pjBloqueio();const novoPj=!PJ.atual||pjPodeCriar();if(!novoPj&&temConteudo()&&!confirm('No plano gratuito você tem 1 projeto. Abrir este arquivo vai substituir o projeto atual (dá para desfazer com Ctrl+Z). Continuar?'))return;if(novoPj)pjNovoId();PJ.trocando=true;try{_aj.apply(this,arguments);}finally{PJ.trocando=false;}if(novoPj)undoS.length=0;pjSalvarLocal().then(pjAgendarNuvem);$('#pjOv').classList.remove('on');};
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&PJ.atual&&$('#pjOv').classList.contains('on'))$('#pjOv').classList.remove('on');});
  window.addEventListener('pc-conta',async()=>{if(!pjLogado())return;await pjListarNuvem();if(PJ.atual&&PJ.locais[PJ.atual])pjAgendarNuvem();});
  window.addEventListener('beforeunload',()=>{try{localStorage.setItem('plantacalc_v4',snapS());}catch(e){}});
 })();
 
 /* ---------- início ---------- */
-(async function(){try{const todos=await pjTodos();todos.forEach(r=>PJ.locais[r.id]=r);}catch(e){console.warn(e);}
+async function pjInicioWeb(){PJ.atual=null;PJ.locais={};PJ.nuvem={};pjStatus('');
+ try{S=defaultState();refresh();}catch(e){}
+ await pjLerLocais();await pjListarNuvem();pjRender();$('#pjOv').classList.add('on');
+ const g=document.getElementById('pcGate');if(g)g.remove();}
+if(PJ_WEB){window.PJ_GERENCIA_GATE=true;pjStatus('');window.addEventListener('pc-acesso',pjInicioWeb,{once:true});}
+else (async function(){try{const todos=await pjTodos();todos.forEach(r=>PJ.locais[r.id]=r);}catch(e){console.warn(e);}
  let id=null;try{id=localStorage.getItem(PJ_KEY);}catch(e){}
  if(!id||!PJ.locais[id]){id=pjUUID();try{localStorage.setItem(PJ_KEY,id);}catch(e){}}
  PJ.atual=id;await pjSalvarLocal();pjStatus(PJ.status||'aparelho');})();
@@ -7722,7 +7732,7 @@ async function iniciarConta(){lerCache();aplicarPlano();
  try{MON.sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey);const {data}=await MON.sb.auth.getSession();MON.user=data&&data.session?data.session.user:null;
   if(!MON.user){irParaConta();return;}
   if(!(await cadastroOk(MON.user))){irParaConta();return;}
-  PC_GATE.remove();await carregarPerfil(false);
+  await carregarPerfil(false);window.dispatchEvent(new Event('pc-acesso'));if(!window.PJ_GERENCIA_GATE)PC_GATE.remove();else{const x=document.getElementById('pcGateTx');if(x)x.textContent='Carregando seus projetos…';}
   MON.sb.auth.onAuthStateChange((ev,ses)=>{const u=ses?ses.user:null;if(!u){irParaConta();return;}if(u.id!==(MON.user&&MON.user.id)){MON.user=u;carregarPerfil(false);}});}
  catch(e){console.warn('supabase',e);gateErro('Não foi possível verificar sua conta agora.');}}
 
