@@ -222,7 +222,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}svg text{-webkit-text-s
 <meta name="description" content="PlantaCalc: desenhe ou responda algumas perguntas e gere planta, cortes, fundações, quantitativo, custo, prazo, memorial e 3D para estudos preliminares de obras civis.">
 <link rel="icon" href="img/icone.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f5f20"><link rel="apple-touch-icon" href="img/icon-192.png">
-<script>window.PC_BUILD="20261109-193958";</script>
+<script>window.PC_BUILD="20261109-195530";</script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -7899,7 +7899,9 @@ async function iniciarConta(){lerCache();aplicarPlano();
  try{MON.sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey);const {data}=await MON.sb.auth.getSession();MON.user=data&&data.session?data.session.user:null;
   if(!MON.user){irParaConta();return;}
   if(!(await cadastroOk(MON.user))){irParaConta();return;}
-  await carregarPerfil(false);window.dispatchEvent(new Event('pc-acesso'));if(!window.PJ_GERENCIA_GATE)PC_GATE.remove();else{const x=document.getElementById('pcGateTx');if(x)x.textContent='Carregando seus projetos…';}
+  await carregarPerfil(false);window.dispatchEvent(new Event('pc-acesso'));
+  /* e-mail de boas-vindas (uma vez, só para contas criadas há menos de 3 dias; o servidor não repete) */
+  try{const u=MON.user,k='pc_bv_'+(u&&u.id);if(u&&Date.now()-new Date(u.created_at)<3*864e5&&!localStorage.getItem(k))MON.sb.functions.invoke('rotinas',{body:{acao:'boas_vindas'}}).then(r=>{if(r&&r.data&&r.data.ok)try{localStorage.setItem(k,'1');}catch(e){}},()=>{});}catch(e){}if(!window.PJ_GERENCIA_GATE)PC_GATE.remove();else{const x=document.getElementById('pcGateTx');if(x)x.textContent='Carregando seus projetos…';}
   MON.sb.auth.onAuthStateChange((ev,ses)=>{const u=ses?ses.user:null;if(!u){irParaConta();return;}if(u.id!==(MON.user&&MON.user.id)){MON.user=u;carregarPerfil(false);}});}
  catch(e){console.warn('supabase',e);gateErro('Não foi possível verificar sua conta agora.');}}
 
@@ -8343,13 +8345,25 @@ async function orcIndice(forcar){if(ORC.idx&&!forcar)return ORC.idx;
 function orcGlobPrep(){const G=ORC.glob||{};ORC.globExtra=(G.extras||[]).map(r=>({r,k:new RegExp(r.key),d:r.desc?new RegExp(r.desc,'i'):null}));}
 function orcBaseData(St){return (St.orc&&(St.orc.base||St.orc.criado))||'9999';}
 function orcVersao(lista,base){let v=null;for(const x of lista||[])if(x.desde<=base&&(!v||x.desde>v.desde))v=x;return v;}
+/* preços de um estado: a função "sinapi" confere o plano no servidor e devolve um link temporário;
+   o arquivo fica guardado no aparelho (não baixa de novo a cada abertura) */
+async function orcPrecosUF(mes,uf,v){const CK='pc-sinapi-uf',chave=`https://plantacalc.local/sinapi-uf/${mes}/${uf}.json?v=${v}`;
+ try{const c=await caches.open(CK);const h=await c.match(chave);if(h)return await h.json();}catch(e){}
+ let r=null,msg='';
+ try{if(typeof MON!=='undefined'&&MON.sb){const {data,error}=await MON.sb.functions.invoke('sinapi',{body:{mes,uf}});
+   if(data&&data.url){r=await fetch(data.url);ORC.leituraSrv=!!data.leitura;}
+   else if(error){try{const j=await error.context.json();msg=j&&j.erro||'';}catch(x){}}}}catch(e){}
+ if(!r||!r.ok){const r0=await fetch(orcURL(mes+'/'+uf+'.json?v='+v)).catch(()=>null);if(r0&&r0.ok)r=r0;}   /* arquivo antigo (transição) */
+ if(!r||!r.ok)throw new Error(msg||'Não foi possível baixar os preços de '+uf+'. Confira a internet e o seu plano.');
+ const j=await r.json();try{const c=await caches.open(CK);await c.put(chave,new Response(JSON.stringify(j),{headers:{'Content-Type':'application/json'}}));}catch(e){}
+ return j;}
 /* carrega catálogo do mês + preços do estado; devolve null enquanto carrega (e redesenha quando chega) */
 function orcDados(mes,uf){const k=mes+'/'+uf;if(ORC.dados[k])return ORC.dados[k];if(ORC.carregando[k])return null;
  ORC.carregando[k]=(async()=>{try{const idx=await orcIndice();const m=idx.meses&&idx.meses[mes];if(!m)throw new Error('O mês '+orcMesNome(mes)+' não está mais publicado.');
    const v='?v='+(m.v||1);const kc=mes+'/cat';
    if(!ORC.dados[kc]){const r=await fetch(orcURL(mes+'/catalogo.json'+v));if(!r.ok)throw new Error('catálogo HTTP '+r.status);ORC.dados[kc]=await r.json();}
    if(!m.ufs.includes(uf))throw new Error('Não há preços de '+uf+' em '+orcMesNome(mes)+'.');
-   const r2=await fetch(orcURL(mes+'/'+uf+'.json'+v));if(!r2.ok)throw new Error('preços HTTP '+r2.status);const u=await r2.json();
+   const u=await orcPrecosUF(mes,uf,m.v||1);
    ORC.dados[k]={mes,uf,cat:ORC.dados[kc],u};}
   catch(e){ORC.dados[k]={erro:String(e.message||e)};}
   delete ORC.carregando[k];try{refresh();}catch(e){}})();
@@ -8394,7 +8408,8 @@ function orcLinha(St,t,D){const des=St.orc.des;const regra=orcRegra(St,t);const 
   if(P.p==null)falta=true;else R.p+=f*P.p;R.hhUn+=f*hh;if(P.sp)R.sp=true;R.as=Math.max(R.as,P.as);}
  if(falta)fb(R.comps.some(c=>!c.existe)?'Código não existe neste mês do SINAPI.':'Sem custo publicado pelo SINAPI (nem em São Paulo).');
  return R;}
-function orcAtivo(St){return !!(St&&St.orc&&St.orc.on&&St.orc.uf&&St.orc.mes&&typeof isPro==='function'&&isPro());}
+function orcLeitura(){return typeof isPro==='function'&&!isPro()&&typeof MON!=='undefined'&&!!MON.user&&!!MON.validade;}
+function orcAtivo(St){return !!(St&&St.orc&&St.orc.on&&St.orc.uf&&St.orc.mes&&typeof isPro==='function'&&(isPro()||orcLeitura()));}
 function orcD(St){const D=orcDados(St.orc.mes,St.orc.uf);return D&&!D.erro?D:null;}
 
 /* ---------- BDI pela fórmula do TCU ---------- */
@@ -8445,7 +8460,7 @@ const orcCodsTxt=(o,sep)=>o.st==='ok'?o.comps.map(c=>c.cod).join(sep||' + '):'';
 .orc input.pm{width:92px;text-align:right}
 .orc .chip.rf{background:#efe9fb;color:#5b3aa6}.orc .chip.fo{background:#e3f1fb;color:#0f5a8a}
 .orc .orig{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:#3c464f;margin:-2px 0 8px}.orc .orig b{font-variant-numeric:tabular-nums}.orc .orig i{font-style:normal;color:#66707a}
-.orc .mu{display:none}.orc .oab{border:0;background:none;color:#1d4ed8;font:inherit;font-size:12px;text-decoration:underline;padding:0 0 0 6px;cursor:pointer;white-space:nowrap}
+.orc .mu{display:none}.orc.ro [disabled]{opacity:.55;cursor:not-allowed}.orc.ro #oDesl{display:none}.orc .oab{border:0;background:none;color:#1d4ed8;font:inherit;font-size:12px;text-decoration:underline;padding:0 0 0 6px;cursor:pointer;white-space:nowrap}
 .orc tr.ab .oab::after,.orc.tudo .oab::after{content:' ▴'}.orc tr:not(.ab) .oab::after{content:' ▾'}.orc.tudo .oab{display:none!important}
 /* 3.2 linhas compactas: composição, observação e memória completas abrem em "detalhes" ou em "Expandir tudo" */
 .orc table.q[data-orctab] td.oi-de .sd{display:none}.orc table.q[data-orctab] tr.ab td.oi-de .sd,.orc.tudo table.q[data-orctab] td.oi-de .sd{display:block}
@@ -8485,7 +8500,8 @@ function orcAbaNome(){const b=document.querySelector('#qtabs [data-q="quant"]');
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',orcAbaNome);else orcAbaNome();})();
 
 function orcHTML(){
- if(typeof isPro!=='function'||!isPro())return `<div class="orc"><div class="av g" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:220px"><b>Orçamento SINAPI</b> — transforme este quantitativo em orçamento com as composições do SINAPI do seu estado, BDI do TCU, curva ABC e composições analíticas. Recurso do plano Pro.</span><button class="btn sm" id="oPro">Conhecer o Pro</button></div></div>`;
+ const RO=!(typeof isPro==='function'&&isPro())&&orcLeitura()&&S.orc&&S.orc.on;
+ if(!RO&&(typeof isPro!=='function'||!isPro()))return `<div class="orc"><div class="av g" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:220px"><b>Orçamento SINAPI</b> — transforme este quantitativo em orçamento com as composições do SINAPI do seu estado, BDI do TCU, curva ABC e composições analíticas. Recurso do plano Pro.</span><button class="btn sm" id="oPro">Conhecer o Pro</button></div></div>`;
  if(!ORC.idx){orcIndice().then(()=>{try{renderView();}catch(e){}});return '<div class="orc"><p class="note">Carregando a base SINAPI…</p></div>';}
  const idx=ORC.idx,meses=Object.keys(idx.meses||{}).sort();
  if(!meses.length)return `<div class="orc"><div class="av y">A base SINAPI ainda não foi publicada${ORC.idxErro&&ORC.idxErro!=='vazio'?' (erro: '+esc(ORC.idxErro)+')':''}. Assim que o mês for publicado, o orçamento fica disponível aqui.</div><button class="btn" id="oRec">Tentar de novo</button></div>`;
@@ -8501,7 +8517,7 @@ function orcHTML(){
  if(D.erro)return `<div class="orc"><div class="av r">${esc(D.erro)}</div><button class="btn" id="oTrocaMes">Usar o mês atual (${orcMesNome(idx.atual)})</button></div>`;
  const R=orcResumo(S,Q),pl=plano(S,Q,M),B=R.B,enc=D.u.encargos||{};setTimeout(orcObsPend,2000);
  const novo=idx.atual&&idx.atual>O.mes;
- let h=`<div class="orc${ORC.tudo?' tudo':''}"><h3 class="sec" style="margin:14px 0 4px">Orçamento SINAPI</h3><div class="ob">
+ let h=`<div class="orc${ORC.tudo?' tudo':''}${RO?' ro':''}"><h3 class="sec" style="margin:14px 0 4px">Orçamento SINAPI</h3>${RO?`<div class="av y" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:220px"><b>O seu plano Pro venceu.</b> Este orçamento abre só para consulta. Para editar, atualizar o mês ou exportar, renove o Pro.</span><button class="btn sm" id="oRenova">Renovar o Pro</button></div>`:''}<div class="ob">
   <div><label>Estado (preços)</label><select id="oUF">${ufsMes(O.mes).map(u=>`<option value="${u}"${u===O.uf?' selected':''}>${u} — ${ORC_UFS[u]}</option>`).join('')}</select></div>
   <div><label>Encargos sociais</label><select id="oDes"><option value="sem"${O.des!=='com'?' selected':''}>Sem desoneração</option><option value="com"${O.des==='com'?' selected':''}>Com desoneração</option></select></div>
   <div><label>Data-base</label><div style="padding:6px 0"><b>SINAPI ${orcMesNome(O.mes)}</b> · ${esc(D.u.localidade||O.uf)}</div></div>
@@ -8509,7 +8525,7 @@ function orcHTML(){
   <div><label>Itens sem SINAPI</label><select id="oRef"><option value="0">Ficam sem preço</option><option value="1"${O.ref?' selected':''}>Usar preço de referência</option></select></div>
   <div style="flex:1"></div>
   <div><label>Exportar o orçamento</label><div class="btns" style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" id="oXls">Excel</button><button class="btn" id="oPdf">PDF</button><button class="btn" id="oAbc">Curva ABC</button><button class="btn" id="oAna">Composições</button></div></div></div>`;
- if(novo)h+=`<div class="av g">Já saiu o SINAPI de <b>${orcMesNome(idx.atual)}</b>. Este orçamento continua em ${orcMesNome(O.mes)} até você atualizar (ao atualizar, também passa a usar os vínculos padrão mais recentes). <button class="btn sm" id="oAtual">Atualizar para o mês atual</button></div>`;
+ if(novo&&!RO)h+=`<div class="av g">Já saiu o SINAPI de <b>${orcMesNome(idx.atual)}</b>. Este orçamento continua em ${orcMesNome(O.mes)} até você atualizar (ao atualizar, também passa a usar os vínculos padrão mais recentes). <button class="btn sm" id="oAtual">Atualizar para o mês atual</button></div>`;
  if(ORC.abreBDI)h+=orcBDIHTML(B)+orcBDIFHTML(R);
  const pc=v=>R.cd>0?nf(v/R.cd*100,1)+'%':'—';
  h+=`<div class="cards"><div class="cd"><small>Custo direto</small><b>R$ ${nf(R.cd)}</b></div><div class="cd"><small>BDI ${R.BF?'serviços ':''}${O.des==='com'?'(com CPRB)':''}</small><b>${nf(B.bdi*100)}%</b></div>${R.BF?`<div class="cd"><small>BDI fornecimento</small><b>${nf(R.BF.bdi*100)}%</b></div>`:''}<div class="cd v"><small>Preço com BDI</small><b>R$ ${nf(R.pv)}</b></div>
@@ -8579,6 +8595,12 @@ function orcObsPend(){try{const pj=(typeof PJ!=='undefined'&&PJ.atual)||'';const
 function orcLinhaQ(key){return Q.flatMap(g=>g.itens).find(t=>t.key===key);}
 function orcSet(fn){mark();if(!S.orc.vinc)S.orc.vinc={};if(!S.orc.preco)S.orc.preco={};fn(S.orc);refresh();}
 function orcBind(){const on=(id,f)=>{const e=document.getElementById(id);if(e)e.onclick=f;};
+ if(document.querySelector('#qBody .orc.ro')){on('oRenova',()=>abrirPlanos('Renove o Pro para editar, atualizar e exportar o orçamento SINAPI.'));
+  on('oBDIb',()=>{ORC.abreBDI=!ORC.abreBDI;renderView();});on('oTudo',()=>{ORC.tudo=!ORC.tudo;renderView();});
+  const f=document.getElementById('oFil');if(f)f.onchange=()=>{ORC.filtro=f.value;renderView();};
+  $$('[data-oab]').forEach(e=>e.onclick=()=>{const tr=e.closest('tr');if(!tr)return;const k=tr.dataset.ok;ORC.abertos=ORC.abertos||new Set();tr.classList.toggle('ab');if(tr.classList.contains('ab'))ORC.abertos.add(k);else ORC.abertos.delete(k);});
+  document.querySelectorAll('#qBody .orc.ro select,#qBody .orc.ro input,#qBody .orc.ro button').forEach(e=>{if(!e.matches('#oFil,#oTudo,#oBDIb,#oRenova,[data-oab],.expl'))e.disabled=true;});
+  return;}
  on('oPro',()=>abrirPlanos('O orçamento SINAPI (composições, BDI, curva ABC e composições analíticas) é do plano Pro.'));
  on('oRec',async()=>{ORC.idx=null;await orcIndice(true);renderView();});
  on('oGerar',()=>{const uf=$('#oUF0').value,des=$('#oDes0').value;mark();S.orc=Object.assign({vinc:{},preco:{},bdi:Object.assign({},ORC_BDI0)},S.orc||{},{on:true,uf,des,mes:ORC.idx.atual,criado:new Date().toISOString(),base:new Date().toISOString()});refresh();toast('Orçamento SINAPI gerado: '+uf+' · '+orcMesNome(ORC.idx.atual)+'.');});

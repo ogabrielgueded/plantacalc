@@ -3,7 +3,7 @@ import * as pdfjs from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pd
 pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
 const C=window.PC_CFG||{},P=window.SINAPI_PARSE,box=document.getElementById('box');
 const ADMINS=(C.admins||[C.contato]).map(e=>String(e).toLowerCase());
-const BUCKET='sinapi';
+const BUCKET='sinapi',BUCKET_UF='sinapi-uf';  /* preços por estado ficam na pasta protegida; o programa recebe link temporário pela função "sinapi" */
 const UFS=['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
 const sb=window.supabase.createClient(C.supabaseUrl,C.supabaseKey);
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
@@ -24,8 +24,8 @@ let user=null,TAB='dash',DADOS=null,PER=30,PAG=null,ERR=null,OBS=null;
 async function api(acao,extra){const {data,error}=await sb.functions.invoke('admin',{body:Object.assign({acao},extra||{})});
  if(error){let m=error.message;try{const j=await error.context.json();if(j&&j.erro)m=j.erro;}catch(e){}throw new Error(m);}if(data&&data.erro)throw new Error(data.erro);return data;}
 async function indice(){try{const r=await fetch(pubURL('index.json')+'?t='+Date.now(),{cache:'no-store'});if(r.ok)return await r.json();}catch(e){}return {atual:null,meses:{}};}
-async function enviar(caminho,obj,cache){const blob=new Blob([JSON.stringify(obj)],{type:'application/json'});
- const {error}=await sb.storage.from(BUCKET).upload(caminho,blob,{upsert:true,contentType:'application/json',cacheControl:cache||'3600'});if(error)throw new Error(caminho+': '+error.message);}
+async function enviar(caminho,obj,cache,pasta){const blob=new Blob([JSON.stringify(obj)],{type:'application/json'});
+ const {error}=await sb.storage.from(pasta||BUCKET).upload(caminho,blob,{upsert:true,contentType:'application/json',cacheControl:cache||'3600'});if(error)throw new Error(caminho+': '+error.message);}
 
 /* ---------- tooltip dos gráficos ---------- */
 const tip=$('#tip');document.addEventListener('mousemove',e=>{const t=e.target.closest&&e.target.closest('[data-tip]');if(!t){tip.style.display='none';return;}tip.textContent=t.dataset.tip;tip.style.display='block';
@@ -49,110 +49,116 @@ function render(){const nAt=atencaoN();
  ({dash:telaDash,usu:telaUsu,aten:telaAten,vinc:telaVinc,base:telaBase})[TAB]();}
 function carregando(t){$('#corpo').innerHTML=`<p class="m">${esc(t||'Carregando…')}</p>`;}
 function falha(e){$('#corpo').innerHTML=`<div class="box er">Não foi possível carregar: ${esc(e.message||e)}.<br>Se as funções do servidor ainda não foram publicadas, publique “admin” e “uso” no Supabase.</div>`;}
-async function dados(){if(DADOS)return DADOS;DADOS=await api('dados');prepara(DADOS);return DADOS;}
-
-/* ---------- modelo: um registro por usuário ---------- */
-function prepara(D){const pf=Object.fromEntries(D.perfis.map(p=>[p.id,p])),cad=Object.fromEntries(D.cadastros.map(c=>[c.id,c]));
- const pj={};for(const p of D.projetos){(pj[p.user_id]=pj[p.user_id]||[]).push(p);}
- const ss={};for(const s of D.sessoes){(ss[s.user_id]=ss[s.user_id]||[]).push(s);}
- const agora=new Date(D.agora),mesIA=D.agora.slice(0,7);
- D.U=D.usuarios.map(u=>{const p=pf[u.id]||{},c=cad[u.id]||{},S=ss[u.id]||[];const val=p.validade?new Date(p.validade):null;const pro=p.plano==='pro'&&val&&val>agora;
-  /* pagante = assinatura autorizada ou Pix pago; Pro sem pagamento registrado (cortesia ou liberação manual) conta como cortesia */
-  const pago=pro&&['authorized','pix'].includes(String(p.mp_status));const cort=pro&&!pago;
-  const plano=u.banido||p.bloqueado?'bloqueado':pago?'pro':cort?'cortesia':'gratis';
-  const ult=S.length?S[0].fim:u.ultimo_login;const seg=S.reduce((a,s)=>a+(s.segundos||0),0);
-  const cid=conta(S.filter(s=>s.cidade),s=>s.cidade+(s.uf?' – '+s.uf:''),s=>Math.max(1,s.segundos||0))[0];
-  return {id:u.id,email:u.email,nome:c.nome||'',prof:c.profissao||'',emp:c.empresa||'',cidCad:c.cidade?(c.cidade+(c.uf?' – '+c.uf:'')):'',ufCad:c.uf||'',tel:c.telefone||'',novid:!!c.novidades,cadOk:!!(c.nome&&c.profissao),
-   criado:u.criado,ultLogin:u.ultimo_login,ult,confirmado:u.confirmado,banido:u.banido,p,pro,pago,cort,plano,ciclo:p.ciclo,validade:p.validade,mp:p.mp_status,
-   sess:S,nSess:S.length,seg,cidUso:cid?cid[0]:'',nProj:(pj[u.id]||[]).length,proj:pj[u.id]||[],ia:u.ia&&u.ia.mes===mesIA?(u.ia.n||0):0};});
- D.byId=Object.fromEntries(D.U.map(u=>[u.id,u]));}
+async function dados(){if(DADOS&&DADOS._per===PER)return DADOS;
+ const tz=(Intl.DateTimeFormat().resolvedOptions().timeZone)||'America/Sao_Paulo',pr=C.preco||{};
+ DADOS=await api('painel',{dias:PER,tz,mensal:pr.mensal||29.9,anual:pr.anual||299});DADOS._per=PER;return DADOS;}
+async function rot(acao,extra){const {data,error}=await sb.functions.invoke('rotinas',{body:Object.assign({acao},extra||{})});
+ if(error){let m=error.message;try{const j=await error.context.json();if(j&&j.erro)m=j.erro;}catch(e){}throw new Error(m);}if(data&&data.erro)throw new Error(data.erro);return data;}
+/* linha de usuário vinda do servidor → formato usado nas tabelas */
+const mapU=r=>({id:r.id,email:r.email,nome:r.nome||'',prof:r.prof||'',emp:r.emp||'',tel:r.tel||'',cidCad:r.cid_cad||'',ufCad:r.uf_cad||'',novid:!!r.novid,cadOk:!!r.cad_ok,
+ criado:r.criado,ultLogin:r.ult_login,ult:r.ult,confirmado:!!r.confirmado,banido:r.banido,plano:r.plano,ciclo:r.ciclo,validade:r.validade,mp:r.mp,
+ p:{cortesia_ate:r.cortesia_ate,cortesia_obs:r.cortesia_obs,atualizado:r.p_atualizado},nSess:+r.n_sess||0,seg:+r.seg||0,cidUso:r.cid_uso||'',nProj:+r.n_proj||0,ia:+r.ia||0,segP:r.seg_p!=null?+r.seg_p:0});
+const NOMES={};async function nomes(ids){if(DADOS)for(const v of DADOS.vencendo||[])if(!NOMES[v.id])NOMES[v.id]={email:v.email,nome:v.nome};const f=[...new Set((ids||[]).filter(i=>i&&/^[0-9a-f-]{36}$/i.test(i)&&!NOMES[i]))];if(f.length){const r=await api('nomes',{ids:f});Object.assign(NOMES,r.nomes||{});}return NOMES;}
+const MB=b=>fmt((+b||0)/1048576,1)+' MB';
 
 /* ---------- DASHBOARD ---------- */
 async function telaDash(){carregando('Carregando indicadores…');let D;try{D=await dados();}catch(e){return falha(e);}
- const agora=new Date(D.agora).getTime(),ini=agora-PER*DIA,iniAnt=agora-2*PER*DIA;const U=D.U;
- const S=D.sessoes.filter(s=>new Date(s.inicio).getTime()>=ini),Sant=D.sessoes.filter(s=>{const t=new Date(s.inicio).getTime();return t>=iniAnt&&t<ini;});
- const ativos=new Set(S.map(s=>s.user_id)),ativosAnt=new Set(Sant.map(s=>s.user_id));
- const novos=U.filter(u=>new Date(u.criado).getTime()>=ini),novosAnt=U.filter(u=>{const t=new Date(u.criado).getTime();return t>=iniAnt&&t<ini;});
- const pagantes=U.filter(u=>u.plano==='pro'),cort=U.filter(u=>u.plano==='cortesia'),gratis=U.filter(u=>u.plano==='gratis'),bloq=U.filter(u=>u.plano==='bloqueado');
- const preco=C.preco||{mensal:29.9,anual:299};const mrr=pagantes.reduce((a,u)=>a+(u.ciclo==='anual'?preco.anual/12:preco.mensal),0);
- const canc=U.filter(u=>['cancelled','paused'].includes(String(u.mp))&&u.p.atualizado&&new Date(u.p.atualizado).getTime()>=ini);
- const segT=S.reduce((a,s)=>a+(s.segundos||0),0),segAnt=Sant.reduce((a,s)=>a+(s.segundos||0),0);
- const retidos=[...ativosAnt].filter(id=>ativos.has(id)).length;
- const dia=t=>new Date(t).toISOString().slice(0,10);const dias=[];for(let t=agora-(Math.min(PER,90)-1)*DIA;t<=agora;t+=DIA)dias.push(dia(t));
- const porDia={};S.forEach(s=>{const k=dia(s.inicio);(porDia[k]=porDia[k]||new Set()).add(s.user_id);});const dau=dias.map(k=>({k:new Date(k+'T12:00').toLocaleDateString('pt-BR'),v:porDia[k]?porDia[k].size:0}));
- const horasDia={};S.forEach(s=>{const k=dia(s.inicio);horasDia[k]=(horasDia[k]||0)+(s.segundos||0)/3600;});const hd=dias.map(k=>({k:new Date(k+'T12:00').toLocaleDateString('pt-BR'),v:horasDia[k]||0}));
- const sem=[];for(let w=11;w>=0;w--){const a=agora-(w+1)*7*DIA,b=agora-w*7*DIA;sem.push({k:'semana até '+new Date(b).toLocaleDateString('pt-BR'),v:U.filter(u=>{const t=new Date(u.criado).getTime();return t>=a&&t<b;}).length});}
- const wau=new Set(D.sessoes.filter(s=>new Date(s.inicio).getTime()>=agora-7*DIA).map(s=>s.user_id)).size,mau=new Set(D.sessoes.filter(s=>new Date(s.inicio).getTime()>=agora-30*DIA).map(s=>s.user_id)).size;
- const dauHoje=new Set(D.sessoes.filter(s=>new Date(s.inicio).getTime()>=agora-DIA).map(s=>s.user_id)).size;
- const ev={};S.forEach(s=>Object.entries(s.eventos||{}).forEach(([k,v])=>{ev[k]=(ev[k]||0)+(+v||0);}));
+ const L=a=>(a||[]).map(x=>[x[0],+x[1]]);
+ const dau=D.dias.map(x=>({k:new Date(x.d+'T12:00').toLocaleDateString('pt-BR'),v:+x.v})),hd=D.dias.map(x=>({k:new Date(x.d+'T12:00').toLocaleDateString('pt-BR'),v:+x.h}));
+ const sem=D.semanas.map(x=>({k:'semana até '+dt(x.ate),v:+x.v}));const hora=D.horas.map((v,h)=>({k:h+'h',v:+v}));
  const NOME_EV=k=>({tela_croqui:'Tela: croqui',tela_quant:'Tela: quantitativo',tela_folhas:'Tela: pranchas',tela_perfil:'Tela: perfil',aba_orc:'Aba: orçamento SINAPI',aba_custo:'Aba: custo P50/P80',aba_plan:'Aba: planejamento',aba_revs:'Aba: revisões',aba_cen:'Aba: cenários',aba_quant:'Aba: quantitativo',ia_abrir:'IA: abriu o assistente',ia_gerar:'IA: pediu geração',ia_falhou:'IA: geração recusada',orc_gerar:'Orçamento SINAPI gerado',orc_atualizar_mes:'Orçamento atualizado de mês',projeto_novo:'Projeto novo',erro:'Erros do programa'}[k]||(k.startsWith('exportar_')?'Exportou '+k.slice(9).toUpperCase():k));
- const hora=Array.from({length:24},(_,h)=>({k:h+'h',v:0}));S.forEach(s=>{hora[new Date(s.inicio).getHours()].v++;});
- const semDado=!D.sessoes.length;const dlt=(a,b,inv)=>{if(!b)return '';const d=(a-b)/b*100;return `<i>${d>=0?'▲':'▼'} ${fmt(Math.abs(d),0)}% vs. ${PER} dias anteriores</i>`;};
+ const dlt=(a,b)=>{if(!b)return '';const d=(a-b)/b*100;return `<i>${d>=0?'▲':'▼'} ${fmt(Math.abs(d),0)}% vs. ${PER} dias anteriores</i>`;};
  const kp=(t,v,sub,cls)=>`<div class="kp ${cls||''}"><small>${t}</small><b>${v}</b>${sub||''}</div>`;
- const iaMes=U.reduce((a,u)=>a+u.ia,0);const semProj=U.filter(u=>!u.nProj).length;const umaVez=U.filter(u=>u.nSess===1).length;
+ const n=k=>+D[k]||0,U=n('usuarios'),pag=n('pagantes'),cort=n('cortesia'),bloq=n('bloqueados'),canc=n('cancelamentos'),mrr=+D.mrr||0;
+ const E=D.espaco||{},pb=E.limite_banco?E.banco/E.limite_banco:0,pa=E.limite_arquivos?E.arquivos/E.limite_arquivos:0;
+ const fun=(F,t)=>{const c=+F.cadastro||0;const et=[['Cadastro',F.cadastro],['Primeiro projeto',F.projeto],['Orçamento gerado',F.orcamento],['Assinatura',F.assinatura]];
+  return `<div class="pn"><h3>${t}</h3>${et.map(([nm,v],i)=>`<div class="fn"><span>${nm}</span><div class="fb"><i style="width:${c?Math.max(2,(+v||0)/c*100):0}%"></i></div><b>${fmt(+v||0)}</b><small>${i?pct(+v||0,c):''}</small></div>`).join('')}</div>`;};
  $('#corpo').innerHTML=`<div class="bar"><div><label>Período</label><select id="per">${[7,30,90,180].map(d=>`<option value="${d}"${d===PER?' selected':''}>Últimos ${d} dias</option>`).join('')}</select></div></div>
- ${semDado?'<div class="box av">Ainda não há sessões registradas. O registro de uso começa quando a nova versão do programa estiver no ar e as tabelas/funções do servidor forem publicadas.</div>':''}
+ ${!D.tem_sessoes?'<div class="box av">Ainda não há sessões registradas. O registro de uso começa quando a nova versão do programa estiver no ar e as tabelas/funções do servidor forem publicadas.</div>':''}
+ ${pb>=0.7||pa>=0.7?`<div class="box er"><b>Espaço quase no limite do plano gratuito do Supabase.</b> Banco ${pct(E.banco,E.limite_banco)} · arquivos ${pct(E.arquivos,E.limite_arquivos)}. Avalie migrar para o plano pago ou limpar versões antigas.</div>`:''}
  <h2>Usuários e receita</h2><div class="kpis">
-  ${kp('Usuários cadastrados',fmt(U.length),`<i>${fmt(U.filter(u=>!u.cadOk).length)} com cadastro incompleto</i>`)}
-  ${kp('Novos no período',fmt(novos.length),dlt(novos.length,novosAnt.length),novos.length>=novosAnt.length?'up':'dn')}
-  ${kp('Pro pagantes',fmt(pagantes.length),`<i>${pct(pagantes.length,U.length)} dos usuários</i>`)}
-  ${kp('Pro cortesia / sem pagamento',fmt(cort.length))}
-  ${kp('Gratuitos',fmt(gratis.length))}
-  ${kp('Bloqueados',fmt(bloq.length))}
+  ${kp('Usuários cadastrados',fmt(U),`<i>${fmt(n('incompletos'))} com cadastro incompleto</i>`)}
+  ${kp('Novos no período',fmt(n('novos')),dlt(n('novos'),n('novos_ant')),n('novos')>=n('novos_ant')?'up':'dn')}
+  ${kp('Pro pagantes',fmt(pag),`<i>${pct(pag,U)} dos usuários</i>`)}
+  ${kp('Pro cortesia / sem pagamento',fmt(cort))}
+  ${kp('Gratuitos',fmt(n('gratis')))}
+  ${kp('Bloqueados',fmt(bloq))}
   ${kp('Receita mensal recorrente (MRR)',brl(mrr),`<i>anual equivalente ${brl(mrr*12)}</i>`)}
-  ${kp('Cancelamentos no período',fmt(canc.length),`<i>${pct(canc.length,pagantes.length+canc.length)} dos pagantes</i>`,canc.length?'dn':'')}
-  ${kp('Conversão Free → Pro',pct(pagantes.length,U.length-cort.length-bloq.length))}
+  ${kp('Cancelamentos no período',fmt(canc),`<i>${pct(canc,pag+canc)} dos pagantes</i>`,canc?'dn':'')}
+  ${kp('Conversão Free → Pro',pct(pag,U-cort-bloq))}
  </div>
  <h2>Uso</h2><div class="kpis">
-  ${kp('Ativos no período',fmt(ativos.size),dlt(ativos.size,ativosAnt.size),ativos.size>=ativosAnt.size?'up':'dn')}
-  ${kp('Ativos hoje / 7 dias / 30 dias',`${fmt(dauHoje)} / ${fmt(wau)} / ${fmt(mau)}`,`<i>aderência diária ${pct(dauHoje,mau)}</i>`)}
-  ${kp('Sessões no período',fmt(S.length))}
-  ${kp('Tempo ativo total',hm(segT),dlt(segT,segAnt),segT>=segAnt?'up':'dn')}
-  ${kp('Tempo médio por sessão',hm(S.length?segT/S.length:0))}
-  ${kp('Tempo médio por usuário ativo',hm(ativos.size?segT/ativos.size:0))}
-  ${kp('Retenção',pct(retidos,ativosAnt.size),`<i>ativos do período anterior que voltaram</i>`)}
-  ${kp('Usaram só uma vez',fmt(umaVez),`<i>${pct(umaVez,U.length)} dos usuários</i>`)}
-  ${kp('Projetos na nuvem',fmt(D.projetos.length),`<i>${fmt(D.projetos.length/(U.length||1),1)} por usuário · ${fmt(semProj)} sem projeto</i>`)}
-  ${kp('Gerações de IA no mês',fmt(iaMes))}
+  ${kp('Ativos no período',fmt(n('ativos')),dlt(n('ativos'),n('ativos_ant')),n('ativos')>=n('ativos_ant')?'up':'dn')}
+  ${kp('Ativos hoje / 7 dias / 30 dias',`${fmt(n('hoje'))} / ${fmt(n('semana'))} / ${fmt(n('mes'))}`,`<i>aderência diária ${pct(n('hoje'),n('mes'))}</i>`)}
+  ${kp('Sessões no período',fmt(n('sessoes')))}
+  ${kp('Tempo ativo total',hm(n('seg')),dlt(n('seg'),n('seg_ant')),n('seg')>=n('seg_ant')?'up':'dn')}
+  ${kp('Tempo médio por sessão',hm(n('sessoes')?n('seg')/n('sessoes'):0))}
+  ${kp('Tempo médio por usuário ativo',hm(n('ativos')?n('seg')/n('ativos'):0))}
+  ${kp('Retenção',pct(n('retidos'),n('ativos_ant')),`<i>ativos do período anterior que voltaram</i>`)}
+  ${kp('Usaram só uma vez',fmt(n('uma_vez')),`<i>${pct(n('uma_vez'),U)} dos usuários</i>`)}
+  ${kp('Projetos na nuvem',fmt(n('projetos')),`<i>${fmt(n('projetos')/(U||1),1)} por usuário · ${fmt(n('sem_projeto'))} sem projeto</i>`)}
+  ${kp('Gerações de IA no mês',fmt(n('ia_mes')))}
  </div>
+ <h2>Funil</h2><div class="grid2">${fun(D.funil.periodo||{},'Quem se cadastrou nos últimos '+PER+' dias')}${fun(D.funil.total||{},'Todos os usuários')}</div>
  <div class="grid2" style="margin-top:14px">
   <div class="pn"><h3>Usuários ativos por dia</h3>${barras(dau,[dau[0]&&dau[0].k,dau.length&&dau[dau.length-1].k],v=>fmt(v)+' usuário(s)','Usuários ativos por dia')}</div>
   <div class="pn"><h3>Horas de uso por dia</h3>${barras(hd,[hd[0]&&hd[0].k,hd.length&&hd[hd.length-1].k],v=>fmt(v,1)+' h','Horas de uso por dia')}</div>
   <div class="pn"><h3>Novos usuários por semana (12 semanas)</h3>${barras(sem,['há 12 semanas','esta semana'],v=>fmt(v)+' novo(s)','Novos usuários por semana')}</div>
   <div class="pn"><h3>Horário de início das sessões</h3>${barras(hora,['0h','23h'],v=>fmt(v)+' sessão(ões)','Horário de uso')}</div>
-  <div class="pn"><h3>Cidades onde mais usam (tempo ativo)</h3>${hbar(conta(S.filter(s=>s.cidade),s=>s.cidade+(s.uf?' – '+s.uf:''),s=>s.segundos||0),hm)}</div>
-  <div class="pn"><h3>Estados (tempo ativo)</h3>${hbar(conta(S.filter(s=>s.uf),s=>s.pais&&s.pais!=='BR'?s.uf+' ('+s.pais+')':s.uf,s=>s.segundos||0),hm,27)}</div>
-  <div class="pn"><h3>Recursos mais usados</h3>${hbar(Object.entries(ev).filter(([k])=>k!=='erro').sort((a,b)=>b[1]-a[1]).map(([k,v])=>[NOME_EV(k),v]),v=>fmt(v)+'×',14)}</div>
-  <div class="pn"><h3>Dispositivo · sistema · navegador (sessões)</h3>${hbar(conta(S,s=>s.dispositivo),v=>fmt(v),5)}<div style="height:10px"></div>${hbar(conta(S,s=>s.sistema),v=>fmt(v),6)}<div style="height:10px"></div>${hbar(conta(S,s=>s.navegador),v=>fmt(v),6)}</div>
-  <div class="pn"><h3>Profissões (cadastro)</h3>${hbar(conta(U,u=>u.prof||'(não informou)'),v=>fmt(v),10)}</div>
-  <div class="pn"><h3>Estados do cadastro</h3>${hbar(conta(U,u=>u.ufCad||'(não informou)'),v=>fmt(v),27)}</div>
+  <div class="pn"><h3>Cidades onde mais usam (tempo ativo)</h3>${hbar(L(D.cidades),hm)}</div>
+  <div class="pn"><h3>Estados (tempo ativo)</h3>${hbar(L(D.estados),hm,27)}</div>
+  <div class="pn"><h3>Recursos mais usados</h3>${hbar(L(D.eventos).filter(([k])=>k!=='erro').map(([k,v])=>[NOME_EV(k),v]),v=>fmt(v)+'×',14)}</div>
+  <div class="pn"><h3>Dispositivo · sistema · navegador (sessões)</h3>${hbar(L(D.dispositivos),v=>fmt(v),5)}<div style="height:10px"></div>${hbar(L(D.sistemas),v=>fmt(v),6)}<div style="height:10px"></div>${hbar(L(D.navegadores),v=>fmt(v),6)}</div>
+  <div class="pn"><h3>Profissões (cadastro)</h3>${hbar(L(D.profissoes),v=>fmt(v),10)}</div>
+  <div class="pn"><h3>Estados do cadastro</h3>${hbar(L(D.ufs),v=>fmt(v),27)}</div>
  </div>
- <h2>Usuários mais ativos no período</h2>${tabelaUsu(U.filter(u=>ativos.has(u.id)).map(u=>Object.assign({},u,{segP:S.filter(s=>s.user_id===u.id).reduce((a,s)=>a+(s.segundos||0),0)})).sort((a,b)=>b.segP-a.segP).slice(0,15),true)}`;
- $('#per').onchange=e=>{PER=+e.target.value;telaDash();};ligaLinhas();}
+ <h2>Usuários mais ativos no período</h2>${tabelaUsu((D.top||[]).map(mapU),true)}
+ <h2>Servidor</h2><div class="grid2">
+  <div class="pn"><h3>Espaço usado (plano gratuito do Supabase)</h3>
+   <div class="fn"><span>Banco de dados</span><div class="fb"><i style="width:${Math.min(100,pb*100)}%;${pb>=0.7?'background:#b42318':''}"></i></div><b>${MB(E.banco)}</b><small>de ${MB(E.limite_banco)}</small></div>
+   <div class="fn"><span>Arquivos</span><div class="fb"><i style="width:${Math.min(100,pa*100)}%;${pa>=0.7?'background:#b42318':''}"></i></div><b>${MB(E.arquivos)}</b><small>de ${MB(E.limite_arquivos)}</small></div>
+   <div class="m" style="font-size:12.5px;margin-top:6px">Projetos ${MB(E.projetos)} · versões anteriores ${MB(E.versoes)}. Alerta a partir de 70%.</div></div>
+  <div class="pn"><h3>Cópias de segurança (toda segunda-feira)</h3><div id="copias" class="m">Carregando…</div></div>
+  <div class="pn"><h3>Avisos por e-mail</h3><div id="avisos" class="m">Carregando…</div></div>
+ </div>`;
+ $('#per').onchange=e=>{PER=+e.target.value;telaDash();};ligaLinhas();
+ const cp=async()=>{const el=$('#copias');if(!el)return;try{const r=await rot('copias');
+   el.innerHTML=(r.copias.length?`<table class="t"><thead><tr><th>Quando</th><th class="n">Projetos</th><th class="n">Tamanho</th><th></th></tr></thead><tbody>${r.copias.map(c=>`<tr><td>${dth(c.quando)}<br><span class="m" style="font-size:12px">${esc(c.origem||'')}</span></td><td class="n">${fmt(c.projetos)}</td><td class="n">${MB(c.bytes)}</td><td>${c.url?`<a class="btn xs ln" href="${esc(c.url)}">Baixar</a>`:''}</td></tr>`).join('')}</tbody></table>`:'<p>Nenhuma cópia ainda.</p>')+
+   '<div style="margin-top:8px"><button class="btn xs pri" id="cpAgora">Fazer uma cópia agora</button></div>';
+   $('#cpAgora').onclick=async()=>{const b=$('#cpAgora');b.disabled=true;b.textContent='Gerando…';try{await rot('copia');cp();}catch(e){b.disabled=false;b.textContent='Fazer uma cópia agora';alert('Não foi possível: '+e.message);}};}
+  catch(e){el.textContent='Não foi possível carregar: '+e.message;}};
+ const av=async()=>{const el=$('#avisos');if(!el)return;try{const r=await rot('enviados');const NM={boas_vindas:'Boas-vindas',vencendo:'Pro vencendo',recusado:'Pagamento recusado',cancelado:'Assinatura cancelada',teste:'Teste'};
+   el.innerHTML=`<p>${r.chave?'<span class="bdg b-pro">chave do Resend configurada</span>':'<span class="bdg b-blo">falta a chave RESEND_API_KEY</span> Sem ela nenhum e-mail sai.'}</p>`+
+   (r.enviados.length?`<table class="t"><thead><tr><th>Quando</th><th>Aviso</th><th>Situação</th></tr></thead><tbody>${r.enviados.slice(0,12).map(a=>`<tr><td>${dth(a.quando)}</td><td>${esc(NM[a.tipo]||a.tipo)}</td><td>${a.ok?'enviado':'<b>falhou</b> '+esc(a.detalhe||'')}</td></tr>`).join('')}</tbody></table>`:'<p>Nenhum aviso enviado ainda.</p>')+
+   '<div style="margin-top:8px"><button class="btn xs ln" id="avTeste">Enviar um e-mail de teste para mim</button></div>';
+   $('#avTeste').onclick=async()=>{try{const x=await rot('teste');alert(x.ok?'E-mail de teste enviado. Confira a sua caixa de entrada.':'Não foi enviado: '+x.detalhe);av();}catch(e){alert('Não foi possível: '+e.message);}};}
+  catch(e){el.textContent='Não foi possível carregar: '+e.message;}};
+ cp();av();}
 
 /* ---------- USUÁRIOS ---------- */
-let FU={q:'',pl:'todos',ord:'ult',dir:-1,sel:null};
+let FU={q:'',pl:'todos',ord:'ult',dir:-1,sel:null,pag:0};const TAM=100;
 function linhaPlano(u){return u.plano==='bloqueado'?'<span class="bdg b-blo">bloqueado</span>':u.plano==='pro'?`<span class="bdg b-pro">Pro ${u.ciclo||''}</span>`:u.plano==='cortesia'?`<span class="bdg b-cor">${u.p.cortesia_ate?'Pro cortesia':'Pro sem pagamento'}</span>`:'<span class="bdg b-fre">Gratuito</span>';}
 function tabelaUsu(L,curta){if(!L.length)return '<div class="tw"><div class="vazio">Nenhum usuário.</div></div>';
  const th=(k,n,cl)=>`<th class="${cl||''}" data-ord="${k}">${n}${FU.ord===k&&!curta?(FU.dir>0?' ▲':' ▼'):''}</th>`;
  return `<div class="tw"><table class="t"><thead><tr>${th('nome','Usuário')}${th('prof','Profissão')}${th('plano','Plano')}${th('criado','Cadastro')}${th('ult','Último uso')}${th('nSess','Sessões','n')}${th(curta?'segP':'seg',curta?'Tempo no período':'Tempo total','n')}${th('cidUso','Onde mais usa')}${th('nProj','Projetos','n')}${th('ia','IA no mês','n')}</tr></thead><tbody>
  ${L.map(u=>`<tr class="cl${FU.sel===u.id?' sel':''}" data-u="${u.id}"><td><b>${esc(u.nome||'(sem nome)')}</b><br><span class="m" style="font-size:12.5px">${esc(u.email)}</span></td><td>${esc(u.prof)}</td><td>${linhaPlano(u)}${u.validade&&u.plano!=='gratis'?`<br><span class="m" style="font-size:12px">até ${dt(u.validade)}</span>`:''}</td><td>${dt(u.criado)}</td><td>${dth(u.ult)}</td><td class="n">${fmt(u.nSess)}</td><td class="n">${hm(curta?u.segP:u.seg)}</td><td>${esc(u.cidUso||u.cidCad||'—')}${!u.cidUso&&u.cidCad?' <span class="m" style="font-size:11px">(cadastro)</span>':''}</td><td class="n">${fmt(u.nProj)}</td><td class="n">${fmt(u.ia)}</td></tr>`).join('')}</tbody></table></div>`;}
 function ligaLinhas(){$$('tr[data-u]').forEach(tr=>tr.onclick=()=>{FU.sel=tr.dataset.u;TAB='usu';history.replaceState(null,'','#usu');render();});}
-async function telaUsu(){carregando('Carregando usuários…');let D;try{D=await dados();}catch(e){return falha(e);}
- const q=norm(FU.q);let L=D.U.filter(u=>(!q||norm(u.nome+' '+u.email+' '+u.prof+' '+u.emp+' '+u.cidCad+' '+u.cidUso).includes(q))&&(FU.pl==='todos'||u.plano===FU.pl||(FU.pl==='semcad'&&!u.cadOk)||(FU.pl==='inativo'&&(!u.ult||Date.now()-new Date(u.ult)>30*DIA))));
- const k=FU.ord;L.sort((a,b)=>{const x=a[k],y=b[k];return (x==null||x==='')?1:(y==null||y==='')?-1:(x>y?1:x<y?-1:0)*FU.dir;});
+async function telaUsu(){carregando('Carregando usuários…');let R;try{R=await api('usuarios',{q:FU.q,filtro:FU.pl,ord:FU.ord,dir:FU.dir,lim:TAM,off:FU.pag*TAM});}catch(e){return falha(e);}
+ const L=R.linhas.map(mapU),np=Math.max(1,Math.ceil(R.total/TAM));
  $('#corpo').innerHTML=`<div class="bar"><div style="flex:1;min-width:220px"><label>Buscar (nome, e-mail, profissão, empresa, cidade)</label><input class="i" id="uq" style="width:100%" value="${esc(FU.q)}"></div>
  <div><label>Filtro</label><select id="upl">${[['todos','Todos'],['pro','Pro pagantes'],['cortesia','Pro cortesia'],['gratis','Gratuitos'],['bloqueado','Bloqueados'],['inativo','Sem uso há 30 dias'],['semcad','Cadastro incompleto']].map(([v,n])=>`<option value="${v}"${FU.pl===v?' selected':''}>${n}</option>`).join('')}</select></div>
  <div><label>&nbsp;</label><button class="btn xs ln" id="ucsv">Baixar lista (CSV)</button></div></div>
- <div class="m" style="font-size:13px;margin-bottom:6px">${fmt(L.length)} usuário(s). Clique numa linha para ver o detalhe e as ações.</div><div id="udet"></div>${tabelaUsu(L)}`;
- const uq=$('#uq');let tm;uq.oninput=()=>{clearTimeout(tm);tm=setTimeout(()=>{FU.q=uq.value;telaUsu().then(()=>{const e=$('#uq');e.focus();e.setSelectionRange(e.value.length,e.value.length);});},300);};
- $('#upl').onchange=e=>{FU.pl=e.target.value;telaUsu();};
- $$('th[data-ord]').forEach(th=>th.onclick=()=>{const k=th.dataset.ord;if(FU.ord===k)FU.dir*=-1;else{FU.ord=k;FU.dir=['nome','prof','cidUso','plano'].includes(k)?1:-1;}telaUsu();});
+ <div class="m" style="font-size:13px;margin-bottom:6px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span>${fmt(R.total)} usuário(s). Clique numa linha para ver o detalhe e as ações.</span>${np>1?`<span style="margin-left:auto"><button class="btn xs ln" id="uAnt"${FU.pag?'':' disabled'}>◀</button> página ${FU.pag+1} de ${np} <button class="btn xs ln" id="uProx"${FU.pag+1<np?'':' disabled'}>▶</button></span>`:''}</div><div id="udet"></div>${tabelaUsu(L)}`;
+ const uq=$('#uq');let tm;uq.oninput=()=>{clearTimeout(tm);tm=setTimeout(()=>{FU.q=uq.value;FU.pag=0;telaUsu().then(()=>{const e=$('#uq');e.focus();e.setSelectionRange(e.value.length,e.value.length);});},350);};
+ $('#upl').onchange=e=>{FU.pl=e.target.value;FU.pag=0;telaUsu();};
+ if($('#uAnt'))$('#uAnt').onclick=()=>{FU.pag=Math.max(0,FU.pag-1);telaUsu();};if($('#uProx'))$('#uProx').onclick=()=>{FU.pag++;telaUsu();};
+ $$('th[data-ord]').forEach(th=>th.onclick=()=>{const k=th.dataset.ord;if(FU.ord===k)FU.dir*=-1;else{FU.ord=k;FU.dir=['nome','prof','cidUso','plano'].includes(k)?1:-1;}FU.pag=0;telaUsu();});
  $$('tr[data-u]').forEach(tr=>tr.onclick=()=>{FU.sel=FU.sel===tr.dataset.u?null:tr.dataset.u;telaUsu();});
- $('#ucsv').onclick=()=>{const cols=['nome','email','prof','emp','tel','cidCad','plano','validade','criado','ult','nSess','seg','cidUso','nProj','ia','novid'];
-  const csv=[['Nome','E-mail','Profissão','Empresa','Telefone','Cidade (cadastro)','Plano','Validade','Cadastro','Último uso','Sessões (180 dias)','Segundos ativos (180 dias)','Onde mais usa','Projetos','IA no mês','Aceita novidades'].join(';')].concat(L.map(u=>cols.map(c=>'"'+String(u[c]==null?'':u[c]).replace(/"/g,'""')+'"').join(';'))).join('\r\n');
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv'}));a.download='usuarios-plantacalc.csv';a.click();};
- if(FU.sel&&D.byId[FU.sel])detalhe(D.byId[FU.sel]);}
+ $('#ucsv').onclick=async()=>{const b=$('#ucsv');b.disabled=true;try{const T=(await api('usuarios',{q:FU.q,filtro:FU.pl,ord:FU.ord,dir:FU.dir,lim:100000,off:0})).linhas.map(mapU);
+  const cols=['nome','email','prof','emp','tel','cidCad','plano','validade','criado','ult','nSess','seg','cidUso','nProj','ia','novid'];
+  const csv=[['Nome','E-mail','Profissão','Empresa','Telefone','Cidade (cadastro)','Plano','Validade','Cadastro','Último uso','Sessões (180 dias)','Segundos ativos (180 dias)','Onde mais usa','Projetos','IA no mês','Aceita novidades'].join(';')].concat(T.map(u=>cols.map(c=>'"'+String(u[c]==null?'':u[c]).replace(/"/g,'""')+'"').join(';'))).join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv'}));a.download='usuarios-plantacalc.csv';a.click();}catch(e){alert('Não foi possível: '+e.message);}b.disabled=false;};
+ if(FU.sel){let u=L.find(x=>x.id===FU.sel);if(!u){try{const r=await api('usuarios',{id:FU.sel,lim:1});u=r.linhas[0]&&mapU(r.linhas[0]);}catch(e){}}if(u)detalhe(u);}}
 async function detalhe(u){const el=$('#udet');const hoje=new Date();const mais=d=>new Date(Math.max(hoje,u.validade?new Date(u.validade):0)+d*DIA).toISOString().slice(0,10);
  el.innerHTML=`<div class="det"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><h2 style="margin:0">${esc(u.nome||'(sem nome)')} ${linhaPlano(u)}</h2><div class="m">${esc(u.email)}${u.confirmado?'':' · <b>e-mail não confirmado</b>'}</div></div><button class="btn xs ln" id="dX">Fechar</button></div>
  <div class="grid2" style="margin-top:10px"><div class="kv"><span>Profissão</span><div>${esc(u.prof||'—')}</div><span>Empresa</span><div>${esc(u.emp||'—')}</div><span>Telefone</span><div>${esc(u.tel||'—')}</div><span>Cidade (cadastro)</span><div>${esc(u.cidCad||'—')}</div><span>Aceita novidades</span><div>${u.novid?'sim':'não'}</div><span>Cadastro em</span><div>${dth(u.criado)}</div><span>Último login</span><div>${dth(u.ultLogin)}</div></div>
@@ -167,7 +173,7 @@ async function detalhe(u){const el=$('#udet');const hoje=new Date();const mais=d
  $('#dX').onclick=()=>{FU.sel=null;telaUsu();};
  $$('[data-mais]').forEach(b=>b.onclick=()=>{$('#dAte').value=mais(+b.dataset.mais);});
  const msg=(t,ok)=>{$('#dMsg').innerHTML=`<div class="box ${ok?'ok':'er'}">${esc(t)}</div>`;};
- const acao=async(fn,ok)=>{try{await fn();msg(ok,true);DADOS=null;await dados();setTimeout(telaUsu,900);}catch(e){msg('Não foi possível: '+(e.message||e));}};
+ const acao=async(fn,ok)=>{try{await fn();msg(ok,true);DADOS=null;setTimeout(telaUsu,900);}catch(e){msg('Não foi possível: '+(e.message||e));}};
  $('#dPro').onclick=()=>{const v=$('#dAte').value;if(!v)return;if(!confirm(`Dar Pro de cortesia a ${u.email} até ${new Date(v+'T23:59').toLocaleDateString('pt-BR')}?`))return;acao(()=>api('pro',{id:u.id,ate:v+'T23:59:59-03:00',obs:$('#dObs').value}),'Pro liberado.');};
  if($('#dTira'))$('#dTira').onclick=()=>{if(!confirm('Remover a cortesia? Se a pessoa não tiver assinatura paga, volta para o plano gratuito.'))return;acao(()=>api('pro',{id:u.id,ate:null}),'Cortesia removida.');};
  if($('#dBlo'))$('#dBlo').onclick=()=>{const on=u.plano!=='bloqueado';if(!confirm(on?`Bloquear o acesso de ${u.email}? A pessoa não consegue entrar até ser desbloqueada; os dados ficam guardados.`:`Desbloquear ${u.email}?`))return;acao(()=>api('bloquear',{id:u.id,on}),on?'Acesso bloqueado.':'Acesso liberado.');};
@@ -186,7 +192,7 @@ function pagProblemas(){if(!PAG)return [];const agora=Date.now();const out=[];
   else if(p.status==='pending'&&p.expira&&new Date(p.expira)<agora)out.push({q:p.criado,ref:refUid(p.ref),o:`Pix gerado e não pago (expirou ${dth(p.expira)})`,v:p.valor});
   else if(['refunded','charged_back','cancelled'].includes(p.status))out.push({q:p.criado,ref:refUid(p.ref),o:`Pagamento ${p.status==='refunded'?'estornado':p.status==='charged_back'?'contestado (chargeback)':'cancelado'}`,v:p.valor});}
  for(const a of PAG.assinaturas||[])if(['cancelled','paused'].includes(a.status))out.push({q:a.alterado||a.criado,ref:refUid(a.ref),o:`Assinatura ${a.status==='cancelled'?'cancelada':'pausada'} (${a.freq===12?'anual':'mensal'})`,v:a.valor});
- if(DADOS)for(const u of DADOS.U)if(u.plano==='pro'&&u.validade){const d=(new Date(u.validade)-agora)/DIA;if(d<7)out.push({q:u.validade,ref:u.id,o:`Pro vence em ${fmt(Math.max(0,d),0)} dia(s) (${dt(u.validade)}) — ${u.mp==='pix'?'Pix não renova sozinho':'confira a renovação'}`,v:null});}
+ if(DADOS)for(const u of DADOS.vencendo||[])if(u.validade){const d=(new Date(u.validade)-agora)/DIA;if(d<7)out.push({q:u.validade,ref:u.id,o:`Pro vence em ${fmt(Math.max(0,d),0)} dia(s) (${dt(u.validade)}) — ${u.mp==='pix'?'Pix não renova sozinho':'confira a renovação'}`,v:null});}
  return out.sort((a,b)=>String(b.q).localeCompare(String(a.q)));}
 function grupoObs(){const g={};for(const o of OBS||[]){const k=o.tipo+'|'+(o.norm||o.chave);const x=g[k]=g[k]||{tipo:o.tipo,norm:o.norm||o.chave,regra:o.regra,descr:o.descr,un:o.un,n:0,us:new Set(),uf:{},comps:{},ult:o.quando};x.n++;x.us.add(o.user_id);if(o.uf)x.uf[o.uf]=(x.uf[o.uf]||0)+1;if(o.regra)x.regra=o.regra;
   if(o.tipo==='troca'&&Array.isArray(o.comps)){const c=o.comps.map(c=>c.cod+(c.f&&c.f!==1?'×'+c.f:'')).join('+');x.comps[c]=(x.comps[c]||0)+1;}if(o.tipo==='manual'&&o.comps&&o.comps.p){(x.precos=x.precos||[]).push(+o.comps.p);}if(o.quando>x.ult)x.ult=o.quando;}
@@ -194,10 +200,10 @@ function grupoObs(){const g={};for(const o of OBS||[]){const k=o.tipo+'|'+(o.nor
 async function telaAten(){carregando('Carregando itens de atenção…');
  try{await dados();}catch(e){return falha(e);}
  const res=await Promise.allSettled([ERR?Promise.resolve():api('erros').then(r=>{ERR=r.erros;}),OBS?Promise.resolve():api('obs').then(r=>{OBS=r.obs;}),PAG?Promise.resolve():api('pagamentos').then(r=>{PAG=r;})]);
- const fal=res.filter(r=>r.status==='rejected').map(r=>r.reason.message);const nome=ref=>{const u=DADOS.byId[ref];return u?esc(u.nome||u.email)+'<br><span class="m" style="font-size:12px">'+esc(u.email)+'</span>':esc(ref||'—');};
+ await nomes(pagProblemas().map(p=>p.ref).concat((ERR||[]).map(e=>e.user_id))).catch(()=>{});const fal=res.filter(r=>r.status==='rejected').map(r=>r.reason.message);const nome=ref=>{const u=NOMES[ref];return u?esc(u.nome||u.email)+'<br><span class="m" style="font-size:12px">'+esc(u.email)+'</span>':esc(ref||'—');};
  const pg=pagProblemas(),er=grupoErros(),ob=grupoObs();const TIPO={troca:'Trocaram o vínculo',sem:'Marcaram “sem equivalente”',incl:'Marcaram “já incluído”',manual:'Digitaram preço',pendente:'Ficou sem preço'};
  $('#corpo').innerHTML=`${fal.length?`<div class="box av">Alguns dados não carregaram: ${fal.map(esc).join(' · ')}</div>`:''}
- <h2>Pagamentos e assinaturas (60 dias)</h2>${pg.length?`<div class="tw"><table class="t"><thead><tr><th>Quando</th><th>Usuário</th><th>Ocorrência</th><th class="n">Valor</th></tr></thead><tbody>${pg.map(p=>`<tr${DADOS.byId[p.ref]?` class="cl" data-u="${p.ref}"`:''}><td>${dth(p.q)}</td><td>${nome(p.ref)}</td><td>${esc(p.o)}</td><td class="n">${p.v!=null?brl(p.v):''}</td></tr>`).join('')}</tbody></table></div>`:'<div class="box ok">Nenhum pagamento com problema.</div>'}
+ <h2>Pagamentos e assinaturas (60 dias)</h2>${pg.length?`<div class="tw"><table class="t"><thead><tr><th>Quando</th><th>Usuário</th><th>Ocorrência</th><th class="n">Valor</th></tr></thead><tbody>${pg.map(p=>`<tr${NOMES[p.ref]?` class="cl" data-u="${p.ref}"`:''}><td>${dth(p.q)}</td><td>${nome(p.ref)}</td><td>${esc(p.o)}</td><td class="n">${p.v!=null?brl(p.v):''}</td></tr>`).join('')}</tbody></table></div>`:'<div class="box ok">Nenhum pagamento com problema.</div>'}
  <h2>Erros do programa</h2>${er.length?`<div class="tw"><table class="t"><thead><tr><th>Último</th><th>Mensagem</th><th class="n">Vezes</th><th class="n">Usuários</th><th>Tela</th><th>Versão</th></tr></thead><tbody>${er.slice(0,80).map((g,i)=>`<tr class="cl" data-err="${i}"><td>${dth(g.ult)}</td><td><b>${esc(g.msg.slice(0,160))}</b><div id="pl${i}" hidden><pre class="pl">${esc(g.pilha||'')}</pre><div class="m" style="font-size:12px">primeira vez: ${dth(g.pri)}</div></div></td><td class="n">${g.n}</td><td class="n">${g.us.size}</td><td>${esc(g.tela||'')}</td><td class="mono">${esc(g.build||'')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="box ok">Nenhum erro registrado.</div>'}
  <h2>Orçamento SINAPI — o que os usuários estão corrigindo</h2>
  <p class="m" style="font-size:13.5px">Agrupado por tipo de linha do quantitativo. Trocas feitas por vários usuários são boas candidatas a virar o vínculo padrão.</p>
@@ -215,7 +221,9 @@ async function vinCarrega(){if(VIN.carregado)return;const idx=await indice();VIN
  VIN.mapa=m;VIN.glob=Object.assign({regras:{},extras:[]},g);
  if(VIN.mes){const v='?v='+((idx.meses[VIN.mes]||{}).v||1);VIN.cat=await (await fetch(pubURL(VIN.mes+'/catalogo.json'+v))).json();await vinUF(VIN.uf);VIN.lista=Object.entries(VIN.cat.c).map(([cod,v])=>({cod,desc:v[0],un:v[1],n:norm(v[0])}));}
  VIN.carregado=true;}
-async function vinUF(uf){VIN.uf=uf;const idx=await indice();const v='?v='+((idx.meses[VIN.mes]||{}).v||1);VIN.ufd=await (await fetch(pubURL(VIN.mes+'/'+uf+'.json'+v))).json();}
+async function lerUF(mes,uf,v){const {data,error}=await sb.storage.from(BUCKET_UF).download(mes+'/'+uf+'.json');if(!error&&data)return JSON.parse(await data.text());
+ const r=await fetch(pubURL(mes+'/'+uf+'.json'+v));if(!r.ok)throw new Error('preços de '+uf+' não encontrados');return await r.json();}
+async function vinUF(uf){VIN.uf=uf;const idx=await indice();const v='?v='+((idx.meses[VIN.mes]||{}).v||1);VIN.ufd=await lerUF(VIN.mes,uf,v);}
 function vinAtual(r){const vs=(VIN.glob.regras||{})[r.id]||[];const v=vs.length?vs[vs.length-1]:null;return v&&!v.fabrica?Object.assign({},r,{comps:v.comps,sem:v.sem,incl:v.incl,obs:v.obs,alterado:v.desde}):r;}
 function preco(cod){if(!VIN.ufd)return null;cod=String(cod);if(cod[0]==='I'){const v=VIN.ufd.i[cod.slice(1)];return v?v[0]:null;}const v=VIN.ufd.c[cod];return v?v[0]:null;}
 function descCod(cod){cod=String(cod);if(!VIN.cat)return '';const c=cod[0]==='I'?VIN.cat.i[cod.slice(1)]:VIN.cat.c[cod];return c?c[0]+' ('+c[1]+')':'(código não existe neste mês)';}
@@ -271,10 +279,18 @@ function vinLigaEditor(r){if(!r||!VIN.ed)return;const E=VIN.ed;
 /* ---------- BASE SINAPI (envio mensal do ZIP) ---------- */
 let R=null,confirmarSubst=false;
 async function telaBase(){const I=await indice();const ms=Object.keys(I.meses||{}).sort().reverse();
- $('#corpo').innerHTML='<p class="m">Envie o arquivo ZIP do SINAPI em PDF (o mesmo que a CAIXA publica todo mês). O PlantaCalc lê os relatórios aqui mesmo no navegador, mostra um resumo por estado para você conferir e só publica depois da sua confirmação.</p>'+
+ let publicos=[];for(const k of ms){const u=(I.meses[k].ufs||[])[0];if(!u)continue;try{const r=await fetch(pubURL(k+'/'+u+'.json')+'?t='+Date.now(),{method:'HEAD',cache:'no-store'});if(r.ok)publicos.push(k);}catch(e){}}
+ $('#corpo').innerHTML=(publicos.length?`<div class="box av" id="mvBox"><b>Os preços de ${publicos.map(mesNome).join(', ')} ainda estão na pasta pública.</b> Qualquer pessoa com o endereço consegue baixá-los. Mova-os para a pasta protegida: o programa passa a entregá-los só para quem tem o Pro.<div style="margin-top:8px"><button class="btn xs pri" id="mvGo">Mover os preços para a pasta protegida</button></div><div id="mvSt" class="m"></div></div>`:'')+'<p class="m">Envie o arquivo ZIP do SINAPI em PDF (o mesmo que a CAIXA publica todo mês). O PlantaCalc lê os relatórios aqui mesmo no navegador, mostra um resumo por estado para você conferir e só publica depois da sua confirmação.</p>'+
  '<label class="drop" id="dz"><input type="file" id="fz" accept=".zip,.pdf" multiple hidden><b>Escolher o ZIP do SINAPI</b>ou arraste o arquivo para cá — também aceita os PDFs soltos</label>'+
  '<div id="prog" hidden><div class="m" id="st"></div><div class="barra"><i id="br"></i></div></div><div id="res"></div>'+
  '<h2>Meses publicados</h2>'+(ms.length?'<ul>'+ms.map(k=>{const m=I.meses[k];return '<li><b>'+mesNome(k)+'</b>'+(k===I.atual?' <span class="bdg b-pro">mês atual</span>':'')+' — '+m.ufs.length+' estados, publicado em '+new Date(m.publicado).toLocaleString('pt-BR')+'</li>';}).join('')+'</ul>':'<p class="m">Nenhum mês publicado ainda.</p>');
+ if($('#mvGo'))$('#mvGo').onclick=async()=>{const b=$('#mvGo'),st=$('#mvSt');b.disabled=true;const apagar=[];
+  try{for(const k of publicos){const v='?v='+((I.meses[k]||{}).v||1);for(const u of I.meses[k].ufs){st.textContent=`Copiando ${mesNome(k)} · ${u}…`;const r=await fetch(pubURL(k+'/'+u+'.json'+v));if(!r.ok)throw new Error(k+'/'+u+': HTTP '+r.status);
+     await enviar(k+'/'+u+'.json',await r.json(),null,BUCKET_UF);apagar.push(k+'/'+u+'.json');}}
+   st.textContent='Conferindo a cópia…';for(const p of apagar){const {data,error}=await sb.storage.from(BUCKET_UF).download(p);if(error||!data||!data.size)throw new Error('cópia de '+p+' não conferiu');}
+   st.textContent='Apagando da pasta pública…';for(let i=0;i<apagar.length;i+=50){const {error}=await sb.storage.from(BUCKET).remove(apagar.slice(i,i+50));if(error)throw new Error(error.message);}
+   st.textContent=`Pronto: ${apagar.length} arquivos de preços estão na pasta protegida.`;setTimeout(telaBase,1500);}
+  catch(e){st.textContent='Parou: '+e.message+' (nada foi apagado da pasta pública antes da cópia conferida).';b.disabled=false;}};
  const dz=$('#dz'),fz=$('#fz');fz.onchange=()=>fz.files.length&&ler([...fz.files]);
  dz.ondragover=e=>{e.preventDefault();dz.classList.add('on');};dz.ondragleave=()=>dz.classList.remove('on');dz.ondrop=e=>{e.preventDefault();dz.classList.remove('on');if(e.dataTransfer.files.length)ler([...e.dataTransfer.files]);};}
 function prog(t,f){$('#prog').hidden=false;$('#st').textContent=t;if(f!=null)$('#br').style.width=Math.round(f*100)+'%';}
@@ -330,7 +346,7 @@ async function publicar(){const r=R;const bp=$('#bPub'),st=$('#pubst');const I=a
  bp.disabled=true;bp.textContent='Publicando…';
  try{const pasta=r.chave+'/';const tot=r.ufs.length+2;let k=0;const passo=t=>{k++;st.innerHTML='<div class="m">'+esc(t)+'</div><div class="barra"><i style="width:'+Math.round(k/tot*100)+'%"></i></div>';};
   passo('Enviando catálogo e composição analítica…');await enviar(pasta+'catalogo.json',r.cat);
-  for(const u of r.ufs){passo('Enviando preços de '+u+'…');await enviar(pasta+u+'.json',r.arq[u]);}
+  for(const u of r.ufs){passo('Enviando preços de '+u+' (pasta protegida)…');await enviar(pasta+u+'.json',r.arq[u],null,BUCKET_UF);}
   const meses=Object.assign({},I.meses||{});meses[r.chave]={mes:r.mes,ufs:r.ufs,publicado:new Date().toISOString(),emissao:(r.arq.SP||{}).emissao||'',v:Date.now()};const atual=Object.keys(meses).sort().pop();
   passo('Atualizando o índice de meses…');await enviar('index.json',{atual,meses},'60');
   st.innerHTML='<div class="box ok"><b>Publicado.</b> '+esc(r.mes)+' já está disponível no PlantaCalc'+(atual===r.chave?' como mês atual':'')+'. Orçamentos feitos em meses anteriores continuam no mês deles e mostram a opção “Atualizar para o mês atual”.</div>';
