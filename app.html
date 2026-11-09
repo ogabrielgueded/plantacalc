@@ -222,7 +222,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}svg text{-webkit-text-s
 <meta name="description" content="PlantaCalc: desenhe ou responda algumas perguntas e gere planta, cortes, fundações, quantitativo, custo, prazo, memorial e 3D para estudos preliminares de obras civis.">
 <link rel="icon" href="img/icone.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f5f20"><link rel="apple-touch-icon" href="img/icon-192.png">
-<script>window.PC_BUILD="20261108-203103";</script>
+<script>window.PC_BUILD="20261109-190336";</script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -7113,7 +7113,7 @@ function wizForm(w){const m=wizModal();const P=w.perguntas;const a={};P.forEach(
 <script>
 /* ===================== p26 — MEUS PROJETOS: vários projetos com salvamento automático.
    Sempre no aparelho (IndexedDB, sem limite). Com conta (versão online): também na nuvem (Supabase) — Gratuito: 1 projeto; Pro ilimitado. ===================== */
-const PJ={db:null,atual:null,locais:{},nuvem:{},status:'',limite:false,trocando:false,tSave:null,tNuvem:null,busca:''};
+const PJ={db:null,atual:null,locais:{},nuvem:{},lixeira:{},status:'',limite:false,trocando:false,tSave:null,tNuvem:null,busca:'',conflito:null};
 const PJ_KEY='pc_proj_atual_v1',PJ_LIM=1; /* plano gratuito (versão online): 1 projeto */
 const pjUUID=()=>(crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);}));
 const pjLogado=()=>typeof MON!=='undefined'&&MON&&MON.sb&&MON.user;
@@ -7122,7 +7122,8 @@ const pjOnline=()=>typeof MON!=='undefined';
 const PJ_WEB=!!(window.PC_CFG&&window.PC_CFG.supabaseUrl); /* versão online: entra direto em Meus projetos e cada usuário vê só os seus */
 const pjDono=()=>pjLogado()?MON.user.id:null;
 const pjMeu=r=>!PJ_WEB||(r&&r.dono&&r.dono===pjDono());
-const pjTotal=()=>new Set([...Object.keys(PJ.locais),...Object.keys(PJ.nuvem)]).size;
+const pjTotal=()=>new Set([...Object.keys(PJ.locais),...Object.keys(PJ.nuvem)].filter(id=>!PJ.lixeira[id])).size;
+const pjT=t=>t?new Date(t).getTime():0; /* data da nuvem em milissegundos */
 const pjPodeCriar=()=>!pjOnline()||pjPro()||pjTotal()<PJ_LIM;
 function pjBloqueio(){if(typeof abrirPlanos==='function')abrirPlanos('No plano gratuito você tem 1 projeto. '+(typeof NO_APP!=='undefined'&&NO_APP?'Com o plano Pro os projetos são ilimitados':'Assine o Pro para criar projetos ilimitados')+' — ou exclua o projeto atual em “Meus projetos” para começar outro.');else toast('O plano gratuito permite 1 projeto.');}
 function pjIDB(){return new Promise((ok,err)=>{if(PJ.db)return ok(PJ.db);if(!window.indexedDB)return err(new Error('sem IndexedDB'));const r=indexedDB.open('plantacalc',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('projetos'))r.result.createObjectStore('projetos',{keyPath:'id'});};r.onsuccess=()=>{PJ.db=r.result;ok(PJ.db);};r.onerror=()=>err(r.error);});}
@@ -7136,30 +7137,85 @@ function pjMini(){try{const rs=S.rooms.filter(r=>(r.pav||0)===0);if(rs.length&&t
 function pjQuando(t){const s=(Date.now()-new Date(t).getTime())/1000;if(s<60)return 'agora';if(s<3600)return `há ${Math.round(s/60)} min`;if(s<86400)return `há ${Math.round(s/3600)} h`;if(s<86400*7)return `há ${Math.round(s/86400)} dia(s)`;return new Date(t).toLocaleDateString('pt-BR');}
 
 /* ---------- salvar ---------- */
-async function pjSalvarLocal(){if(!PJ.atual||PJ.trocando)return;if(PJ_WEB&&!pjDono())return;let dados;try{dados=JSON.stringify(S);}catch(e){dados=snapS();}
- const prev=PJ.locais[PJ.atual]||{};const rec={id:PJ.atual,nome:pjNome(),atualizado:Date.now(),criado:prev.criado||Date.now(),dados,mini:pjMini(),nuvem:prev.nuvem||null,dono:prev.dono||pjDono()};
+/* edit=true: salvamento vindo de uma alteração do usuário (fica pendente até subir para a nuvem) */
+async function pjSalvarLocal(edit){if(!PJ.atual||PJ.trocando)return;if(PJ_WEB&&!pjDono())return;let dados;try{dados=JSON.stringify(S);}catch(e){dados=snapS();}
+ const prev=PJ.locais[PJ.atual]||{};const rec={id:PJ.atual,nome:pjNome(),atualizado:Date.now(),criado:prev.criado||Date.now(),dados,mini:pjMini(),nuvem:prev.nuvem||null,dono:prev.dono||pjDono(),sujo:edit===true?true:!!prev.sujo};
  PJ.locais[PJ.atual]=rec;try{await pjGrava(rec);if(!pjLogado())pjStatus('aparelho');}catch(e){console.warn(e);pjStatus('erro');}}
-function pjAgendar(){if(PJ.trocando||!PJ.atual)return;clearTimeout(PJ.tSave);pjStatus('salvando');PJ.tSave=setTimeout(async()=>{await pjSalvarLocal();pjAgendarNuvem();},1200);}
+function pjAgendar(){if(PJ.trocando||!PJ.atual)return;clearTimeout(PJ.tSave);pjStatus('salvando');PJ.tSave=setTimeout(async()=>{await pjSalvarLocal(true);pjAgendarNuvem();},1200);}
 function pjAgendarNuvem(){if(!pjLogado())return;clearTimeout(PJ.tNuvem);PJ.tNuvem=setTimeout(pjSalvarNuvem,3500);}
-async function pjSalvarNuvem(){if(!pjLogado()||!PJ.atual)return;const rec=PJ.locais[PJ.atual];if(!rec)return;
- if(!PJ.nuvem[PJ.atual]&&!pjPro()&&Object.keys(PJ.nuvem).length>=PJ_LIM){PJ.limite=true;pjStatus('limite');return;}
+/* Grava na nuvem só se a nuvem ainda estiver na versão que este aparelho conhece (rec.nuvem).
+   Se outro aparelho salvou depois, ou mandou o projeto para a lixeira, abre o aviso de conflito e para o salvamento automático. */
+async function pjSalvarNuvem(){if(!pjLogado()||!PJ.atual)return;const id=PJ.atual;if(PJ.conflito&&PJ.conflito.id===id)return;const rec=PJ.locais[id];if(!rec)return;
+ if(!PJ.nuvem[id]&&!pjPro()&&Object.keys(PJ.nuvem).length>=PJ_LIM){PJ.limite=true;pjStatus('limite');return;}
  let dados;try{dados=JSON.parse(snapS());}catch(e){return;}
- const pl={id:PJ.atual,user_id:MON.user.id,nome:rec.nome,dados,miniatura:rec.mini,tamanho:rec.dados.length,atualizado:new Date().toISOString()};
- pjStatus('nuvem-salvando');const {error}=await MON.sb.from('projetos').upsert(pl);
+ const agora=new Date().toISOString();const pl={nome:rec.nome,dados,miniatura:rec.mini,tamanho:rec.dados.length,atualizado:agora};
+ const ins=()=>MON.sb.from('projetos').insert(Object.assign({id,user_id:MON.user.id},pl));
+ const atual=async()=>{const r=await MON.sb.from('projetos').select('atualizado,excluido_em').eq('id',id).maybeSingle();if(r.error&&/excluido_em/.test(r.error.message||'')){const r2=await MON.sb.from('projetos').select('atualizado').eq('id',id).maybeSingle();return r2;}return r;};
+ pjStatus('nuvem-salvando');let error=null;
+ try{if(rec.nuvem){let r=await MON.sb.from('projetos').update(pl).eq('id',id).eq('atualizado',rec.nuvem).is('excluido_em',null).select('id');
+    if(r.error&&/excluido_em/.test(r.error.message||''))r=await MON.sb.from('projetos').update(pl).eq('id',id).eq('atualizado',rec.nuvem).select('id');
+    error=r.error;
+    if(!error&&!(r.data&&r.data.length)){const c=await atual();if(c.error)error=c.error;else if(c.data){pjConflito(id,c.data);return;}else{error=(await ins()).error;}}}
+  else{error=(await ins()).error;if(error&&(error.code==='23505'||/duplicate/i.test(error.message||''))){const c=await atual();if(c.data){pjConflito(id,c.data);return;}}}}
+ catch(e){error=e;}
  if(error){if(/LIMITE_GRATIS/.test(error.message||'')){PJ.limite=true;pjStatus('limite');}else{console.warn(error);pjStatus('offline');}return;}
- PJ.nuvem[PJ.atual]={id:PJ.atual,nome:rec.nome,miniatura:rec.mini,atualizado:pl.atualizado};rec.nuvem=pl.atualizado;pjGrava(rec).catch(()=>{});pjStatus('nuvem');}
+ PJ.nuvem[id]={id,nome:rec.nome,miniatura:rec.mini,atualizado:agora};rec.nuvem=agora;rec.sujo=false;pjGrava(rec).catch(()=>{});pjStatus('nuvem');}
+/* ---------- conflito entre aparelhos ---------- */
+function pjModal(html,cls){let m=$('#pjMd');if(!m){m=document.createElement('div');m.id='pjMd';document.body.appendChild(m);}m.className='on '+(cls||'');m.innerHTML=`<div class="bx">${html}</div>`;return m;}
+function pjModalFecha(){const m=$('#pjMd');if(m)m.className='';}
+function pjConflito(id,cur){if(id!==PJ.atual)return;clearTimeout(PJ.tNuvem);PJ.conflito={id,cur};pjStatus('conflito');
+ const lix=!!cur.excluido_em,quando=cur.atualizado?new Date(cur.atualizado).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+ const copia=!lix&&pjPodeCriarMais();
+ const m=pjModal(lix?`<h3>Este projeto foi para a lixeira</h3><p>Em outro aparelho, “${esc(pjNome())}” foi enviado para a lixeira. As alterações feitas aqui estão guardadas neste aparelho.</p>
+  <div class="bt"><button class="pri" data-cf="manter">Restaurar e continuar aqui</button><button data-cf="fechar">Fechar o projeto</button></div>`
+ :`<h3>Este projeto foi alterado em outro aparelho</h3><p>A versão na nuvem foi salva ${quando?'em '+esc(quando):'por outro aparelho'}, depois da última vez que este aparelho sincronizou. Para não perder trabalho, o salvamento automático foi pausado. Escolha:</p>
+  <div class="bt col"><button class="pri" data-cf="nuvem"><b>Usar a versão da nuvem</b><span>Descarta as alterações deste aparelho.</span></button>
+  <button data-cf="manter"><b>Manter a deste aparelho</b><span>Substitui a versão da nuvem pela que está aberta aqui.</span></button>
+  ${copia?'<button data-cf="copia"><b>Salvar esta como cópia</b><span>Guarda as duas: a deste aparelho vira um projeto novo.</span></button>':''}</div>`,'cf');
+ m.onclick=async e=>{const b=e.target.closest('[data-cf]');if(!b)return;m.querySelectorAll('button').forEach(x=>x.disabled=true);try{await pjResolve(b.dataset.cf);}finally{pjModalFecha();}};}
+const pjPodeCriarMais=()=>!pjOnline()||pjPro()||pjTotal()<PJ_LIM;
+async function pjResolve(op){const C=PJ.conflito;if(!C)return;const id=C.id,rec=PJ.locais[id];PJ.conflito=null;
+ if(op==='nuvem'){const {data,error}=await MON.sb.from('projetos').select('dados,atualizado').eq('id',id).single();if(error){toast('Não foi possível baixar a versão da nuvem agora.');PJ.conflito=C;return;}
+  let u=null;try{u=JSON.parse(rec.dados).under||null;}catch(e){}const obj=data.dados;obj.under=u;rec.nuvem=data.atualizado;rec.sujo=false;pjCarregar(obj,id);await pjSalvarLocal();PJ.nuvem[id]=Object.assign(PJ.nuvem[id]||{id},{atualizado:data.atualizado});pjStatus('nuvem');toast('Versão da nuvem carregada.');return;}
+ if(op==='manter'){const dados=JSON.parse(snapS());const agora=new Date().toISOString();const upd={nome:rec.nome,dados,miniatura:rec.mini,tamanho:rec.dados.length,atualizado:agora};if(C.cur.excluido_em)upd.excluido_em=null;
+  const {error}=await MON.sb.from('projetos').update(upd).eq('id',id);if(error){if(/LIMITE_GRATIS/.test(error.message||''))pjBloqueio();else toast('Não foi possível salvar na nuvem agora.');PJ.conflito=C;pjStatus('conflito');return;}
+  rec.nuvem=agora;rec.sujo=false;delete PJ.lixeira[id];PJ.nuvem[id]={id,nome:rec.nome,miniatura:rec.mini,atualizado:agora};await pjGrava(rec);pjStatus('nuvem');toast('A versão deste aparelho foi salva na nuvem.');return;}
+ if(op==='copia'){const novo=pjUUID();S.meta.obra=pjNome()+' (cópia deste aparelho)';try{await pjApaga(id);}catch(e){}delete PJ.locais[id];PJ.atual=novo;try{localStorage.setItem(PJ_KEY,novo);}catch(e){}await pjSalvarLocal();await pjSalvarNuvem();renderPanel&&renderPanel();toast('Salvo como um projeto novo. O original ficou com a versão da nuvem.');return;}
+ if(op==='fechar'){try{await pjApaga(id);}catch(e){}delete PJ.locais[id];PJ.atual=null;pjStatus('');await abrirProjetos();}}
+/* ao voltar para o programa (ou a cada 2 minutos): se outro aparelho salvou, carrega a versão nova quando não há alteração pendente aqui */
+async function pjChecarNuvem(){if(!pjLogado()||!PJ.atual||PJ.conflito||document.visibilityState!=='visible')return;const id=PJ.atual,rec=PJ.locais[id];if(!rec||!rec.nuvem)return;
+ let r;try{r=await MON.sb.from('projetos').select('atualizado,excluido_em').eq('id',id).maybeSingle();}catch(e){return;}if(r.error||!r.data||id!==PJ.atual)return;const cur=r.data;
+ if(!cur.excluido_em&&Math.abs(pjT(cur.atualizado)-pjT(rec.nuvem))<1000)return;
+ const pendente=PJ.status==='salvando'||PJ.status==='nuvem-salvando'||!!rec.sujo;
+ if(pendente||cur.excluido_em){pjConflito(id,cur);return;}
+ PJ.conflito={id,cur};await pjResolve('nuvem');toast('Projeto atualizado com a versão salva em outro aparelho.');}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(pjChecarNuvem,400);});
+setInterval(pjChecarNuvem,120000);
 async function pjSalvarAgora(){clearTimeout(PJ.tSave);clearTimeout(PJ.tNuvem);await pjSalvarLocal();if(pjLogado())await pjSalvarNuvem();}
-async function pjListarNuvem(){if(!pjLogado())return;try{let {data,error}=await MON.sb.from('projetos').select('id,nome,miniatura,atualizado,tamanho,amb:dados->rooms,pavs:dados->pavs,cod:dados->meta->>codigo,rev:dados->meta->>rev').order('atualizado',{ascending:false});
- if(error)({data,error}=await MON.sb.from('projetos').select('id,nome,miniatura,atualizado,tamanho').order('atualizado',{ascending:false}));if(error)throw error;PJ.nuvem={};(data||[]).forEach(p=>PJ.nuvem[p.id]=p);}catch(e){console.warn('nuvem',e);}}
+async function pjListarNuvem(){if(!pjLogado())return;try{
+ if(!PJ.limpou){PJ.limpou=true;MON.sb.rpc('limpa_minha_lixeira').then(()=>{},()=>{});}
+ let {data,error}=await MON.sb.from('projetos').select('id,nome,miniatura,atualizado,tamanho,excluido_em,amb:dados->rooms,pavs:dados->pavs,cod:dados->meta->>codigo,rev:dados->meta->>rev').order('atualizado',{ascending:false});
+ if(error)({data,error}=await MON.sb.from('projetos').select('id,nome,miniatura,atualizado,tamanho').order('atualizado',{ascending:false}));if(error)throw error;
+ PJ.nuvem={};PJ.lixeira={};(data||[]).forEach(p=>{if(p.excluido_em)PJ.lixeira[p.id]=p;else PJ.nuvem[p.id]=p;});}catch(e){console.warn('nuvem',e);}}
 
 /* ---------- indicador no topo ---------- */
-const PJ_ST={salvando:['Salvando…','#f0ad4e'],aparelho:['Salvo neste aparelho','#8bc34a'],'nuvem-salvando':['Salvando na nuvem…','#f0ad4e'],nuvem:['Salvo na nuvem','#8bc34a'],limite:['Salvo neste aparelho (limite da nuvem)','#ffc107'],offline:['Sem internet: salvo neste aparelho','#ffc107'],erro:['Não foi possível salvar','#e57373']};
+const PJ_ST={salvando:['Salvando…','#f0ad4e'],aparelho:['Salvo neste aparelho','#8bc34a'],'nuvem-salvando':['Salvando na nuvem…','#f0ad4e'],nuvem:['Salvo na nuvem','#8bc34a'],limite:['Salvo neste aparelho (limite da nuvem)','#ffc107'],offline:['Sem internet: salvo neste aparelho','#ffc107'],erro:['Não foi possível salvar','#e57373'],conflito:['Alterado em outro aparelho — escolha a versão','#e57373']};
 function pjStatus(s){PJ.status=s;const b=$('#bProj');if(!b)return;if(!PJ.atual){b.innerHTML='<span class="pjn">📁 Meus projetos</span>';b.title='Meus projetos';return;}const st=PJ_ST[s]||PJ_ST.aparelho;b.innerHTML=`<span class="pjn">📁 ${esc(pjNome())}</span><i style="background:${st[1]}" title="${esc(st[0])}"></i><small>${esc(st[0])}</small>`;b.title='Meus projetos — '+st[0];}
 (function(){const st=document.createElement('style');st.textContent=`
 #bProj{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.12)!important;border:1px solid rgba(255,255,255,.35)!important;color:#fff!important;max-width:min(360px,40vw);padding:6px 10px!important;border-radius:9px}
 #bProj .pjn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}#bProj i{width:8px;height:8px;border-radius:50%;flex:none}#bProj small{font-size:11px;opacity:.85;white-space:nowrap}
 @media (max-width:1100px){#bProj small{display:none}}
 @media (max-width:1400px){header .brand small{display:none}}
+#pjMd{position:fixed;inset:0;z-index:80;display:none;background:rgba(20,30,25,.45);align-items:center;justify-content:center;padding:16px}#pjMd.on{display:flex}
+#pjMd .bx{background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:90vh;overflow:auto;padding:20px 22px;box-shadow:0 20px 60px rgba(0,0,0,.25);font-size:14.5px;color:#1b2733}
+#pjMd h3{margin:0 0 8px;font-size:18px}#pjMd p{margin:0 0 12px;color:#46515a;line-height:1.45}#pjMd .mu{color:#66707a}
+#pjMd .bt{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px}#pjMd .bt.col{flex-direction:column;align-items:stretch}
+#pjMd button{font:inherit;border:1px solid #cfd8d2;background:#fff;border-radius:10px;padding:10px 14px;cursor:pointer;text-align:left;min-height:44px}
+#pjMd button b{display:block}#pjMd button span{display:block;font-size:12.5px;color:#66707a;margin-top:2px}#pjMd button.pri{background:#1f5f20;color:#fff;border-color:#1f5f20}#pjMd button.pri span{color:#d9ecd9}
+#pjMd .vl{border:1px solid #e1e6e2;border-radius:10px;max-height:50vh;overflow:auto}#pjMd .vi{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #eef1ef}#pjMd .vi>div{flex:1}#pjMd .vi span{display:block;font-size:12.5px;color:#66707a}
+#pjOv details.lx{margin-top:26px;background:#fff;border:1px solid #e1e6e2;border-radius:12px;padding:10px 14px}#pjOv details.lx summary{cursor:pointer;font-weight:600;color:#46515a}#pjOv details.lx summary span{font-weight:400;font-size:12.5px;color:#8a949c;margin-left:6px}
+#pjOv .li{display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid #eef1ef;flex-wrap:wrap}#pjOv .li>div{flex:1;min-width:180px}#pjOv .li span{display:block;font-size:12.5px;color:#66707a}
+#pjOv .li button{font:inherit;border:1px solid #cfd8d2;background:#fff;border-radius:9px;padding:8px 12px;cursor:pointer;min-height:40px}#pjOv .li button.ex{color:#a3241a;border-color:#f0c8c4}#pjOv .li button.cf{background:#a3241a;color:#fff}
 #pjOv{position:fixed;inset:0;z-index:63;display:none;background:#f3f5f2;overflow:auto;font-size:14px}#pjOv.on{display:block}
 #pjOv .top{position:sticky;top:0;z-index:2;background:var(--g1,#1f5f20);color:#fff;box-shadow:0 2px 10px rgba(0,0,0,.12)}
 #pjOv .top .in{width:min(1200px,100%);margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:10px}
@@ -7218,7 +7274,7 @@ function pjResumo(o){try{const rs=(o.rooms||[]).filter(r=>r&&r.poly&&r.poly.leng
  return {area:a,amb:rs.length,pav:pv,cod:(o.meta&&o.meta.codigo)||'',rev:(o.meta&&o.meta.rev)||''};}catch(e){return null;}}
 function pjInfo(p){if(p.l){const k=p.id+':'+p.l.atualizado;if(!PJ_RES.has(k)){try{PJ_RES.set(k,pjResumo(JSON.parse(p.l.dados)));}catch(e){PJ_RES.set(k,null);}}return PJ_RES.get(k);}
  if(p.n&&p.n.amb!==undefined)return pjResumo({rooms:p.n.amb||[],pavs:p.n.pavs,meta:{codigo:p.n.cod,rev:p.n.rev}});return null;}
-function pjRender(){const ov=$('#pjOv');const ids=[...new Set([...Object.keys(PJ.locais),...Object.keys(PJ.nuvem)])];
+function pjRender(){const ov=$('#pjOv');const ids=[...new Set([...Object.keys(PJ.locais),...Object.keys(PJ.nuvem)])].filter(id=>!PJ.lixeira[id]);
  const todos=ids.map(id=>{const l=PJ.locais[id],n=PJ.nuvem[id];const t=Math.max(l?l.atualizado:0,n?new Date(n.atualizado).getTime():0);return{id,nome:(l&&l.nome)||(n&&n.nome)||'Projeto',mini:(l&&l.mini)||(n&&n.miniatura)||'',t,l,n};});
  const ord=PJ.ordem||'rec';
  const it=todos.filter(p=>!PJ.busca||p.nome.toLowerCase().includes(PJ.busca.toLowerCase()))
@@ -7235,7 +7291,10 @@ function pjRender(){const ov=$('#pjOv');const ids=[...new Set([...Object.keys(PJ
   <div class="m">${det.length?`<span>${det.join(' · ')}</span>`:''}${cod?`<span>${cod}</span>`:''}</div>
   <div class="m"><span title="${new Date(p.t).toLocaleString('pt-BR')}">Editado ${pjQuando(p.t)}</span></div>
   <div class="ac"><button class="ab${at?' cur':''}" data-pjo="${p.id}">${at?'Continuar editando':'Abrir'}</button><button class="mais" data-pjm="${p.id}" title="Mais opções" aria-label="Mais opções">⋯</button></div></div>
-  <div class="mn" data-mn="${p.id}"><button data-pjr="${p.id}">✏️ Renomear</button><button data-pjd="${p.id}">⧉ Duplicar${trava?' 🔒':''}</button><hr><button class="ex" data-pjx="${p.id}">🗑 Excluir…</button></div></div>`;};
+  <div class="mn" data-mn="${p.id}"><button data-pjr="${p.id}">✏️ Renomear</button><button data-pjd="${p.id}">⧉ Duplicar${trava?' 🔒':''}</button>${web&&p.n?`<button data-pjv="${p.id}">🕘 Versões anteriores${pro?'':' 🔒'}</button>`:''}<hr><button class="ex" data-pjx="${p.id}">🗑 ${web&&p.n?'Mover para a lixeira':'Excluir…'}</button></div></div>`;};
+ const lix=Object.values(PJ.lixeira).sort((a,b)=>pjT(b.excluido_em)-pjT(a.excluido_em));
+ const dias=p=>Math.max(0,30-Math.floor((Date.now()-pjT(p.excluido_em))/864e5));
+ const lixHTML=web&&lix.length?`<details class="lx"${PJ.abreLix?' open':''}><summary>🗑 Lixeira (${lix.length}) <span>os projetos ficam aqui por 30 dias</span></summary>${lix.map(p=>`<div class="li"><div><b>${esc(p.nome||'Projeto')}</b><span>Excluído ${pjQuando(p.excluido_em)} · apagado de vez em ${dias(p)} dia${dias(p)===1?'':'s'}</span></div><button data-pjrs="${p.id}">Restaurar</button><button class="ex" data-pjxx="${p.id}">Excluir agora</button></div>`).join('')}</details>`:'';
  const vazio=PJ.busca?`<div class="vz"><div class="i">🔍</div><b>Nada encontrado para “${esc(PJ.busca)}”.</b>Confira o nome ou limpe a busca.</div>`
   :`<div class="vz"><div class="i">📐</div><b>Você ainda não tem nenhum projeto.</b>Escolha acima como quer começar — em branco, com o assistente ou a partir do exemplo.</div>`;
  const n=todos.length;
@@ -7247,7 +7306,7 @@ function pjRender(){const ov=$('#pjOv');const ids=[...new Set([...Object.keys(PJ
   <button data-pjn="assistente">${trava}<span class="ic a">★</span><div><b>Com o assistente</b><span>Responda algumas perguntas e receba o estudo pronto.</span></div></button>
   <button data-pjn="exemplo">${trava}<span class="ic e">⧉</span><div><b>A partir do exemplo</b><span>Casa de bombas com sala elétrica, para explorar.</span></div></button>${typeof abrirIA==='function'?`<button data-pjn="ia">${trava}<span class="ic i">✨</span><div><b>Descrever com IA</b><span>Escreva o que precisa e a IA desenha o croqui.</span></div></button>`:''}</div>
  ${n?`<div class="barra"><h3>Meus projetos (${n})</h3><div class="busca"><input id="pjBusca" placeholder="Procurar projeto…" value="${esc(PJ.busca)}"></div><div class="ord"><button data-pjord="rec" class="${ord==='rec'?'on':''}">Recentes</button><button data-pjord="nome" class="${ord==='nome'?'on':''}">Nome</button></div></div>`:''}
- ${it.length?`<div class="g">${it.map(card).join('')}</div>`:vazio}</div>`;
+ ${it.length?`<div class="g">${it.map(card).join('')}</div>`:vazio}${lixHTML}</div>`;
  const bs=$('#pjBusca');if(bs)bs.oninput=()=>{PJ.busca=bs.value;const pos=bs.selectionStart;pjRender();const nb=$('#pjBusca');if(nb){nb.focus();nb.setSelectionRange(pos,pos);}};}
 $('#pjOv').addEventListener('click',async e=>{const t=e.target;let b;
  if((b=t.closest('[data-pjord]'))){PJ.ordem=b.dataset.pjord;pjRender();return;}
@@ -7258,14 +7317,22 @@ $('#pjOv').addEventListener('click',async e=>{const t=e.target;let b;
  if((b=t.closest('[data-pjo]'))){if(PJ.atual)fechar();await pjAbrir(b.dataset.pjo);fechar();return;}
  if((b=t.closest('[data-pjr]'))){const id=b.dataset.pjr;const atual=(PJ.locais[id]||PJ.nuvem[id]||{}).nome||'';const n=prompt('Nome do projeto:',atual);if(n&&n.trim())await pjRenomear(id,n.trim());pjRender();return;}
  if((b=t.closest('[data-pjd]'))){await pjDuplicar(b.dataset.pjd);pjRender();return;}
- if((b=t.closest('[data-pjx]'))){if(!b.classList.contains('cf')){b.classList.add('cf');b.textContent='Confirmar exclusão (não dá para desfazer)';setTimeout(()=>{if(b.isConnected){b.classList.remove('cf');b.textContent='🗑 Excluir…';}},5000);return;}await pjExcluir(b.dataset.pjx);pjRender();return;}});
+ if((b=t.closest('[data-pjv]'))){$$('#pjOv .mn.on').forEach(x=>x.classList.remove('on'));pjVersoes(b.dataset.pjv);return;}
+ if((b=t.closest('[data-pjrs]'))){b.disabled=true;await pjRestaurar(b.dataset.pjrs);pjRender();return;}
+ if((b=t.closest('[data-pjxx]'))){if(!b.classList.contains('cf')){b.classList.add('cf');b.textContent='Confirmar (não dá para desfazer)';setTimeout(()=>{if(b.isConnected){b.classList.remove('cf');b.textContent='Excluir agora';}},5000);return;}PJ.abreLix=true;await pjExcluirDeVez(b.dataset.pjxx);pjRender();return;}
+ if((b=t.closest('[data-pjx]'))){const paraLixeira=PJ_WEB&&PJ.nuvem[b.dataset.pjx]&&pjLogado();if(!b.classList.contains('cf')){b.classList.add('cf');b.textContent=paraLixeira?'Confirmar: mover para a lixeira':'Confirmar exclusão (não dá para desfazer)';setTimeout(()=>{if(b.isConnected){b.classList.remove('cf');b.textContent='🗑 Excluir…';}},5000);return;}await pjExcluir(b.dataset.pjx);pjRender();return;}});
 
 /* ---------- ações ---------- */
 function pjNovoId(){clearTimeout(PJ.tSave);clearTimeout(PJ.tNuvem);pjSalvarLocal();if(pjLogado())pjSalvarNuvem();PJ.atual=pjUUID();try{localStorage.setItem(PJ_KEY,PJ.atual);}catch(e){}}
 function pjCarregar(obj,id){PJ.trocando=true;try{const u=obj.under||null;S=migrate(obj);S.under=u;}finally{PJ.trocando=false;}PJ.atual=id;try{localStorage.setItem(PJ_KEY,id);}catch(e){}undoS.length=0;redoS.length=0;ed.sel=null;ed.pav=0;if(typeof setView==='function'&&view!=='croqui')setView('croqui');refresh();fitView();pjStatus(PJ.nuvem[id]?'nuvem':'aparelho');}
 async function pjAbrir(id){if(id===PJ.atual)return;await pjSalvarAgora();const l=PJ.locais[id],n=PJ.nuvem[id];
- try{let obj=null;if(n&&(!l||new Date(n.atualizado).getTime()>l.atualizado+2000)&&pjLogado()){const {data,error}=await MON.sb.from('projetos').select('dados').eq('id',id).single();if(error)throw error;obj=data.dados;if(l){try{obj.under=JSON.parse(l.dados).under||null;}catch(e){}}}
-  else if(l)obj=JSON.parse(l.dados);if(!obj)throw new Error('projeto vazio');pjCarregar(obj,id);await pjSalvarLocal();toast(`Projeto “${pjNome()}” aberto.`);}catch(e){console.warn(e);toast('Não foi possível abrir este projeto agora.');}}
+ /* alterações deste aparelho ainda não enviadas + nuvem mudou depois da última sincronização = conflito */
+ const conflito=!!(l&&n&&l.sujo&&l.nuvem&&pjT(n.atualizado)>pjT(l.nuvem)+1000);
+ try{let obj=null,base=null;if(!conflito&&n&&pjLogado()&&(!l||(!l.sujo&&pjT(n.atualizado)>pjT(l.nuvem)+1000)||(!l.nuvem&&pjT(n.atualizado)>l.atualizado+2000))){const {data,error}=await MON.sb.from('projetos').select('dados,atualizado').eq('id',id).single();if(error)throw error;obj=data.dados;base=data.atualizado;if(l){try{obj.under=JSON.parse(l.dados).under||null;}catch(e){}}}
+  else if(l)obj=JSON.parse(l.dados);if(!obj)throw new Error('projeto vazio');
+  if(base){PJ.locais[id]=Object.assign(PJ.locais[id]||{id,criado:Date.now(),dono:pjDono()},{nuvem:base,sujo:false});}
+  pjCarregar(obj,id);await pjSalvarLocal();toast(`Projeto “${pjNome()}” aberto.`);
+  if(conflito)pjConflito(id,{atualizado:n.atualizado});}catch(e){console.warn(e);toast('Não foi possível abrir este projeto agora.');}}
 async function pjNovo(tipo,forcar){let reusa=false;if(!forcar&&!pjPodeCriar()){if(!PJ.atual||temConteudo()){pjBloqueio();return;}reusa=true;}await pjSalvarAgora();const keep={tipos:S.tipos,esq:S.esq,blocos:S.blocos,equipTipos:S.equipTipos,params:S.params,indices:S.indices,precos:S.precos,estr:S.estr};
  let St;if(tipo==='exemplo'){St=exemplo();}else{St=defaultState();Object.assign(St,deep(keep));St.fund=Object.assign({},deep(S.fund),{porPilar:{}});}
  const n=reusa?1:pjTotal()+1;St.meta.obra=tipo==='exemplo'?'Exemplo — casa de bombas':`Projeto ${n}`;St.under=null;
@@ -7277,9 +7344,33 @@ async function pjRenomear(id,nome){if(id===PJ.atual){edit(()=>{S.meta.obra=nome;
 async function pjDuplicar(id){if(!pjPodeCriar())return pjBloqueio();if(id===PJ.atual)await pjSalvarLocal();let l=PJ.locais[id];
  if(!l&&PJ.nuvem[id]&&pjLogado()){const {data}=await MON.sb.from('projetos').select('dados').eq('id',id).single();if(data)l={dados:JSON.stringify(data.dados),mini:PJ.nuvem[id].miniatura,nome:PJ.nuvem[id].nome};}
  if(!l)return;const o=JSON.parse(l.dados);o.meta=o.meta||{};o.meta.obra=(l.nome||'Projeto')+' (cópia)';const rec={id:pjUUID(),nome:o.meta.obra,atualizado:Date.now(),criado:Date.now(),dados:JSON.stringify(o),mini:l.mini,nuvem:null,dono:pjDono()};PJ.locais[rec.id]=rec;await pjGrava(rec);toast('Cópia criada (salva neste aparelho). Abra para guardar na nuvem.');}
-async function pjExcluir(id){try{await pjApaga(id);}catch(e){}delete PJ.locais[id];if(PJ.nuvem[id]&&pjLogado()){await MON.sb.from('projetos').delete().eq('id',id);delete PJ.nuvem[id];PJ.limite=false;}
+async function pjExcluir(id){let lixo=false;
+ if(PJ.nuvem[id]&&pjLogado()){const agora=new Date().toISOString();let {error}=await MON.sb.from('projetos').update({excluido_em:agora,atualizado:agora}).eq('id',id);
+  if(error&&/excluido_em/.test(error.message||''))({error}=await MON.sb.from('projetos').delete().eq('id',id));else if(!error){lixo=true;PJ.lixeira[id]=Object.assign({},PJ.nuvem[id],{excluido_em:agora,atualizado:agora});}
+  if(error){toast('Não foi possível excluir agora. Tente de novo.');return;}delete PJ.nuvem[id];PJ.limite=false;}
+ try{await pjApaga(id);}catch(e){}delete PJ.locais[id];if(PJ.conflito&&PJ.conflito.id===id)PJ.conflito=null;
  if(id===PJ.atual&&PJ_WEB){PJ.atual=null;pjStatus('');$('#pjOv').classList.add('on');}
- else if(id===PJ.atual){const outro=Object.values(PJ.locais).sort((a,b)=>b.atualizado-a.atualizado)[0];if(outro){PJ.atual=null;await pjAbrir(outro.id);}else{PJ.atual=null;await pjNovo('branco',true);}}toast('Projeto excluído.');}
+ else if(id===PJ.atual){const outro=Object.values(PJ.locais).sort((a,b)=>b.atualizado-a.atualizado)[0];if(outro){PJ.atual=null;await pjAbrir(outro.id);}else{PJ.atual=null;await pjNovo('branco',true);}}toast(lixo?'Projeto movido para a lixeira. Dá para restaurar em até 30 dias.':'Projeto excluído.');}
+async function pjRestaurar(id){if(!pjLogado())return;const agora=new Date().toISOString();const {error}=await MON.sb.from('projetos').update({excluido_em:null,atualizado:agora}).eq('id',id);
+ if(error){if(/LIMITE_GRATIS/.test(error.message||''))pjBloqueio();else toast('Não foi possível restaurar agora.');return;}
+ PJ.nuvem[id]=Object.assign({},PJ.lixeira[id],{excluido_em:null,atualizado:agora});delete PJ.lixeira[id];
+ const l=PJ.locais[id];if(l){l.nuvem=null;l.sujo=false;}toast('Projeto restaurado.');}
+async function pjExcluirDeVez(id){if(!pjLogado())return;const {error}=await MON.sb.from('projetos').delete().eq('id',id);if(error){toast('Não foi possível excluir agora.');return;}delete PJ.lixeira[id];try{await pjApaga(id);}catch(e){}delete PJ.locais[id];toast('Projeto excluído de vez.');}
+/* ---------- histórico de versões (plano Pro): o servidor guarda uma versão por hora de trabalho, até 10 ---------- */
+async function pjVersoes(id){if(!pjPro()){if(typeof abrirPlanos==='function')abrirPlanos('O histórico de versões é do plano Pro: o PlantaCalc guarda uma versão por hora de trabalho (até 10) e você restaura qualquer uma.');return;}
+ const m=pjModal('<h3>Versões anteriores</h3><p class="mu">Carregando…</p>','vs');m.onclick=e=>{if(e.target===m||e.target.closest('[data-vx]'))pjModalFecha();};
+ const {data,error}=await MON.sb.from('projetos_versoes').select('id,criado,salvo_em,nome,tamanho').eq('projeto_id',id).order('criado',{ascending:false});
+ const nome=(PJ.nuvem[id]||PJ.locais[id]||{}).nome||'Projeto';const fmt=t=>new Date(t).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+ const lista=error?'<p class="mu">Não foi possível carregar as versões agora.</p>':!(data||[]).length?'<p class="mu">Ainda não há versões guardadas deste projeto. O PlantaCalc guarda uma versão por hora de trabalho, até 10.</p>'
+  :`<div class="vl">${data.map(v=>`<div class="vi"><div><b>${esc(fmt(v.salvo_em||v.criado))}</b><span>${esc(v.nome||nome)} · ${nf((v.tamanho||0)/1024,0)} kB</span></div><button data-vr="${v.id}">Restaurar</button></div>`).join('')}</div>`;
+ m.innerHTML=`<div class="bx"><h3>Versões anteriores — ${esc(nome)}</h3><p class="mu">Restaurar uma versão substitui o projeto pelo conteúdo dela. A versão atual é guardada antes, então dá para voltar.</p>${lista}<div class="bt"><button data-vx>Fechar</button></div></div>`;
+ m.querySelectorAll('[data-vr]').forEach(b=>b.onclick=async()=>{const v=data.find(x=>String(x.id)===b.dataset.vr);if(!confirm(`Restaurar a versão de ${fmt(v.salvo_em||v.criado)}?`))return;b.disabled=true;b.textContent='Restaurando…';
+  try{if(id!==PJ.atual){await pjAbrir(id);if(PJ.atual!==id)throw new Error('não abriu');}
+   await pjSalvarAgora();await MON.sb.rpc('guardar_versao_agora',{p_id:id});
+   const r=await MON.sb.from('projetos_versoes').select('dados').eq('id',v.id).single();if(r.error)throw r.error;
+   const obj=r.data.dados;try{obj.under=JSON.parse(PJ.locais[id].dados).under||null;}catch(e){}
+   pjCarregar(obj,id);await pjSalvarLocal(true);await pjSalvarNuvem();pjModalFecha();$('#pjOv').classList.remove('on');toast('Versão restaurada.');}
+  catch(e){console.warn(e);b.disabled=false;b.textContent='Restaurar';toast('Não foi possível restaurar agora.');}});}
 
 /* ---------- ganchos nos botões existentes ---------- */
 (function(){
