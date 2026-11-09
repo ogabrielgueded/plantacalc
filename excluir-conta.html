@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Excluir conta e dados — PlantaCalc</title>
+<meta name="description" content="Como excluir a sua conta do PlantaCalc ou apenas alguns dados, e o que é apagado.">
+<link rel="icon" href="img/icone.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+<script src="config.js"></script>
+</head>
+<body>
+<header class="nav"><div class="wrap"><a class="logo" href="index.html"><img src="img/icone.svg" alt="">PlantaCalc</a><div class="sp"></div><a class="btn pri sm" href="app.html">Abrir o PlantaCalc</a></div></header>
+<main class="doc">
+<h1>Excluir a conta ou os dados do PlantaCalc</h1><div class="dt">Aplicativo PlantaCalc (site plantacalc.com.br e app Android) · desenvolvedor: <span data-titular></span></div>
+
+<h2 id="conta">Excluir a conta inteira</h2>
+<ol>
+<li>Entre no PlantaCalc com a sua conta (no site ou no app).</li>
+<li>Abra <b>Minha conta</b> (no celular, pelo menu ☰).</li>
+<li>Toque em <b>Excluir minha conta</b> e confirme.</li>
+</ol>
+<p>Se não conseguir entrar, peça a exclusão pelo <a data-mail href="#">e-mail de contato</a>, escrevendo do mesmo e-mail da conta. Respondemos em até 15 dias.</p>
+<p><b>O que é apagado na hora:</b> a conta de acesso, o cadastro (nome, profissão, empresa, cidade, telefone), todos os projetos na nuvem, as versões anteriores e a lixeira, as observações do orçamento SINAPI, os registros de uso (sessões e cidade aproximada) e de erros e os avisos por e-mail enviados.</p>
+<p><b>O que fica guardado por um tempo:</b></p>
+<ul>
+<li>Cópias de segurança semanais dos projetos: apagadas automaticamente em até 8 semanas.</li>
+<li>Registros de assinatura e pagamento: pelo prazo exigido pela legislação fiscal; o que não precisar ser mantido por lei é apagado ou anonimizado.</li>
+</ul>
+
+<h2 id="dados">Excluir só alguns dados, sem excluir a conta</h2>
+<ul>
+<li><b>Projetos:</b> em <b>Meus projetos</b>, abra o menu do projeto e toque em <b>Excluir</b>. Ele vai para a lixeira e é apagado de vez em 30 dias, ou na hora com <b>Excluir de vez</b>.</li>
+<li><b>Cadastro:</b> em <b>Minha conta</b>, apague ou altere nome, profissão, empresa, cidade e telefone.</li>
+<li><b>Registros de uso e de erros:</b> peça pelo <a data-mail href="#">e-mail de contato</a>; apagamos em até 15 dias.</li>
+</ul>
+<p>Mais detalhes na <a href="privacidade.html">Política de privacidade</a>.</p>
+</main>
+<footer><div class="wrap"><nav><a href="index.html">Início</a><a href="termos.html">Termos de uso</a><a href="privacidade.html">Privacidade</a></nav><span>© <span id="ano"></span> PlantaCalc</span></div></footer>
+<script>(function(){var C=window.PC_CFG||{};document.querySelectorAll('[data-titular]').forEach(function(e){e.textContent=[C.responsavel].filter(function(v){return v&&!/^\[/.test(v);}).join(', ')||'PlantaCalc';});document.querySelectorAll('[data-mail]').forEach(function(a){if(C.contato){a.href='mailto:'+C.contato;a.textContent=C.contato;}});document.getElementById('ano').textContent=new Date().getFullYear();})();</script>
+</body>
+</html>
