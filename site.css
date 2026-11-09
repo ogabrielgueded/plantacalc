@@ -150,3 +150,6 @@ footer nav{display:flex;gap:18px;flex-wrap:wrap}footer a{color:var(--mut)}
   .hero{padding-top:40px}
   .final{margin:0 12px;padding:40px 18px}
 }
+
+/* alvos de toque de 40 px no celular */
+@media(max-width:760px){.logo{min-height:40px}.burger{min-width:44px;min-height:44px}.nav .btn.sm{min-height:40px;box-sizing:border-box}#menu a{min-height:40px;box-sizing:border-box}}

@@ -222,7 +222,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}svg text{-webkit-text-s
 <meta name="description" content="PlantaCalc: desenhe ou responda algumas perguntas e gere planta, cortes, fundações, quantitativo, custo, prazo, memorial e 3D para estudos preliminares de obras civis.">
 <link rel="icon" href="img/icone.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f5f20"><link rel="apple-touch-icon" href="img/icon-192.png">
-<script>window.PC_BUILD="20261109-195530";</script>
+<script>window.PC_BUILD="20261109-201519";</script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -7980,7 +7980,7 @@ $('#pcUp').addEventListener('click',e=>{const b=e.target.closest('[data-u]');if(
 (function(){if(!window.PC_BUILD)return;let remoto=null,avisado=false;
  const st=document.createElement('style');st.textContent=`#pcNova{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:300;background:#1d2329;color:#fff;border-radius:12px;padding:10px 14px;display:none;gap:12px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.35);font-size:14px;max-width:calc(100% - 24px)}#pcNova.on{display:flex}#pcNova button{border:0;border-radius:9px;background:#8bc34a;color:#13250a;font:inherit;font-weight:700;padding:8px 12px;cursor:pointer;white-space:nowrap}`;document.head.appendChild(st);
  const el=document.createElement('div');el.id='pcNova';el.innerHTML='<span>Há uma versão nova do PlantaCalc com correções.</span><button>Atualizar agora</button>';document.body.appendChild(el);
- el.querySelector('button').onclick=async()=>{el.querySelector('button').textContent='Salvando…';try{if(typeof pjSalvarAgora==='function')await pjSalvarAgora();}catch(e){}const u=new URL(location.href);u.searchParams.set('v',Date.now());location.replace(u.toString());};
+ el.querySelector('button').onclick=async()=>{el.querySelector('button').textContent='Salvando…';try{if(typeof pjSalvarAgora==='function')await pjSalvarAgora();}catch(e){}el.querySelector('button').textContent='Atualizando…';try{if(window.pcSWAtualizar)await window.pcSWAtualizar();}catch(e){}const u=new URL(location.href);u.searchParams.set('v',Date.now());location.replace(u.toString());};
  async function ver(){try{const r=await fetch('version.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return null;const j=await r.json();remoto=j.build||null;if(remoto&&remoto!==window.PC_BUILD&&!avisado){avisado=true;el.classList.add('on');}return remoto;}catch(e){return null;}}
  window.pcVersaoAtual=async()=>{const b=await ver();return !b||b===window.PC_BUILD;};
  setTimeout(ver,15e3);setInterval(ver,5*60e3);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ver();});})();
@@ -8484,18 +8484,24 @@ const orcCodsTxt=(o,sep)=>o.st==='ok'?o.comps.map(c=>c.cod).join(sep||' + '):'';
  .orc table.q[data-orctab] tr.ab td.oi-cod,.orc table.q[data-orctab] tr.ab td.oi-hh,.orc.tudo table.q[data-orctab] td.oi-cod,.orc.tudo table.q[data-orctab] td.oi-hh{display:block;margin-top:6px}.orc table.q[data-orctab] tr.ab td.oi-mem,.orc.tudo table.q[data-orctab] td.oi-mem{display:block;grid-column:1/-1;margin-top:6px;max-width:none}.orc table.q[data-orctab] tr.ab td.oi-de .sd,.orc.tudo table.q[data-orctab] td.oi-de .sd{display:block}
  .orc .oab{display:block;border:0;background:none;color:#1d4ed8;font:inherit;font-size:12px;font-weight:400;text-decoration:underline;padding:4px 0 0;min-height:32px;cursor:pointer}
 }
+details.qres{margin:6px 0 10px;border:1px solid #dfe5e9;border-radius:10px;padding:6px 12px;background:#fff}details.qres>summary{cursor:pointer;font-weight:600;color:var(--g1,#257126);min-height:32px;line-height:32px}
 #qtabs .qoS{display:none}@media(max-width:700px){#qtabs .qoL{display:none}#qtabs .qoS{display:inline;white-space:nowrap}}
 `;document.head.appendChild(st);})();
 
 /* Quantitativo e orçamento SINAPI na MESMA tela: a aba "Quantitativo" passa a mostrar o orçamento
    (quando ligado) na própria tabela de itens; sem orçamento, mostra a barra para gerar (Pro) ou o convite (gratuito). */
+/* com orçamento ligado, no celular os cartões de resumo do quantitativo ficam recolhidos para o orçamento aparecer logo */
+function orcResumoRecolhe(h){try{if(!matchMedia('(max-width:700px)').matches)return h;const t=document.createElement('template');t.innerHTML=h;const c=t.content.querySelector('.cards');if(!c||c.closest('.orc'))return h;
+ const d=document.createElement('details');d.className='qres';d.innerHTML='<summary>Resumo do quantitativo (área, concreto, aço, prazo e custo)</summary>';c.replaceWith(d);d.appendChild(c);return t.innerHTML;}catch(e){return h;}}
 function orcAbaNome(){const b=document.querySelector('#qtabs [data-q="quant"]');if(b)b.innerHTML='<span class="qoL">Quantitativo e orçamento</span><span class="qoS">Quant. e orçamento</span>';}
 (function(){const _rv=renderView;renderView=function(){if(typeof qtab!=='undefined'&&qtab==='orc')qtab='quant';
   const w=$('#qWrap'),mesma=typeof view!=='undefined'&&view==='quant'&&ORC.ultQ===qtab&&ORC.ultV==='quant';const sc=w&&mesma?w.scrollTop:null;
   const r=_rv.apply(this,arguments);ORC.ultQ=typeof qtab!=='undefined'?qtab:null;ORC.ultV=typeof view!=='undefined'?view:null;if(sc!=null&&w)w.scrollTop=sc;return r;};
  if(typeof quantHTML==='function'){const _qh=quantHTML;quantHTML=function(){const h=_qh.apply(this,arguments);if(typeof temConteudo==='function'&&!temConteudo())return h;
   const i=h.indexOf('<table class="q">');if(i<0)return h;const j=h.indexOf('</table>',i)+8;let o='';try{o=orcHTML();}catch(e){console.error(e);return h;}
-  return o.indexOf('data-orctab')>=0?h.slice(0,i)+o+h.slice(j):h.slice(0,i)+o+h.slice(i);};}
+  if(o.indexOf('data-orctab')>=0)return orcResumoRecolhe(h.slice(0,i)+o+h.slice(j));
+  /* sem orçamento: a barra para gerar (ou o convite do Pro) vem antes dos cartões de resumo, à vista no celular */
+  const c=h.indexOf('<div class="cards">');return c>=0&&c<i?h.slice(0,c)+o+h.slice(c):h.slice(0,i)+o+h.slice(i);};}
  if(typeof bindQuant==='function'){const _bq=bindQuant;bindQuant=function(){const r=_bq.apply(this,arguments);if(document.querySelector('#qBody .orc'))orcBind();return r;};}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',orcAbaNome);else orcAbaNome();})();
 
@@ -8838,6 +8844,26 @@ function medir(){const m=document.querySelector('#sBar [data-sb="med"]');if(m&&!
 function ini(){abas();arquivo();medir();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ini);else ini();
 setTimeout(ini,1500);
+})();
+</script>
+
+<script>
+/* ===================== p34 — abrir rápido e sem internet (Fase 5 do roteiro) =====================
+   O service worker (sw.js) guarda o programa no aparelho. Sem internet, o projeto salvo no aparelho abre normalmente;
+   nuvem, IA e base SINAPI voltam com a conexão (e aí vale o aviso de conflito entre aparelhos). */
+(function(){
+ if('serviceWorker' in navigator&&location.protocol!=='file:'){
+  window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});
+  /* versão nova: troca a cópia guardada antes de recarregar (até 10 s) */
+  window.pcSWAtualizar=()=>new Promise(res=>{const sw=navigator.serviceWorker.controller;if(!sw)return res();
+   const fim=setTimeout(res,10000);navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.tipo==='atualizado'){clearTimeout(fim);res();}});sw.postMessage({tipo:'atualizar'});});}
+ const st=document.createElement('style');st.textContent=`#pcOff{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:250;background:#3b2a00;color:#fff;border-radius:12px;padding:9px 14px;font-size:13.5px;line-height:1.35;box-shadow:0 8px 24px rgba(0,0,0,.3);display:none;max-width:calc(100% - 24px);text-align:center}#pcOff.on{display:block}#pcOff.min span{display:none}#pcOff.min{padding:6px 12px;cursor:pointer}`;
+ document.head.appendChild(st);const el=document.createElement('div');el.id='pcOff';el.setAttribute('role','status');
+ el.innerHTML='<b>Sem internet.</b><span> O projeto continua sendo salvo neste aparelho. Nuvem, IA e base SINAPI voltam quando a conexão voltar.</span>';el.title='O projeto continua sendo salvo neste aparelho. Nuvem, IA e base SINAPI voltam quando a conexão voltar.';el.onclick=()=>el.classList.toggle('min');
+ let tm=null;const pronto=()=>{if(!el.isConnected)document.body.appendChild(el);const off=!navigator.onLine;el.classList.toggle('on',off);el.classList.remove('min');clearTimeout(tm);if(off)tm=setTimeout(()=>el.classList.add('min'),10000);};
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',pronto);else pronto();
+ window.addEventListener('offline',pronto);
+ window.addEventListener('online',()=>{pronto();try{if(typeof pjChecarNuvem==='function')pjChecarNuvem();}catch(e){}});
 })();
 </script>
 
