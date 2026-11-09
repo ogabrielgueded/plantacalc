@@ -222,7 +222,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}svg text{-webkit-text-s
 <meta name="description" content="PlantaCalc: desenhe ou responda algumas perguntas e gere planta, cortes, fundações, quantitativo, custo, prazo, memorial e 3D para estudos preliminares de obras civis.">
 <link rel="icon" href="img/icone.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f5f20"><link rel="apple-touch-icon" href="img/icon-192.png">
-<script>window.PC_BUILD="20261109-193037";</script>
+<script>window.PC_BUILD="20261109-193958";</script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -6463,7 +6463,7 @@ function quantHTML(){
  let h=`<div class="qhead"><h2>Quantitativo – ${esc(S.meta.obra)}</h2><span class="note">${esc(S.meta.codigo)} · Rev. ${esc(S.meta.rev)} · ${brDate(S.meta.data)} · modelo #${modelHash(S)}</span></div>`;
  h+=`<div class="note">Estudo preliminar gerado a partir de croqui, por critérios paramétricos e pré-dimensionamento simplificado. Precisão de classe ${montecarlo(S,Q,M).classe} (AACE). Não substitui projeto executivo.</div>`;
  if(R.soImpl){const its=Q.flatMap(g=>g.itens);const fo=sum(its.filter(t=>t.un==='m²'&&/forma/i.test(t.desc)),t=>t.q),es=sum(its.filter(t=>t.un==='m³'&&/escava/i.test(t.desc)),t=>t.q);h+=`<div class="cards"><div class="card"><span>Peças inseridas</span><b>${(S.indus||[]).length}</b></div><div class="card"><span>Concreto</span><b>${nf(R.conc)} m³</b></div><div class="card"><span>Forma</span><b>${nf(fo)} m²</b></div><div class="card"><span>Aço CA-50</span><b>${nf(R.aco,0)} kg</b></div><div class="card"><span>Escavação</span><b>${nf(es)} m³</b></div><div class="card"><span>Hh total</span><b>${nf(R.Hh,0)}</b></div><div class="card"><span>Prazo estimado</span><b>${pl?nf(pl.prazoMeses,1)+' meses':'—'}</b></div><div class="card" style="border-color:#84BD00"><span>Custo direto</span><b>${R.custo?'R$ '+nf(R.custo,0):'—'}</b></div></div>`;}
- else h+=`<div class="cards"><div class="card"><span>Área construída</span><b>${nf(R.areaTot)} m²</b></div><div class="card"><span>Área útil</span><b>${nf(R.areaU)} m²</b></div><div class="card"><span>Pilares (térreo)</span><b>${R.n}</b></div><div class="card"><span>Concreto</span><b>${nf(R.conc)} m³</b></div><div class="card"><span>Aço CA-50</span><b>${nf(R.aco,0)} kg</b></div>${R.acoEst?`<div class="card"><span>Aço estrutural</span><b>${nf(R.acoEst,0)} kg</b></div>`:''}<div class="card"><span>Alvenaria</span><b>${nf(R.alv)} m²</b></div><div class="card"><span>Hh total</span><b>${nf(R.Hh,0)}</b></div><div class="card"><span>Prazo estimado</span><b>${pl?nf(pl.prazoMeses,1)+' meses':'—'}</b></div>${(()=>{const e=estRapido(S,Q,M);let mc=null;try{mc=montecarlo(S,Q,M);}catch(x){}return `<div class="card"><span>Custo direto</span><b>${e.custo?'R$ '+nf(e.custo):'—'}</b>${e.cub>0?`<small style="display:block;font-size:11px;color:#66707a">inclui R$ ${nf(e.cub,0)} da edificação pelo CUB</small>`:''}</div>${mc&&mc.det?`<div class="card"><span>Faixa provável (P50–P80)</span><b>R$ ${nf(mc.custo.p50,0)} a ${nf(mc.custo.p80,0)}</b></div>`:''}`;})()}</div>`;
+ else h+=`<div class="cards"><div class="card"><span>Área construída</span><b>${nf(R.areaTot)} m²</b></div><div class="card"><span>Área útil</span><b>${nf(R.areaU)} m²</b></div><div class="card"><span>Pilares (térreo)</span><b>${R.n}</b></div><div class="card"><span>Concreto</span><b>${nf(R.conc)} m³</b></div><div class="card"><span>Aço CA-50</span><b>${nf(R.aco,0)} kg</b></div>${R.acoEst?`<div class="card"><span>Aço estrutural</span><b>${nf(R.acoEst,0)} kg</b></div>`:''}<div class="card"><span>Alvenaria</span><b>${nf(R.alv)} m²</b></div><div class="card"><span>Hh total</span><b>${nf(R.Hh,0)}</b></div><div class="card"><span>Prazo estimado</span><b>${pl?nf(pl.prazoMeses,1)+' meses':'—'}</b></div>${(()=>{const e=estRapido(S,Q,M);let mc=null;try{mc=montecarlo(S,Q,M);}catch(x){}return `<div class="card"><span>Custo direto</span><b>${e.custo?'R$ '+nf(e.custo):'—'}</b>${e.cub>0?`<small style="display:block;font-size:12px;color:#66707a">inclui R$ ${nf(e.cub,0)} da edificação pelo CUB</small>`:''}</div>${mc&&mc.det?`<div class="card"><span>Faixa provável (P50–P80)</span><b>R$ ${nf(mc.custo.p50,0)} a ${nf(mc.custo.p80,0)}</b></div>`:''}`;})()}</div>`;
  h+=`<details class="pref"><summary>O que significa cada valor de custo</summary><div class="note" style="margin:4px 0 8px"><b>Custo direto</b>: soma dos serviços sem BDI (impostos, administração e lucro). Quando a edificação ainda não tem preços por item, entra pelo CUB × área.<br><b>Faixa provável (P50–P80)</b>: resultado da simulação de incertezas da aba Custo; P50 é o valor mais provável e P80 inclui reserva de risco.<br><b>Preço com BDI</b>: custo direto do orçamento SINAPI mais o BDI pela fórmula do TCU; é o valor de venda e aparece no topo quando o orçamento está ligado.</div></details>`;
  const nE=CH.filter(c=>c.sev==='erro').length;if(nE)h+=`<div class="err"><b>${nE} erro(s) nas verificações</b> — veja a aba Verif. no painel. O quantitativo é calculado mesmo assim.</div>`;
  h+=`<table class="q"><thead><tr><th>Item</th><th>Descrição</th><th>Un</th><th class="n">Quant.</th><th class="n">Preço unit. (R$)</th><th class="n">Total (R$)</th><th class="n">Hh/un</th><th class="n">Hh</th>${hasBase?'<th>Vínculo (base)</th>':''}<th>Memória de cálculo</th></tr></thead><tbody>`;
@@ -7480,8 +7480,8 @@ function abrir(){const it=(ic,txt,act,cls='')=>`<button class="it ${cls}" data-m
  const t=id=>{const e=document.getElementById(id);return e?e.textContent.trim():'';};
  let h=`<div class="sh"><div class="gr"></div>`;
  if(vis('bPro'))h+=it('⭐',gratis()?'Seja Pro — tudo liberado':'Plano Pro','bPro','pro');
- h+=`<div class="hd">Projeto</div>`+(document.getElementById('bIA')?it('✨','Assistente de IA','bIA'):'')+it('★','Assistente (responder perguntas)','bWiz')+it('📁','Meus projetos','bAbrir')+it('＋','Novo projeto','bNovo')+it('💾','Salvar','bSalvar');
- const ex=[...document.querySelectorAll('#ddExp button')];
+ h+=`<div class="hd">Projeto</div>`+(document.getElementById('bIA')?it('✨','Assistente de IA','bIA'):'')+it('★','Assistente (responder perguntas)','bWiz')+it('📁','Meus projetos','bAbrir')+it('＋','Novo projeto','bNovo')+it('💾','Salvar','bSalvar')+(simp()&&document.getElementById('sbMed')?it('📏','Medir uma distância','sbMed'):'');
+ const ex=[...document.querySelectorAll('#ddExp button:not(.arq)')];
  if(ex.length){h+=it('⬇','Exportar arquivos','exp')+`<div class="sub" id="mmExp">${ex.map(b=>`<button class="it" data-mm="x:${b.id}"><span>${b.textContent.replace(/PRO$/,'')}</span>${gratis()?'<span class="tg">PRO</span>':''}</button>`).join('')}</div>`;}
  if(!simp()){h+=`<div class="hd">Ferramentas</div>`;if(document.getElementById('b3D'))h+=it('🧊','Vista 3D','b3D');if(document.getElementById('bRev'))h+=it('🏷','Emitir revisão','bRev');if(document.getElementById('ptoggle'))h+=it('▤','Mostrar/ocultar o painel','ptoggle');}
  h+=`<div class="hd">Conta e tela</div>`;
@@ -8445,7 +8445,11 @@ const orcCodsTxt=(o,sep)=>o.st==='ok'?o.comps.map(c=>c.cod).join(sep||' + '):'';
 .orc input.pm{width:92px;text-align:right}
 .orc .chip.rf{background:#efe9fb;color:#5b3aa6}.orc .chip.fo{background:#e3f1fb;color:#0f5a8a}
 .orc .orig{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:#3c464f;margin:-2px 0 8px}.orc .orig b{font-variant-numeric:tabular-nums}.orc .orig i{font-style:normal;color:#66707a}
-.orc .mu,.orc .oab{display:none}
+.orc .mu{display:none}.orc .oab{border:0;background:none;color:#1d4ed8;font:inherit;font-size:12px;text-decoration:underline;padding:0 0 0 6px;cursor:pointer;white-space:nowrap}
+.orc tr.ab .oab::after,.orc.tudo .oab::after{content:' ▴'}.orc tr:not(.ab) .oab::after{content:' ▾'}.orc.tudo .oab{display:none!important}
+/* 3.2 linhas compactas: composição, observação e memória completas abrem em "detalhes" ou em "Expandir tudo" */
+.orc table.q[data-orctab] td.oi-de .sd{display:none}.orc table.q[data-orctab] tr.ab td.oi-de .sd,.orc.tudo table.q[data-orctab] td.oi-de .sd{display:block}
+.orc table.q[data-orctab] td.oi-mem{max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.orc table.q[data-orctab] tr.ab td.oi-mem,.orc.tudo table.q[data-orctab] td.oi-mem{white-space:normal}
 @media(max-width:700px){
  #qBody table.q:not([data-orctab]){display:block;overflow-x:auto;max-width:100%}
  .orc .tw{overflow:visible}.orc table.q[data-orctab],.orc table.q[data-orctab] tbody{display:block;width:100%}.orc table.q[data-orctab] thead{display:none}
@@ -8462,9 +8466,8 @@ const orcCodsTxt=(o,sep)=>o.st==='ok'?o.comps.map(c=>c.cod).join(sep||' + '):'';
  .orc table.q[data-orctab] td.oi-it{order:1}.orc table.q[data-orctab] td.oi-de{order:2}.orc table.q[data-orctab] td.oi-q{order:3}.orc table.q[data-orctab] td.oi-pu{order:4}.orc table.q[data-orctab] td.oi-tot{order:5}.orc table.q[data-orctab] td.oi-cod{order:6}.orc table.q[data-orctab] td.oi-hh{order:7;text-align:left!important}.orc table.q[data-orctab] td.oi-mem{order:8}
  .orc table.q[data-orctab] td.oi-tot{font-weight:700}.orc input.pm{width:100%;max-width:120px}
  .orc table.q[data-orctab] td.oi-cod,.orc table.q[data-orctab] td.oi-hh,.orc table.q[data-orctab] td.oi-mem,.orc table.q[data-orctab] td.oi-de .sd{display:none}
- .orc table.q[data-orctab] tr.ab td.oi-cod,.orc table.q[data-orctab] tr.ab td.oi-hh{display:block;margin-top:6px}.orc table.q[data-orctab] tr.ab td.oi-mem{display:block;grid-column:1/-1;margin-top:6px}.orc table.q[data-orctab] tr.ab td.oi-de .sd{display:block}
+ .orc table.q[data-orctab] tr.ab td.oi-cod,.orc table.q[data-orctab] tr.ab td.oi-hh,.orc.tudo table.q[data-orctab] td.oi-cod,.orc.tudo table.q[data-orctab] td.oi-hh{display:block;margin-top:6px}.orc table.q[data-orctab] tr.ab td.oi-mem,.orc.tudo table.q[data-orctab] td.oi-mem{display:block;grid-column:1/-1;margin-top:6px;max-width:none}.orc table.q[data-orctab] tr.ab td.oi-de .sd,.orc.tudo table.q[data-orctab] td.oi-de .sd{display:block}
  .orc .oab{display:block;border:0;background:none;color:#1d4ed8;font:inherit;font-size:12px;font-weight:400;text-decoration:underline;padding:4px 0 0;min-height:32px;cursor:pointer}
- .orc tr.ab .oab::after{content:' ▴'}.orc tr:not(.ab) .oab::after{content:' ▾'}
 }
 #qtabs .qoS{display:none}@media(max-width:700px){#qtabs .qoL{display:none}#qtabs .qoS{display:inline;white-space:nowrap}}
 `;document.head.appendChild(st);})();
@@ -8498,7 +8501,7 @@ function orcHTML(){
  if(D.erro)return `<div class="orc"><div class="av r">${esc(D.erro)}</div><button class="btn" id="oTrocaMes">Usar o mês atual (${orcMesNome(idx.atual)})</button></div>`;
  const R=orcResumo(S,Q),pl=plano(S,Q,M),B=R.B,enc=D.u.encargos||{};setTimeout(orcObsPend,2000);
  const novo=idx.atual&&idx.atual>O.mes;
- let h=`<div class="orc"><h3 class="sec" style="margin:14px 0 4px">Orçamento SINAPI</h3><div class="ob">
+ let h=`<div class="orc${ORC.tudo?' tudo':''}"><h3 class="sec" style="margin:14px 0 4px">Orçamento SINAPI</h3><div class="ob">
   <div><label>Estado (preços)</label><select id="oUF">${ufsMes(O.mes).map(u=>`<option value="${u}"${u===O.uf?' selected':''}>${u} — ${ORC_UFS[u]}</option>`).join('')}</select></div>
   <div><label>Encargos sociais</label><select id="oDes"><option value="sem"${O.des!=='com'?' selected':''}>Sem desoneração</option><option value="com"${O.des==='com'?' selected':''}>Com desoneração</option></select></div>
   <div><label>Data-base</label><div style="padding:6px 0"><b>SINAPI ${orcMesNome(O.mes)}</b> · ${esc(D.u.localidade||O.uf)}</div></div>
@@ -8516,7 +8519,7 @@ function orcHTML(){
  if(R.ref.length)h+=`<div class="av y"><b>${R.ref.length} ${R.ref.length>1?'itens usam':'item usa'} o preço de referência do PlantaCalc</b> (<span class="chip rf">ref. PlantaCalc</span>): valor aproximado, sem composição SINAPI. Revise ou digite o seu preço na linha.</div>`;
  if(R.sp.length)h+=`<div class="av y">${R.sp.length} ${R.sp.length>1?'itens usam':'item usa'} o custo de <b>São Paulo</b> porque ${O.uf} não tem custo publicado (marcado <span class="chip sp">SP</span>). ${R.as.length?R.as.length+' outros têm parte do custo completada pela CAIXA com preços de SP (<span class="chip as">%AS</span>).':''}</div>`;
  const avB=B.av.concat(R.BF?R.BF.av:[]);if(avB.length)h+=`<div class="av y">${avB.map(esc).join('<br>')}</div>`;
- h+=`<div class="ob" style="margin:4px 0"><div><label>Mostrar</label><select id="oFil"><option value="todos">Todos os itens</option><option value="pend"${ORC.filtro==='pend'?' selected':''}>Só sem preço (${R.pend.length})</option><option value="sp"${ORC.filtro==='sp'?' selected':''}>Com custo de SP ou %AS (${R.sp.length+R.as.length})</option><option value="ref"${ORC.filtro==='ref'?' selected':''}>Com preço de referência (${R.ref.length})</option><option value="fo"${ORC.filtro==='fo'?' selected':''}>Fornecimento – BDI diferenciado (${R.F.length})</option><option value="us"${ORC.filtro==='us'?' selected':''}>Vínculos alterados por você</option></select></div>
+ h+=`<div class="ob" style="margin:4px 0"><div><label>Mostrar</label><select id="oFil"><option value="todos">Todos os itens</option><option value="pend"${ORC.filtro==='pend'?' selected':''}>Só sem preço (${R.pend.length})</option><option value="sp"${ORC.filtro==='sp'?' selected':''}>Com custo de SP ou %AS (${R.sp.length+R.as.length})</option><option value="ref"${ORC.filtro==='ref'?' selected':''}>Com preço de referência (${R.ref.length})</option><option value="fo"${ORC.filtro==='fo'?' selected':''}>Fornecimento – BDI diferenciado (${R.F.length})</option><option value="us"${ORC.filtro==='us'?' selected':''}>Vínculos alterados por você</option></select></div><div><label>Detalhes</label><button class="btn" id="oTudo">${ORC.tudo?'Recolher tudo':'Expandir tudo'}</button></div>
   <div class="note" style="flex:1;align-self:center">Vínculos sugeridos pelo PlantaCalc — revise: clique no código SINAPI para trocar. Custos sem BDI (custo direto); o preço com BDI está no resumo e nas exportações. Hh pelas horas do SINAPI.</div></div>`;
  h+=`<div class="tw"><table class="q" data-orctab="1"><thead><tr><th>Item</th><th>Descrição</th><th>Un</th><th class="n">Quant.</th><th>SINAPI</th><th class="n">Custo unit. (R$)</th><th class="n">Total (R$)</th><th class="n">Hh</th><th>Memória de cálculo</th></tr></thead><tbody>`;
  for(const g of Q){const its=g.itens.filter(t=>t.orc&&(ORC.filtro==='todos'||(ORC.filtro==='pend'&&t.orc.st==='pend')||(ORC.filtro==='sp'&&(t.orc.sp||t.orc.as>0))||(ORC.filtro==='ref'&&t.orc.st==='ref')||(ORC.filtro==='fo'&&orcForn(S,t))||(ORC.filtro==='us'&&t.orc.regra&&t.orc.regra.usuario)));if(!its.length)continue;
@@ -8583,7 +8586,7 @@ function orcBind(){const on=(id,f)=>{const e=document.getElementById(id);if(e)e.
  on('oAtual',()=>{const de=S.orc.mes,para=ORC.idx.atual;if(!confirm(`Atualizar os preços de ${orcMesNome(de)} para ${orcMesNome(para)}? (dá para desfazer com Ctrl+Z)`))return;
   const R=orcResumo(S,Q);orcSet(O=>{O.hist=(O.hist||[]).concat([{mes:de,uf:O.uf,des:O.des,cd:R.cd,pv:R.pv,data:new Date().toISOString()}]).slice(-24);O.mes=para;O.base=new Date().toISOString();});toast('Orçamento atualizado para '+orcMesNome(para)+'.');});
  on('oDesl',()=>{if(!confirm('Desligar o orçamento SINAPI deste projeto? Os vínculos e preços digitados ficam guardados se você ligar de novo.'))return;orcSet(O=>{O.on=false;});});
- on('oBDIb',()=>{ORC.abreBDI=!ORC.abreBDI;renderView();});
+ on('oTudo',()=>{ORC.tudo=!ORC.tudo;renderView();});on('oBDIb',()=>{ORC.abreBDI=!ORC.abreBDI;renderView();});
  on('oBDIFmed',()=>orcSet(O=>{O.bdiF=Object.assign({},ORC_BDIF0);}));
  $$('[data-obdif]').forEach(e=>e.onchange=()=>{const v=parseFloat(String(e.value).replace(/\./g,'').replace(',','.'));if(!isFinite(v)||v<0||v>60)return toast('Valor inválido.');orcSet(O=>{O.bdiF=Object.assign({},ORC_BDIF0,O.bdiF||{},{[e.dataset.obdif]:v});});});
  $$('[data-oab]').forEach(e=>e.onclick=()=>{const tr=e.closest('tr');if(!tr)return;const k=tr.dataset.ok;ORC.abertos=ORC.abertos||new Set();tr.classList.toggle('ab');if(tr.classList.contains('ab'))ORC.abertos.add(k);else ORC.abertos.delete(k);});
@@ -8746,6 +8749,74 @@ function usoErro(msg,pilha){try{msg=String(msg||'').slice(0,1000);if(!msg||USO.n
  MON.sb.from('erros_app').insert({user_id:MON.user.id,build:String(window.PC_BUILD||'').slice(0,30),tela:(typeof view!=='undefined'?view:'')+(typeof qtab!=='undefined'&&view==='quant'?'/'+qtab:''),msg,pilha:String(pilha||'').slice(0,4000)}).then(()=>{},()=>{});}catch(e){}}
 window.addEventListener('error',e=>usoErro(e.message,e.error&&e.error.stack?e.error.stack:(e.filename||'')+':'+(e.lineno||'')));
 window.addEventListener('unhandledrejection',e=>{const r=e.reason;usoErro('Promessa rejeitada: '+(r&&r.message||r),r&&r.stack);});
+</script>
+
+<script>
+/* ===================== p33 — NAVEGAÇÃO E LEITURA (Fase 3 do roteiro) =====================
+   3.1 abas curtas, roláveis no celular · 3.3 barra superior sem repetições, Salvar e Exportar em "Arquivo"
+   3.4 alvos de toque de 40 px no celular · 3.5 opções da IA em linha inteira · 3.6 texto mínimo de 12 px */
+(function(){
+const st=document.createElement('style');st.textContent=`
+/* 3.6 texto mínimo de 12 px */
+.card span,td.m,#sEst span,#bProj small,.pp,.orc .ob label,.orc .cd small,.orc .bdi .fx,.orc .chip,.orc .sd,.orc .orig,.orc .ed .res .note{font-size:12px!important}
+.orc .chip{padding:1px 7px;line-height:1.5}
+/* 3.1 abas do quantitativo: nomes curtos, uma linha, faixa rolável */
+#qWrap .sub{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}#qWrap .sub::-webkit-scrollbar{display:none}
+#qWrap .sub button{white-space:nowrap;flex:none}
+/* 3.3 topo do computador: Assistente só na barra de baixo; "Meus projetos" só no botão do projeto */
+body.simples #bWiz,#bAbrir{display:none!important}
+#ddExp .hd3{font-size:12px;font-weight:700;color:var(--mut,#66707a);text-transform:uppercase;letter-spacing:.4px;padding:8px 10px 2px}
+#ddExp .arq{font-weight:600}#ddExp hr{border:0;border-top:1px solid var(--line,#e3e8ec);margin:4px 2px}
+/* 3.5 opções da IA: uma linha inteira para cada opção */
+#iaOv .op{flex-direction:column;gap:6px}
+#iaOv .op label{width:100%;box-sizing:border-box;min-height:44px;border:1px solid #dfe6da;border-radius:11px;padding:8px 12px;gap:10px;background:#fbfdf8}
+#iaOv .op label:has(input:checked){border-color:var(--g1,#1f5f20);background:#eef6e0;color:#1b2733}
+#iaOv .op input{width:20px;height:20px;margin:0;flex:none;accent-color:var(--g1,#1f5f20)}
+@media(max-width:700px){
+ /* 3.4 alvos de toque de pelo menos 40 px no celular */
+ #qWrap .sub button{min-height:44px;padding:9px 12px}
+ header button,#bMenu{min-height:40px!important;height:auto}
+ #bProj{min-height:40px}
+ .tb,#pjOv button{min-height:40px}
+ .orc .expl,#qBody .expl{width:40px;height:40px;line-height:20px;border:10px solid transparent;background-clip:padding-box;box-shadow:inset 0 0 0 1px var(--line,#dfe5e9);margin:-10px -6px -10px -6px}
+ .orc .oab{min-height:40px;min-width:88px;text-align:left}
+ .orc input.pm,.orc select,.orc input.oi,.orc .btn{min-height:40px}
+ .orc .lk{min-height:40px;min-width:48px;text-align:left}
+ #iaOv .x{width:40px;height:40px}#iaOv .tabs button{min-height:44px}#iaOv .ex button{min-height:40px}
+ /* botão de voltar mais curto para as abas caberem */
+ body.simples #sBack.on{font-size:0!important;padding:10px 12px!important;min-height:40px}body.simples #sBack.on::before{content:'◀ Desenho';font-size:14px}
+ body.simples.vw-quant #qWrap .sub,body.simples.vw-pranchas #sheetWrap .sub{padding-left:112px!important}
+ /* barra de baixo: Assistente volta para a barra; Medir vai para o menu ☰ */
+ body.simples #sBar button.wiz{display:flex!important}body.simples #sBar [data-sb="med"]{display:none!important}
+ body.simples #sBar button{font-size:12px!important;letter-spacing:-.3px}
+}
+`;document.head.appendChild(st);
+
+/* 3.1 nomes curtos com o nome completo como dica */
+const ABAS={quant:['Orçamento','Quantitativo e orçamento SINAPI'],custo:['Custo','Custo provável (P50/P80), curva ABC e sanidade'],plan:['Prazo','Planejamento: horas de trabalho, prazo e cronograma'],revs:['Revisões','Revisões emitidas do projeto'],cen:['Cenários','Comparar cenários do projeto']};
+function abas(){document.querySelectorAll('#qtabs [data-q]').forEach(b=>{const a=ABAS[b.dataset.q];if(!a)return;if(b.textContent!==a[0])b.textContent=a[0];b.title=a[1];});}
+window.orcAbaNome=abas;
+
+/* 3.3 "Arquivo ▾": Novo, Salvar e as exportações no mesmo menu */
+function arquivo(){const dd=document.getElementById('ddExp'),bx=document.getElementById('bExp');if(!dd||!bx||dd.dataset.arq)return;dd.dataset.arq='1';
+ bx.textContent='Arquivo ▾';bx.title='Novo projeto, salvar e exportar';
+ const novo=document.getElementById('bNovo'),sal=document.getElementById('bSalvar');
+ const top=document.createDocumentFragment();
+ [novo,sal].forEach(b=>{if(!b)return;b.classList.add('arq');top.appendChild(b);});
+ if(novo)novo.textContent='Novo projeto';if(sal)sal.textContent='Salvar agora';
+ const hr=document.createElement('hr');top.appendChild(hr);const h=document.createElement('div');h.className='hd3';h.textContent='Exportar';top.appendChild(h);
+ dd.insertBefore(top,dd.firstChild);
+ dd.addEventListener('click',e=>{if(e.target.closest('.arq'))dd.classList.remove('open');});
+ /* o topo tem rolagem lateral, que cortava o menu: o menu passa a ser posicionado na tela */
+ bx.addEventListener('click',()=>{requestAnimationFrame(()=>{if(!dd.classList.contains('open'))return;const r=bx.getBoundingClientRect();dd.style.position='fixed';dd.style.top=(r.bottom+4)+'px';dd.style.right='auto';
+  dd.style.maxHeight=(innerHeight-r.bottom-16)+'px';dd.style.overflowY='auto';dd.style.left=Math.max(8,Math.min(r.right-dd.offsetWidth,innerWidth-dd.offsetWidth-8))+'px';});});}
+
+/* Medir no menu do celular aponta para o botão da barra */
+function medir(){const m=document.querySelector('#sBar [data-sb="med"]');if(m&&!m.id)m.id='sbMed';}
+function ini(){abas();arquivo();medir();}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ini);else ini();
+setTimeout(ini,1500);
+})();
 </script>
 
 <!-- pdf.js (Apache-2.0, Mozilla) embutido para ler PDF de fundo -->
