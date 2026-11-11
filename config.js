@@ -26,7 +26,7 @@ window.PC_CFG = {
   slots: { inicio: '', resultados: '', pranchas: '' },
 
   // Dados de quem vende (aparecem nos Termos de uso e na Política de privacidade)
-  responsavel: 'Gabriel Ernesto Oliveira Guedes',
-  documento: '',  // CNPJ, quando houver (não publique CPF)
-  cidade: 'Ipatinga – MG'
+  responsavel: 'Guilherme Oliveira Guedes Ltda',
+  documento: 'CNPJ 18.263.052/0001-16',  // CNPJ (não publique CPF)
+  cidade: 'São Gonçalo do Rio Preto – MG'
 };
