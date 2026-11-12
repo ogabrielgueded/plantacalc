@@ -1,0 +1,118 @@
+# App do PlantaCalc para iPhone e iPad (pasta app-ios/, Capacitor).
+# Sem Mac: compila num Mac da nuvem do GitHub.
+#  - Sempre: compila para o simulador, abre o app no iPhone e no iPad simulados e tira fotos da tela
+#    (vão para o branch "build-ios" junto com o log), para conferir que o app abre e funciona.
+#  - "Enviar ao TestFlight" (rodar à mão, com os segredos da Apple cadastrados): assina e envia à App Store Connect.
+#    Segredos do repositório: APPLE_TEAM_ID, ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (conteúdo do arquivo .p8).
+name: App iOS
+on:
+  push:
+    branches: [main]
+    paths: ['app-ios/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+    inputs:
+      enviar:
+        description: 'Assinar e enviar ao TestFlight'
+        type: boolean
+        default: false
+permissions:
+  contents: write
+concurrency:
+  group: ios
+  cancel-in-progress: false
+jobs:
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Escolher o Xcode mais novo
+        run: |
+          ls -d /Applications/Xcode*.app
+          X=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$X"
+          xcodebuild -version
+      - name: Preparar o app (site + plugins)
+        working-directory: app-ios
+        run: |
+          npm install --no-audit --no-fund
+          bash preparar-www.sh
+          npx cap sync ios
+      - name: Compilar para o simulador
+        working-directory: app-ios/ios/App
+        run: |
+          set -o pipefail
+          mkdir -p ../../../out
+          xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build 2>&1 | tee ../../../out/build-sim.log | tail -40
+      - name: Abrir no iPhone e no iPad simulados e fotografar
+        run: |
+          APP=$(ls -d app-ios/ios/App/build/Build/Products/Debug-iphonesimulator/App.app)
+          python3 - <<'PY' > /tmp/devs.txt
+          import json,subprocess
+          d=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j']))
+          todos=[x for r,l in d['devices'].items() if 'iOS' in r for x in l]
+          def pega(pref):
+              for p in pref:
+                  for x in todos:
+                      if x['name']==p: return x['udid'],x['name']
+              for x in todos:
+                  if pref[-1].split()[0] in x['name']: return x['udid'],x['name']
+          for u,n in [pega(['iPhone 17 Pro Max','iPhone 16 Pro Max','iPhone 16 Plus','iPhone 17']),pega(['iPad Pro 13-inch (M5)','iPad Pro 13-inch (M4)','iPad Air 13-inch (M3)','iPad Pro (12.9-inch) (6th generation)','iPad'])]:
+              print(u+'|'+n)
+          PY
+          cat /tmp/devs.txt
+          i=0
+          while IFS='|' read -r UDID NOME; do
+            i=$((i+1))
+            xcrun simctl boot "$UDID" || true
+            xcrun simctl bootstatus "$UDID" -b
+            xcrun simctl install "$UDID" "$APP"
+            xcrun simctl launch "$UDID" br.com.plantacalc.app
+            sleep 25
+            xcrun simctl io "$UDID" screenshot "out/tela-$i-$(echo "$NOME" | tr ' ()' '---').png"
+            xcrun simctl spawn "$UDID" log show --last 2m --predicate 'process == "App"' --style compact > "out/log-$i.txt" 2>&1 || true
+            xcrun simctl shutdown "$UDID" || true
+          done < /tmp/devs.txt
+          ls -la out
+      - name: Assinar e enviar ao TestFlight
+        if: ${{ inputs.enviar }}
+        working-directory: app-ios/ios/App
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KID: ${{ secrets.ASC_KEY_ID }}
+          ISS: ${{ secrets.ASC_ISSUER_ID }}
+          P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          set -o pipefail
+          test -n "$TEAM" -a -n "$KID" -a -n "$ISS" -a -n "$P8" || { echo "Faltam os segredos da Apple no repositório"; exit 1; }
+          printf '%s' "$P8" > /tmp/asc.p8
+          AUTH="-allowProvisioningUpdates -authenticationKeyPath /tmp/asc.p8 -authenticationKeyID $KID -authenticationKeyIssuerID $ISS"
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/App.xcarchive \
+            DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            $AUTH archive 2>&1 | tee ../../../out/build-release.log | tail -40
+          P=/tmp/export.plist; B=/usr/libexec/PlistBuddy
+          rm -f $P
+          $B -c "Add :method string app-store-connect" $P
+          $B -c "Add :destination string upload" $P
+          $B -c "Add :teamID string $TEAM" $P
+          $B -c "Add :signingStyle string automatic" $P
+          $B -c "Add :uploadSymbols bool true" $P
+          xcodebuild -exportArchive -archivePath build/App.xcarchive -exportOptionsPlist /tmp/export.plist \
+            -exportPath build/export $AUTH 2>&1 | tee ../../../out/upload.log | tail -40
+          rm -f /tmp/asc.p8
+      - name: Publicar resultado no branch build-ios
+        if: always()
+        run: |
+          mkdir -p /tmp/res && cp -r out/. /tmp/res/ 2>/dev/null || true
+          cd /tmp/res
+          git init -q
+          git checkout -q -b build-ios
+          git add .
+          git -c user.name="PlantaCalc CI" -c user.email="ci@plantacalc.com.br" commit -qm "iOS build ${{ github.run_number }}" || true
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" build-ios

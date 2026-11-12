@@ -1,0 +1,7 @@
+{
+  "appId": "br.com.plantacalc.app",
+  "appName": "PlantaCalc",
+  "webDir": "www",
+  "ios": { "contentInset": "never", "backgroundColor": "#1f5f20", "limitsNavigationsToAppBoundDomains": false },
+  "plugins": { "SplashScreen": { "launchShowDuration": 600, "backgroundColor": "#1f5f20", "showSpinner": false } }
+}

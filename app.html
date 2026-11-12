@@ -222,7 +222,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}svg text{-webkit-text-s
 <meta name="description" content="PlantaCalc: desenhe ou responda algumas perguntas e gere planta, cortes, fundações, quantitativo, custo, prazo, memorial e 3D para estudos preliminares de obras civis.">
 <link rel="icon" href="img/icone.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f5f20"><link rel="apple-touch-icon" href="img/icon-192.png">
-<script>window.PC_BUILD="20261111-211400";</script>
+<script>window.PC_BUILD="20261111-211604";</script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -8865,6 +8865,25 @@ setTimeout(ini,1500);
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',pronto);else pronto();
  window.addEventListener('offline',pronto);
  window.addEventListener('online',()=>{pronto();try{if(typeof pjChecarNuvem==='function')pjChecarNuvem();}catch(e){}});
+})();
+</script>
+
+<script>
+/* ===================== p35 — app de iPhone/iPad (Capacitor, capacitor://localhost) =====================
+   No iOS o navegador embutido não baixa arquivos: PDF, Excel, Word, DXF, IFC e .json exportados abrem a
+   folha de compartilhamento do sistema (Salvar em Arquivos, AirDrop, WhatsApp, e-mail…). */
+(function(){
+ if(location.protocol!=='capacitor:'||!window.Capacitor||!Capacitor.Plugins)return;
+ const P=Capacitor.Plugins;
+ const b64=blob=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=()=>no(r.error);r.readAsDataURL(blob);});
+ window.download=async function(blob,name){
+  try{
+   const nome=String(name||'arquivo').replace(/[\\/:*?"<>|]+/g,'-').slice(0,120);
+   const w=await P.Filesystem.writeFile({path:nome,data:await b64(blob),directory:'CACHE'});
+   await P.Share.share({title:nome,files:[w.uri],dialogTitle:'Salvar ou enviar '+nome});
+  }catch(e){const m=String(e&&e.message||e);if(!/cancel/i.test(m))alert('Não foi possível salvar o arquivo: '+m);}
+ };
+ document.documentElement.classList.add('ios-app');
 })();
 </script>
 

@@ -1,0 +1,15 @@
+{
+  "name": "plantacalc-ios",
+  "private": true,
+  "version": "1.0.0",
+  "description": "App do PlantaCalc para iPhone e iPad (Capacitor). O site é copiado para www/ na hora de compilar.",
+  "scripts": { "www": "bash preparar-www.sh", "sync": "bash preparar-www.sh && npx cap sync ios" },
+  "dependencies": {
+    "@capacitor/core": "8.6.0",
+    "@capacitor/ios": "8.6.0",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/share": "8.0.3",
+    "@capacitor/splash-screen": "8.0.2"
+  },
+  "devDependencies": { "@capacitor/cli": "8.6.0" }
+}
