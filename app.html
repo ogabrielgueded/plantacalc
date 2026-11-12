@@ -222,7 +222,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}svg text{-webkit-text-s
 <meta name="description" content="PlantaCalc: desenhe ou responda algumas perguntas e gere planta, cortes, fundações, quantitativo, custo, prazo, memorial e 3D para estudos preliminares de obras civis.">
 <link rel="icon" href="img/icone.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f5f20"><link rel="apple-touch-icon" href="img/icon-192.png">
-<script>window.PC_BUILD="20261109-201519";</script>
+<script>window.PC_BUILD="20261111-211400";</script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -7813,7 +7813,8 @@ const MON={plano:'gratis',validade:null,user:null,sb:null,status:null};
 const PLANO_KEY='pc_plano_v1',COOKIE_KEY='pc_cookies_v1';
 const isPro=()=>MON.plano==='pro'&&MON.validade&&new Date(MON.validade)>new Date();
 /* aberto pelo app Android (Play Store): sem anúncios e sem venda dentro do app (a assinatura fica na conta e vale em todos os aparelhos) */
-const NO_APP=(()=>{try{const q=new URLSearchParams(location.search);if(q.get('origem')==='android'||String(document.referrer).startsWith('android-app://'))sessionStorage.setItem('pc_canal','android');return sessionStorage.getItem('pc_canal')==='android';}catch(e){return false;}})();
+/* Canal da loja: 'android' (app da Play Store) ou 'ios' (app da App Store, que roda em capacitor://). Nos dois, sem preços, sem assinatura e sem anúncios. */
+const NO_APP=(()=>{try{const q=new URLSearchParams(location.search);if(location.protocol==='capacitor:'||q.get('origem')==='ios')sessionStorage.setItem('pc_canal','ios');else if(q.get('origem')==='android'||String(document.referrer).startsWith('android-app://'))sessionStorage.setItem('pc_canal','android');const c=sessionStorage.getItem('pc_canal');window.PC_CANAL=c||'web';return c==='android'||c==='ios';}catch(e){return location.protocol==='capacitor:';}})();
 if(NO_APP)document.documentElement.classList.add('no-app');
 const brl=v=>'R$ '+nf(v,2);
 
