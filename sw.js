@@ -3,7 +3,7 @@
    - Bibliotecas com versão fixa (CDN) e fontes: guardadas uma vez.
    - version.json, Supabase, Mercado Pago, anúncios e IA: sempre pela internet, nunca guardados.
    - Versão nova: o aviso "Atualizar agora" do programa troca a cópia guardada antes de recarregar. */
-const CACHE = 'pc-site-v1';
+const CACHE = 'pc-site-v2';
 const SITE = ['app.html', 'loteamento.html', 'index.html', 'conta.html', 'config.js', 'manifest.webmanifest', 'site.css', 'sinapi_mapa.json', 'img/icon-192.png', 'img/icon-512.png', 'img/icone.svg'];
 
 self.addEventListener('install', (e) => { self.skipWaiting(); });
@@ -17,6 +17,9 @@ self.addEventListener('activate', (e) => {
 const chave = (url) => { const u = new URL(url); u.search = ''; u.hash = ''; if (u.pathname.endsWith('/')) u.pathname += 'index.html'; return u.toString(); };
 const doSite = (u) => u.origin === self.location.origin;
 const nuncaGuardar = (u) => doSite(u) && /\/(version\.json|admin\.(html|js)|sw\.js)$/.test(u.pathname);
+/* páginas e estilos do site: busca a versão nova primeiro; a cópia guardada só entra sem internet.
+   O programa (app.html, loteamento.html) e a base SINAPI continuam abrindo da cópia guardada, com atualização em segundo plano. */
+const grandes = (u) => /\/(app|loteamento)\.html$|\/sinapi_mapa\.json$|\/img\//.test(u.pathname);
 const imutavel = (u) => (u.hostname === 'cdn.jsdelivr.net' && /@\d+\.\d+\.\d+/.test(u.pathname)) || u.hostname === 'fonts.gstatic.com' || u.hostname === 'fonts.googleapis.com';
 
 async function guardadaOuRede(req, u) {
@@ -29,6 +32,12 @@ async function guardadaOuRede(req, u) {
   if (r) return r;
   if (req.mode === 'navigate') { const app = await c.match(chave(new URL('app.html', self.location).toString())); if (app) return app; }
   return new Response('Sem internet', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+}
+async function redePrimeiro(req) {
+  const c = await caches.open(CACHE);
+  const k = chave(req.url);
+  try { const r = await fetch(req, { cache: 'no-cache' }); if (r && r.ok && r.type !== 'opaque') c.put(k, r.clone()); return r; }
+  catch (x) { const g = await c.match(k); if (g) return g; if (req.mode === 'navigate') { const app = await c.match(chave(new URL('app.html', self.location).toString())); if (app) return app; } return new Response('Sem internet', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }); }
 }
 async function umaVez(req) {
   const c = await caches.open(CACHE);
@@ -44,7 +53,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const u = new URL(req.url);
   if (nuncaGuardar(u)) return;
-  if (doSite(u)) { e.respondWith(guardadaOuRede(req, u)); return; }
+  if (doSite(u)) { e.respondWith(grandes(u) ? guardadaOuRede(req, u) : redePrimeiro(req)); return; }
   if (imutavel(u)) { e.respondWith(umaVez(req)); return; }
   /* Supabase, Mercado Pago, anúncios, IA e o resto: direto pela internet */
 });

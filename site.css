@@ -154,14 +154,3 @@ footer nav{display:flex;gap:18px;flex-wrap:wrap}footer a{color:var(--mut)}
 /* alvos de toque de 40 px no celular */
 @media(max-width:760px){.logo{min-height:40px}.burger{min-width:44px;min-height:44px}.nav .btn.sm{min-height:40px;box-sizing:border-box}#menu a{min-height:40px;box-sizing:border-box}}
 
-/* módulos na abertura da página */
-.mods{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:1080px;margin:6px auto 30px;text-align:left}
-.mod{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;text-decoration:none;color:inherit;transition:border-color .15s,transform .15s,box-shadow .15s}
-.mod:hover{border-color:#b9d79c;transform:translateY(-2px);box-shadow:0 8px 20px rgba(31,95,32,.08)}
-.mod .ic{flex:none;width:40px;height:40px;border-radius:11px;background:#eaf3df;display:flex;align-items:center;justify-content:center}
-.mod .ic svg{width:22px;height:22px;stroke:var(--g1);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.mod b{display:block;font-size:15.5px;line-height:1.25;margin:1px 0 4px}
-.mod b em{font-style:normal;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:#f59e0b;color:#2b1d00;border-radius:20px;padding:2px 7px;margin-left:4px;vertical-align:2px}
-.mod small{display:block;font-size:13.5px;line-height:1.4;color:var(--mut)}
-@media (max-width:980px){.mods{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:560px){.mods{gap:8px;margin-bottom:24px}.mod{flex-direction:column;gap:8px;padding:12px}.mod .ic{width:34px;height:34px}.mod .ic svg{width:19px;height:19px}.mod b{font-size:14.5px}.mod small{font-size:12.5px}.hero{padding-top:36px}}
