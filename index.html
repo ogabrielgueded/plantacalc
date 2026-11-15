@@ -6,10 +6,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PlantaCalc — do croqui ao orçamento em minutos</title>
-<meta name="description" content="Desenhe ou responda algumas perguntas: o PlantaCalc gera planta, cortes, fundações, quantitativo, custo, prazo, memorial e 3D para estudos preliminares de obras civis. Grátis no navegador, também no tablet.">
+<meta name="description" content="Desenhe ou responda algumas perguntas: o PlantaCalc gera planta, cortes, fundações, quantitativo, custo, prazo, memorial e 3D para estudos preliminares de obras civis. Novo módulo Loteamento: lotes, ruas, greide, redes e pranchas a partir da gleba. Grátis no navegador, também no tablet.">
 <meta property="og:title" content="PlantaCalc — do croqui ao orçamento em minutos">
 <meta property="og:description" content="Estudo preliminar de obras civis no navegador: pranchas, quantitativo, custo, prazo, memorial e 3D.">
-<meta property="og:image" content="img/hero.webp">
+<meta property="og:image" content="https://plantacalc.com.br/img/hero.webp">
+<meta property="og:url" content="https://plantacalc.com.br/">
 <meta property="og:type" content="website">
 <meta name="google-adsense-account" content="ca-pub-8681311606179270">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8681311606179270" crossorigin="anonymous"></script>
@@ -22,7 +23,7 @@
 <body>
 <header class="nav"><div class="wrap">
   <a class="logo" href="index.html"><img src="img/icone.svg" alt="">PlantaCalc</a>
-  <nav id="menu"><a href="#recursos">Recursos</a><a href="#como">Como funciona</a><a href="#planos">Planos</a><a href="#duvidas">Dúvidas</a></nav>
+  <nav id="menu"><a href="#recursos">Recursos</a><a href="#loteamento">Loteamento</a><a href="#como">Como funciona</a><a href="#planos">Planos</a><a href="#duvidas">Dúvidas</a></nav>
   <div class="sp"></div>
   <a class="btn sec sm" href="conta.html">Entrar</a>
   <a class="btn pri sm" href="app.html">Abrir o PlantaCalc</a>
@@ -34,8 +35,9 @@
   <div class="tag"><i></i>Estudo preliminar de obras civis · direto no navegador</div>
   <h1>Do croqui ao <em>orçamento</em> em minutos.</h1>
   <p class="lead">Desenhe as salas com o dedo ou responda algumas perguntas. O PlantaCalc monta as pranchas, calcula o quantitativo e orça pelo SINAPI do seu estado, com BDI pela fórmula do TCU e curva ABC. Também calcula o prazo, escreve o memorial e mostra tudo em 3D.</p>
+  <a class="novo" href="#loteamento"><b>Novo</b> Módulo Loteamento: lotes, ruas, greide, redes e pranchas a partir da gleba →</a>
   <div class="cta"><a class="btn pri" href="conta.html?volta=app">Começar grátis</a><a class="btn sec" href="#planos">Ver planos</a><small>Funciona no computador, no tablet e no celular, também como app Android. Os projetos ficam na nuvem e abrem em qualquer aparelho.</small></div>
-  <div class="shot"><div class="bar"><i></i><i></i><i></i></div><img src="img/hero.webp" width="1600" height="1000" alt="Tela do PlantaCalc com uma casa de bombas desenhada e o cartão de opções da sala aberto"></div>
+  <div class="shot"><div class="bar"><i></i><i></i><i></i></div><img src="img/hero.webp" width="1600" height="1000" alt="Tela do PlantaCalc com uma casa de bombas desenhada, com custo direto e prazo no canto"></div>
   <div class="nums"><div><b>6</b><span>assistentes prontos</span></div><div><b>A3</b><span>pranchas técnicas cotadas</span></div><div><b>5</b><span>formatos: PDF, Excel, Word, DXF, IFC</span></div><div><b>27</b><span>estados com preços do SINAPI</span></div></div>
 </div></section>
 
@@ -77,7 +79,7 @@
       <p>Quantitativo por serviço com preço, custo provável com reserva de risco, cronograma com equipe e histograma, e a lista do que precisa de atenção.</p>
       <ul><li>“Onde vai o dinheiro” por etapa da obra</li><li>Excel com quantitativo, lista de materiais por disciplina e memória de cálculo</li><li>Memorial descritivo em Word, editável</li></ul>
     </div>
-    <div class="img"><img src="img/resultados.webp" width="1600" height="1000" alt="Tela de resultados com custo, prazo, área e pontos de atenção" loading="lazy"></div>
+    <div class="img"><img src="img/prazo.webp" width="1600" height="1000" alt="Planejamento com horas de mão de obra, histograma por semana e prazo por etapa" loading="lazy"></div>
   </div>
 
   <div class="feat">
@@ -97,6 +99,40 @@
     <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></div><h4>App Android</h4><p>A mesma conta e os mesmos projetos no celular e no tablet Android, em tela cheia. Depois do primeiro acesso, abre mesmo sem internet.</p></div>
     <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg></div><h4>Modo simples e modo engenheiro</h4><p>Tela limpa para quem está começando; todos os parâmetros quando você precisar.</p></div>
   </div>
+</div></section>
+
+<section id="loteamento" style="background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)"><div class="wrap">
+  <p class="kick">Módulo Loteamento</p>
+  <h2>Da gleba ao projeto de loteamento e estacionamento.</h2>
+  <p class="sub">Desenhe o terreno ou importe o levantamento topográfico, informe as dimensões mínimas e o PlantaCalc distribui lotes, ruas, praças e área institucional. Depois de aprovado, gera o projeto geométrico e as redes, com pranchas A3. Incluído no plano Pro.</p>
+
+  <div class="feat">
+    <div class="txt">
+      <h3>Lotes com frente para rua e ruas interligadas.</h3>
+      <p>Você define a área e a testada mínimas, a largura das ruas e os percentuais de áreas públicas. O sistema monta as quadras, deixa os lotes o mais iguais possível e incorpora as sobras aos vizinhos.</p>
+      <ul><li>Rua perimetral, avenida com canteiro e encaixe nas ruas existentes</li><li>Nenhuma rua sem saída quando a gleba permite e quadro de áreas conferido automaticamente</li><li>Estacionamentos com vagas, circulação e acessos no mesmo programa</li></ul>
+    </div>
+    <div class="img"><img src="img/loteamento.webp" width="1600" height="1000" alt="Loteamento com 119 lotes, quadras, praças, área institucional e quadro de áreas" loading="lazy"></div>
+  </div>
+
+  <div class="feat rev">
+    <div class="txt">
+      <h3>Greide, perfis, seções e volumes.</h3>
+      <p>A partir dos pontos do levantamento, o sistema monta o terreno, define o greide das vias com rampas e curvas verticais e calcula corte e aterro.</p>
+      <ul><li>Perfis longitudinais, seções transversais e seção tipo do pavimento</li><li>Nota de serviço, volumes, diagrama de Brückner e projeto da praça</li><li>Arraste um ponto ou um vértice e tudo é recalculado</li></ul>
+    </div>
+    <div class="img"><img src="img/loteamento-perfil.webp" width="1600" height="1000" alt="Perfil longitudinal de uma rua com greide, curvas verticais e tabela de cotas" loading="lazy"></div>
+  </div>
+
+  <div class="feat">
+    <div class="txt">
+      <h3>Drenagem, água, esgoto, iluminação e energia.</h3>
+      <p>Você marca os pontos de ligação com as concessionárias e o lançamento da drenagem; o sistema dimensiona as redes e liga cada lote.</p>
+      <ul><li>Drenagem com bocas de lobo, galerias e poços de visita no padrão do Caderno de Encargos SUDECAP</li><li>Água pelos critérios da COPASA (T.104), esgoto pela NBR 9649 e ramais de cada lote</li><li>Iluminação pública e rede aérea com postes, estruturas e transformadores pela CEMIG (ND-2.1 e ND-2.4)</li><li>Valas, reaterro e pavimento pelos Cap. 3, 10 e 20 da SUDECAP, com memorial e planilha de quantitativos</li></ul>
+    </div>
+    <div class="img"><img src="img/loteamento-redes.webp" width="1600" height="1000" alt="Loteamento com as redes de drenagem, esgoto, água e iluminação desenhadas" loading="lazy"></div>
+  </div>
+  <div class="cta" style="margin-top:36px"><a class="btn pri" href="conta.html?volta=loteamento">Abrir o módulo Loteamento</a><small>Use a mesma conta do PlantaCalc. No Gratuito, desenhe e calcule na tela; no Pro, baixe as pranchas, as planilhas e o DXF.</small></div>
 </div></section>
 
 <section class="dark" id="como"><div class="wrap">
@@ -123,16 +159,16 @@
 <section id="planos" style="background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)"><div class="wrap">
   <p class="kick">Planos</p>
   <h2>Grátis para usar. Pro para entregar.</h2>
-  <p class="sub">Experimente de graça em um projeto, na tela. O Pro libera o quantitativo completo, a exportação dos arquivos e projetos ilimitados, sem anúncios.</p>
+  <p class="sub">Experimente de graça em um projeto, na tela. O Pro libera o quantitativo completo, a exportação dos arquivos e projetos ilimitados, sem anúncios, no PlantaCalc e no módulo Loteamento.</p>
   <div class="planos">
     <div class="plano">
       <h3>Gratuito</h3><div class="pr">R$ 0</div><div class="alt">só precisa criar a conta</div>
-      <ul><li>Todos os assistentes e cálculos</li><li>Pranchas, cronograma, memorial e 3D na tela</li><li class="n">Quantitativo parcial (metade da tabela) e só a faixa de custo</li><li class="n">3 usos por mês do assistente de IA (só desenhar)</li><li class="n">1 projeto</li><li class="n">Sem exportar arquivos (PDF, Excel, Word, DXF, IFC)</li><li class="n">Com anúncios</li><li class="n">Pranchas com marca d'água “versão gratuita”</li></ul>
+      <ul><li>Todos os assistentes e cálculos</li><li>Pranchas, cronograma, memorial e 3D na tela</li><li>Módulo Loteamento: traçado, greide e redes na tela</li><li class="n">Quantitativo parcial (metade da tabela) e só a faixa de custo</li><li class="n">3 usos por mês do assistente de IA (só desenhar)</li><li class="n">1 projeto</li><li class="n">Sem exportar arquivos (PDF, Excel, Word, DXF, IFC)</li><li class="n">Com anúncios</li><li class="n">Pranchas com marca d'água “versão gratuita”</li></ul>
       <a class="btn sec" href="conta.html?volta=app">Começar grátis</a>
     </div>
     <div class="plano pro"><span class="rib" id="eco">Mais escolhido</span>
       <h3>Pro</h3><div class="pr"><span data-preco="mensal">R$ 29,90</span><small> /mês</small></div><div class="alt">ou <span data-preco="anual">R$ 299,00</span> por ano</div>
-      <ul><li>Tudo do Gratuito</li><li>Quantitativo completo, curva ABC e análise de custo</li><li>Orçamento pelo SINAPI do seu estado, com BDI do TCU e composições analíticas</li><li>Exporta PDF, Excel, Word, DXF e IFC</li><li>Projetos ilimitados, na nuvem e em qualquer aparelho</li><li>Assistente de IA: desenha o croqui a partir de uma descrição e redige o escopo técnico</li><li>Sem nenhum anúncio</li><li>Pranchas e PDF sem marca d'água</li><li>Cancele quando quiser, sem multa</li></ul>
+      <ul><li>Tudo do Gratuito</li><li>Quantitativo completo, curva ABC e análise de custo</li><li>Orçamento pelo SINAPI do seu estado, com BDI do TCU e composições analíticas</li><li>Exporta PDF, Excel, Word, DXF e IFC</li><li>Módulo Loteamento completo: pranchas A3, planilhas, DXF e projetos ilimitados</li><li>Projetos ilimitados, na nuvem e em qualquer aparelho</li><li>Assistente de IA: desenha o croqui a partir de uma descrição e redige o escopo técnico</li><li>Sem nenhum anúncio</li><li>Pranchas e PDF sem marca d'água</li><li>Cancele quando quiser, sem multa</li></ul>
       <a class="btn pri" href="conta.html?assinar=anual">Assinar o Pro</a>
     </div>
   </div>
@@ -145,10 +181,11 @@
   <div class="faq">
     <details><summary>Preciso instalar alguma coisa?</summary><p>Não. O PlantaCalc abre no navegador (Chrome, Edge, Safari ou Firefox) do notebook, do tablet ou do celular.</p></details>
     <details><summary>O estudo substitui o projeto executivo?</summary><p>Não. O PlantaCalc gera estudo preliminar: serve para estimar custo e prazo, comparar alternativas e apoiar a decisão. Obra exige projeto executivo com responsável técnico e ART.</p></details>
-    <details><summary>Onde ficam os meus projetos?</summary><p>No seu aparelho, salvos automaticamente em “Meus projetos”. Se você criar uma conta (grátis), ficam também na nuvem e abrem em qualquer computador ou tablet. O plano Gratuito guarda 1 projeto; o Pro, quantos você quiser. No Pro você também pode exportar o arquivo do projeto (.json) como cópia de segurança.</p></details>
-    <details><summary>De onde vêm os preços?</summary><p>De uma base de preços de referência que vem com o sistema. Você pode ajustar os preços unitários e índices no modo engenheiro para a sua região ou para a sua empresa.</p></details>
+    <details><summary>Onde ficam os meus projetos?</summary><p>No PlantaCalc, são salvos automaticamente no aparelho e na nuvem da sua conta, e abrem em qualquer computador, tablet ou celular. No módulo Loteamento, ficam salvos no navegador do aparelho; no Pro, você baixa o arquivo do projeto para guardar ou abrir em outro aparelho. O plano Gratuito permite 1 projeto em cada um; o Pro, quantos você quiser.</p></details>
+    <details><summary>De onde vêm os preços?</summary><p>Do SINAPI do estado que você escolher, com e sem desoneração, atualizado mês a mês (orçamento no plano Pro). No modo engenheiro você também pode ajustar preços unitários e índices para a sua região ou para a sua empresa.</p></details>
     <details><summary>Como funciona o pagamento do Pro?</summary><p>A assinatura é feita pelo Mercado Pago, mensal ou anual, com renovação automática. Você cancela quando quiser em “Minha conta” e continua com o Pro até o fim do período pago.</p></details>
-    <details><summary>Posso usar o plano Gratuito em trabalho profissional?</summary><p>Sim. A única diferença são os anúncios na tela e a marca d'água “versão gratuita” nas pranchas.</p></details>
+    <details><summary>Posso usar o plano Gratuito em trabalho profissional?</summary><p>Sim. No Gratuito você faz todos os cálculos na tela, com anúncios, marca d'água “versão gratuita”, metade do quantitativo e 1 projeto; para baixar PDF, Excel, Word, DXF e IFC é preciso o Pro.</p></details>
+    <details><summary>Quais normas o módulo Loteamento segue?</summary><p>Água pela NBR 12218 e pela norma T.104 da COPASA, esgoto pela NBR 9649, iluminação pela NBR 5101, drenagem, valas e pavimento pelo Caderno de Encargos SUDECAP e rede aérea pelos manuais ND-2.1 e ND-2.4 da CEMIG. Os parâmetros (lote mínimo, larguras, áreas públicas, chuva de projeto) são editáveis para seguir a lei e os padrões do seu município. O resultado é estudo preliminar: o projeto executivo e a aprovação nos órgãos e nas concessionárias continuam com o responsável técnico.</p></details>
   </div>
 </div></section>
 
