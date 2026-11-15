@@ -5,10 +5,10 @@
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f5f20">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PlantaCalc — do croqui ao orçamento em minutos</title>
+<title>PlantaCalc — edificações, áreas industriais, loteamentos, orçamento SINAPI e prazo</title>
 <meta name="description" content="Desenhe ou responda algumas perguntas: o PlantaCalc gera planta, cortes, fundações, quantitativo, custo, prazo, memorial e 3D para estudos preliminares de obras civis. Novo módulo Loteamento: lotes, ruas, greide, redes e pranchas a partir da gleba. Grátis no navegador, também no tablet.">
-<meta property="og:title" content="PlantaCalc — do croqui ao orçamento em minutos">
-<meta property="og:description" content="Estudo preliminar de obras civis no navegador: pranchas, quantitativo, custo, prazo, memorial e 3D.">
+<meta property="og:title" content="PlantaCalc — edificações, áreas industriais, loteamentos, orçamento SINAPI e prazo">
+<meta property="og:description" content="Estudo preliminar de obras civis no navegador: edificações, implantação industrial, loteamentos e estacionamentos, redes de infraestrutura, orçamento SINAPI, prazo, pranchas e 3D.">
 <meta property="og:image" content="https://plantacalc.com.br/img/hero.webp">
 <meta property="og:url" content="https://plantacalc.com.br/">
 <meta property="og:type" content="website">
@@ -23,7 +23,7 @@
 <body>
 <header class="nav"><div class="wrap">
   <a class="logo" href="index.html"><img src="img/icone.svg" alt="">PlantaCalc</a>
-  <nav id="menu"><a href="#recursos">Recursos</a><a href="#loteamento">Loteamento</a><a href="#como">Como funciona</a><a href="#planos">Planos</a><a href="#duvidas">Dúvidas</a></nav>
+  <nav id="menu"><a href="#recursos">Edificações</a><a href="#loteamento">Loteamento</a><a href="#orcamento">Orçamento</a><a href="#como">Como funciona</a><a href="#planos">Planos</a><a href="#duvidas">Dúvidas</a></nav>
   <div class="sp"></div>
   <a class="btn sec sm" href="conta.html">Entrar</a>
   <a class="btn pri sm" href="app.html">Abrir o PlantaCalc</a>
@@ -33,10 +33,10 @@
 <main>
 <section class="hero"><div class="wrap">
   <div class="tag"><i></i>Estudo preliminar de obras civis · direto no navegador</div>
-  <h1>Do croqui ao <em>orçamento</em> em minutos.</h1>
-  <p class="lead">Desenhe as salas com o dedo ou responda algumas perguntas. O PlantaCalc monta as pranchas, calcula o quantitativo e orça pelo SINAPI do seu estado, com BDI pela fórmula do TCU e curva ABC. Também calcula o prazo, escreve o memorial e mostra tudo em 3D.</p>
-  <a class="novo" href="#loteamento"><b>Novo</b> Módulo Loteamento: lotes, ruas, greide, redes e pranchas a partir da gleba →</a>
-  <div class="cta"><a class="btn pri" href="conta.html?volta=app">Começar grátis</a><a class="btn sec" href="#planos">Ver planos</a><small>Funciona no computador, no tablet e no celular, também como app Android. Os projetos ficam na nuvem e abrem em qualquer aparelho.</small></div>
+  <h1>Do croqui ao <em>orçamento</em>. Da gleba ao <em>loteamento</em>.</h1>
+  <p class="lead">Um só sistema para estudar edificações, áreas industriais, loteamentos e estacionamentos: pranchas, quantitativo, orçamento SINAPI, prazo, redes de infraestrutura e 3D.</p>
+  <nav class="mods" aria-label="Módulos do PlantaCalc"><a class="mod" href="#recursos"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg></span><span class="tx"><b>Edificações</b><small>Planta, cortes, fachadas, fundações e estrutura a partir do croqui ou de perguntas.</small></span></a><a class="mod" href="#recursos"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 21V10l6 4V10l6 4V6l6 3v12z"/><path d="M7 21v-3M12 21v-3M17 21v-3"/></svg></span><span class="tx"><b>Áreas industriais</b><small>Casa de bombas, sala elétrica, pipe rack, canaletas, bases, cercas e eletrodutos.</small></span></a><a class="mod" href="#loteamento"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 10h18M10 3v18M15 10v11"/></svg></span><span class="tx"><b>Loteamento e estacionamento <em>Novo</em></b><small>Lotes, quadras, ruas interligadas, praças e vagas a partir da gleba.</small></span></a><a class="mod" href="#lote-redes"><span class="ic"><svg viewBox="0 0 24 24"><path d="M2 12c3-3 5 3 8 0s5 3 8 0 3-2 4-1"/><path d="M6 20v-5M12 20v-6M18 20v-5M4 20h16"/></svg></span><span class="tx"><b>Infraestrutura urbana <em>Novo</em></b><small>Greide, perfis e volumes; drenagem, água, esgoto, iluminação e energia.</small></span></a><a class="mod" href="#orcamento"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span class="tx"><b>Orçamento SINAPI</b><small>Composições dos 27 estados, BDI pela fórmula do TCU e curva ABC.</small></span></a><a class="mod" href="#prazo"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M7 13h4M7 17h8"/></svg></span><span class="tx"><b>Prazo e planejamento</b><small>Horas de mão de obra, equipe, histograma e cronograma por etapa.</small></span></a><a class="mod" href="#pranchas"><span class="ic"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span><span class="tx"><b>Pranchas e documentos</b><small>Pranchas A3, memorial, planilhas, DXF, IFC e vista 3D.</small></span></a><a class="mod" href="#planos"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg></span><span class="tx"><b>Assistente de IA</b><small>Desenha o croqui a partir de uma descrição e redige o escopo técnico.</small></span></a></nav>
+  <div class="cta"><a class="btn pri" href="conta.html?volta=app">Começar grátis</a><a class="btn sec" href="#planos">Ver planos</a><small>Funciona no computador, no tablet e no celular, também como app Android. Uma conta para todos os módulos.</small></div>
   <div class="shot"><div class="bar"><i></i><i></i><i></i></div><img src="img/hero.webp" width="1600" height="1000" alt="Tela do PlantaCalc com uma casa de bombas desenhada, com custo direto e prazo no canto"></div>
   <div class="nums"><div><b>6</b><span>assistentes prontos</span></div><div><b>A3</b><span>pranchas técnicas cotadas</span></div><div><b>5</b><span>formatos: PDF, Excel, Word, DXF, IFC</span></div><div><b>27</b><span>estados com preços do SINAPI</span></div></div>
 </div></section>
@@ -55,7 +55,7 @@
     <div class="img"><img src="img/assistente.webp" width="1600" height="1000" alt="Assistente da sala elétrica com estimativa ao lado" loading="lazy"></div>
   </div>
 
-  <div class="feat rev">
+  <div class="feat rev" id="pranchas">
     <div class="txt">
       <h3>Pranchas técnicas que já saem cotadas.</h3>
       <p>Planta detalhada, estrutura, cortes, fachadas, fundações, quadros de pilares, armaduras e acabamentos, implantação e detalhes típicos — com carimbo, legenda e notas.</p>
@@ -64,7 +64,7 @@
     <div class="img"><img src="img/pranchas.webp" width="1600" height="896" alt="Prancha de planta detalhada com quadro de áreas e esquadrias" loading="lazy"></div>
   </div>
 
-  <div class="feat">
+  <div class="feat" id="orcamento">
     <div class="txt">
       <h3>Orçamento pelo SINAPI do seu estado.</h3>
       <p>Cada serviço do quantitativo recebe a composição SINAPI equivalente, com custo unitário, horas de mão de obra e memória de cálculo. Você revisa os vínculos e o PlantaCalc fecha o orçamento.</p>
@@ -73,7 +73,7 @@
     <div class="img"><img src="img/resultados.webp" width="1600" height="1000" alt="Tela de resultados com custo, prazo, área e pontos de atenção" loading="lazy"></div>
   </div>
 
-  <div class="feat rev">
+  <div class="feat rev" id="prazo">
     <div class="txt">
       <h3>Custo, prazo e riscos sem planilha paralela.</h3>
       <p>Quantitativo por serviço com preço, custo provável com reserva de risco, cronograma com equipe e histograma, e a lista do que precisa de atenção.</p>
@@ -124,7 +124,7 @@
     <div class="img"><img src="img/loteamento-perfil.webp" width="1600" height="1000" alt="Perfil longitudinal de uma rua com greide, curvas verticais e tabela de cotas" loading="lazy"></div>
   </div>
 
-  <div class="feat">
+  <div class="feat" id="lote-redes">
     <div class="txt">
       <h3>Drenagem, água, esgoto, iluminação e energia.</h3>
       <p>Você marca os pontos de ligação com as concessionárias e o lançamento da drenagem; o sistema dimensiona as redes e liga cada lote.</p>
