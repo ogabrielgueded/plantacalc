@@ -1750,5 +1750,699 @@ setTimeout(deUrl,60);
 .wz-img{display:block;width:100%;margin-top:10px;border-radius:8px;background:#fff;border:1px solid #e1e8d8}.wz-nd{color:#5b6670;font-size:13.5px}
 @media (max-width:760px){.wz-cols{grid-template-columns:1fr}.wz-gr{grid-template-columns:1fr}.wz-bx{padding:14px}.wz-q h3{font-size:18px}.wz-gr button{min-height:0}}
 </style>
+<script>
+/* ===================== PlantaCalc Loteamento — ORÇAMENTO SINAPI (plano Pro) =====================
+   O mesmo orçamento da infraestrutura industrial do PlantaCalc (base SINAPI publicada mês a mês no
+   bucket "sinapi", preços por estado com e sem desoneração, BDI do Acórdão TCU 2.622/2013, curva ABC,
+   composições analíticas, Excel e PDF), aplicado aos quantitativos do loteamento e do estacionamento.
+   O orçamento fica guardado no próprio projeto (st.park.orc ou st.lot.orc). */
+(function(){
+const MON=window.PCL||{};
+const PJ={get atual(){return 'loteamento:'+((st&&st.meta&&st.meta.id)||'');}};
+let S=null,Q=[];
+const nf=(v,d=2)=>(isFinite(v)?v:0).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sum=(a,fn)=>a.reduce((s,x)=>s+fn(x),0);
+const trunc=(s,n)=>{s=String(s||'');return s.length>n?s.slice(0,n-1)+'…':s;};
+const $=q=>document.querySelector(q),$$=q=>[...document.querySelectorAll(q)];
+const slug=s=>String(s||'projeto').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w-]+/g,'_').replace(/_+/g,'_').slice(0,40);
+const fname=x=>`PlantaCalc_${st.mode==='lot'?'Loteamento':'Estacionamento'}_${slug(st.meta.name)}_rev${slug(st.meta.rev||'0')}_${x}`;
+const download=(b,n)=>dl(b,n);
+function toast(m){let t=document.getElementById('lqoToast');if(!t){t=document.createElement('div');t.id='lqoToast';document.body.appendChild(t);}
+ t.textContent=m;t.classList.add('on');clearTimeout(toast.tm);toast.tm=setTimeout(()=>t.classList.remove('on'),3200);}
+function abrirPlanos(m){if(typeof window.pclPro==='function')window.pclPro(m);}
+function mark(){}
+function renderView(){lqRender();}
+function refresh(){try{save();}catch(e){}lqRender();}
+/* estado no formato que o motor do PlantaCalc espera: S.orc e S.meta */
+function mkS(){const m=st.mode;return{get orc(){return st[m].orc;},set orc(v){st[m].orc=v;},
+ meta:{obra:st.meta.name||'Projeto',codigo:m==='lot'?'Loteamento':'Estacionamento',rev:st.meta.rev||'0',empresa:st.meta.cliente||''}};}
+
+/* ---------- utilitários do PlantaCalc: Excel e PDF ---------- */
+const HELV={r:[278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556, 556, 556, 556, 556, 556, 556, 278, 278, 584, 584, 584, 556, 1015, 667, 667, 722, 722, 667, 611, 778, 722, 278, 500, 667, 556, 833, 722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 278, 278, 278, 469, 556, 333, 556, 556, 500, 556, 556, 278, 556, 556, 222, 222, 500, 222, 833, 556, 556, 556, 556, 333, 500, 278, 556, 500, 722, 500, 500, 500, 334, 260, 334, 584, 0, 0, 0, 222, 556, 333, 1000, 556, 556, 333, 1000, 667, 333, 1000, 0, 611, 0, 0, 222, 222, 333, 333, 350, 556, 1000, 333, 1000, 500, 333, 944, 0, 500, 667, 0, 333, 556, 556, 556, 556, 260, 556, 333, 737, 370, 556, 584, 0, 737, 333, 400, 584, 333, 333, 333, 556, 537, 278, 333, 333, 365, 556, 834, 834, 834, 611, 667, 667, 667, 667, 667, 667, 1000, 722, 667, 667, 667, 667, 278, 278, 278, 278, 722, 722, 778, 778, 778, 778, 778, 584, 778, 722, 722, 722, 722, 667, 667, 611, 556, 556, 556, 556, 556, 556, 889, 500, 556, 556, 556, 556, 278, 278, 278, 278, 556, 556, 556, 556, 556, 556, 556, 584, 611, 556, 556, 556, 556, 500, 556, 500],b:[278, 333, 474, 556, 556, 889, 722, 238, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556, 556, 556, 556, 556, 556, 556, 333, 333, 584, 584, 584, 611, 975, 722, 722, 722, 722, 667, 611, 778, 722, 278, 556, 722, 611, 833, 722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 333, 278, 333, 584, 556, 333, 556, 611, 556, 611, 556, 333, 611, 611, 278, 278, 556, 278, 889, 611, 611, 611, 611, 389, 556, 333, 611, 556, 778, 556, 556, 500, 389, 280, 389, 584, 0, 0, 0, 278, 556, 500, 1000, 556, 556, 333, 1000, 667, 333, 1000, 0, 611, 0, 0, 278, 278, 500, 500, 350, 556, 1000, 333, 1000, 556, 333, 944, 0, 500, 667, 0, 333, 556, 556, 556, 556, 280, 556, 333, 737, 370, 556, 584, 0, 737, 333, 400, 584, 333, 333, 333, 611, 556, 278, 333, 333, 365, 556, 834, 834, 834, 611, 722, 722, 722, 722, 722, 722, 1000, 722, 667, 667, 667, 667, 278, 278, 278, 278, 722, 722, 778, 778, 778, 778, 778, 584, 778, 722, 722, 722, 722, 667, 667, 611, 556, 556, 556, 556, 556, 556, 889, 556, 556, 556, 556, 556, 278, 278, 278, 278, 611, 611, 611, 611, 611, 611, 611, 584, 611, 611, 611, 611, 611, 556, 611, 556]};
+function cp1252(ch){const c=ch.charCodeAt(0);if(c<128)return c;const M={0x20AC:128,0x201A:130,0x0192:131,0x201E:132,0x2026:133,0x2020:134,0x2021:135,0x02C6:136,0x2030:137,0x0160:138,0x2039:139,0x0152:140,0x017D:142,0x2018:145,0x2019:146,0x201C:147,0x201D:148,0x2022:149,0x2013:150,0x2014:151,0x02DC:152,0x2122:153,0x0161:154,0x203A:155,0x0153:156,0x017E:158,0x0178:159};
+ if(M[c])return M[c];if(c>=160&&c<=255)return c;return -1;}
+function pdfText(s){s=String(s).replace(/≥/g,'>=').replace(/≤/g,'<=').replace(/→/g,'->').replace(/Σ/g,'Soma ').replace(/⚠/g,'!');let o='';for(const ch of s){const c=cp1252(ch);o+=c<0?'?':String.fromCharCode(c);}return o;}
+function textW(s,h,bold){const t=HELV[bold?'b':'r'];let w=0;for(const ch of pdfText(s)){const c=ch.charCodeAt(0);w+=(c>=32?t[c-32]||556:0);}return w/1000*h;}
+function pdfBuild(pages){ // pages: [{W,H,ops}] mm
+ const objs=[];const add=s=>{objs.push(s);return objs.length;};
+ const hex=c=>{if(typeof c!=='string')c='#000';c=(c||'#000').replace('#','');if(c.length===3)c=c.split('').map(x=>x+x).join('');return[0,2,4].map(i=>(parseInt(c.slice(i,i+2),16)/255).toFixed(3)).join(' ');};
+ const f=v=>(+v).toFixed(3),PT=72/25.4;
+ const fontR=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>'),fontB=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+ const pagesIdx=add('');const pageIds=[];const imgs={};const imgRef=o=>{if(imgs[o.src])return imgs[o.src];const m=/^data:image\/jpeg;base64,(.*)$/.exec(o.src||'');if(!m)return null;const bin=atob(m[1]);const id=add(`<< /Type /XObject /Subtype /Image /Width ${o.pw} /Height ${o.ph} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${bin.length} >>\nstream\n${bin}\nendstream`);imgs[o.src]={id,nm:'Im'+Object.keys(imgs).length};return imgs[o.src];};
+ for(const pg of pages){const H=pg.H;const X=x=>f(x*PT),Y=y=>f((H-y)*PT);let c='';const usa={};
+  const esc2=s=>s.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');
+  for(const o of pg.ops){
+   if(o.t==='l'){c+=`q ${hex(o.col)} RG ${f(Math.max(o.w,0.05)*PT)} w ${o.dash?'['+o.dash.map(d=>f(d*PT)).join(' ')+'] 0 d ':''}${X(o.x1)} ${Y(o.y1)} m ${X(o.x2)} ${Y(o.y2)} l S Q\n`;}
+   else if(o.t==='r'){const fill=o.fill&&o.fill!=='none',st=!!o.stroke;if(!fill&&!st)continue;
+    c+=`q ${fill?hex(o.fill)+' rg ':''}${st?hex(o.stroke)+' RG '+f((o.sw||0.25)*PT)+' w ':''}${o.dash?'['+o.dash.map(d=>f(d*PT)).join(' ')+'] 0 d ':''}${X(o.x)} ${Y(o.y+o.h)} ${f(o.w*PT)} ${f(o.h*PT)} re ${fill&&st?'B':fill?'f':'S'} Q\n`;}
+   else if(o.t==='p'){const fill=o.fill&&o.fill!=='none',st=!!o.stroke;if(!fill&&!st||!o.pts.length)continue;
+    c+=`q ${fill?hex(o.fill)+' rg ':''}${st?hex(o.stroke)+' RG '+f((o.sw||0.25)*PT)+' w ':''}${o.dash?'['+o.dash.map(d=>f(d*PT)).join(' ')+'] 0 d ':''}`+o.pts.map((p,i)=>`${X(p[0])} ${Y(p[1])} ${i?'l':'m'}`).join(' ')+` ${o.close||fill?'h ':''}${fill&&st?'B':fill?'f':'S'} Q\n`;}
+   else if(o.t==='c'||o.t==='a'){const kk=0.5523;let a0,a1;if(o.t==='c'){a0=0;a1=360;}else{const d=((o.a1-o.a0)%360+360)%360;if(d<=180){a0=o.a0;a1=o.a0+d;}else{a0=o.a1;a1=o.a1+(360-d);}}
+    const segs=Math.max(1,Math.ceil((a1-a0)/90)),da=(a1-a0)/segs*Math.PI/180;let path='';
+    for(let i=0;i<segs;i++){const t0=(a0*Math.PI/180)+i*da,t1=t0+da,kv=4/3*Math.tan((t1-t0)/4);
+     const p0=[o.cx+o.r*Math.cos(t0),o.cy+o.r*Math.sin(t0)],p3=[o.cx+o.r*Math.cos(t1),o.cy+o.r*Math.sin(t1)];
+     const p1=[p0[0]-kv*o.r*Math.sin(t0),p0[1]+kv*o.r*Math.cos(t0)],p2=[p3[0]+kv*o.r*Math.sin(t1),p3[1]-kv*o.r*Math.cos(t1)];
+     if(!i)path+=`${X(p0[0])} ${Y(p0[1])} m `;path+=`${X(p1[0])} ${Y(p1[1])} ${X(p2[0])} ${Y(p2[1])} ${X(p3[0])} ${Y(p3[1])} c `;}
+    const fill=o.fill&&o.fill!=='none',st=!!o.stroke;if(!fill&&!st)continue;
+    c+=`q ${fill?hex(o.fill)+' rg ':''}${st?hex(o.stroke)+' RG '+f((o.sw||0.25)*PT)+' w ':''}${o.dash?'['+o.dash.map(d=>f(d*PT)).join(' ')+'] 0 d ':''}${path}${o.t==='c'?'h ':''}${fill&&st?'B':fill?'f':'S'} Q\n`;}
+   else if(o.t==='img'){const r=imgRef(o);if(!r)continue;usa[r.nm]=r.id;c+=`q ${f(o.w*PT)} 0 0 ${f(o.h*PT)} ${X(o.x)} ${Y(o.y+o.h)} cm /${r.nm} Do Q\n`;}
+   else if(o.t==='hatch'){const sp=o.sp||0.9,n=Math.ceil((o.w+o.h)/sp);c+=`q ${X(o.x)} ${Y(o.y+o.h)} ${f(o.w*PT)} ${f(o.h*PT)} re W n ${hex(o.col||'#444')} RG ${f((o.sw||0.12)*PT)} w `;
+    for(let i=0;i<=n;i++){const d=i*sp;c+=`${X(o.x+d)} ${Y(o.y)} m ${X(o.x)} ${Y(o.y+d)} l `;}c+='S Q\n';}
+   else if(o.t==='tx'){const s=pdfText(o.s);if(!s)continue;const h=o.h;
+    // sobrescritos (² ³) como texto elevado menor
+    const runs=[];let cur='';for(const ch of String(o.s)){if(ch==='²'||ch==='³'){if(cur)runs.push({t:cur,sup:false});runs.push({t:ch==='²'?'2':'3',sup:true});cur='';}else cur+=ch;}if(cur)runs.push({t:cur,sup:false});
+    const w=sum(runs,r=>textW(r.t,r.sup?0.62*h:h,o.bold));const dx=o.anc==='middle'?-w/2:o.anc==='end'?-w:0;const dy=o.base==='auto'?0:o.base==='hanging'?0.75*h:0.35*h;
+    const rot=-(o.rot||0)*Math.PI/180,cs=Math.cos(rot),sn=Math.sin(rot);
+    const pr=(o.rot||0)*Math.PI/180;const bx=o.x+dx*Math.cos(pr)-dy*Math.sin(pr),by=o.y+dx*Math.sin(pr)+dy*Math.cos(pr);
+    c+=`BT ${hex(o.col)} rg ${f(cs)} ${f(sn)} ${f(-sn)} ${f(cs)} ${X(bx)} ${Y(by)} Tm `;
+    for(const r of runs){c+=`/${o.bold?'F2':'F1'} ${f((r.sup?0.62*h:h)*PT)} Tf ${f((r.sup?0.33*h:0)*PT)} Ts (${esc2(pdfText(r.t))}) Tj `;}
+    c+='ET\n';}}
+  const cont=add(`<< /Length ${c.length} >>\nstream\n${c}endstream`);
+  pageIds.push(add(`<< /Type /Page /Parent ${pagesIdx} 0 R /MediaBox [0 0 ${f(pg.W*PT)} ${f(pg.H*PT)}] /Contents ${cont} 0 R /Resources << /Font << /F1 ${fontR} 0 R /F2 ${fontB} 0 R >>${Object.keys(usa).length?' /XObject << '+Object.entries(usa).map(([n,i])=>`/${n} ${i} 0 R`).join(' ')+' >>':''} >> >>`));}
+ objs[pagesIdx-1]=`<< /Type /Pages /Kids [${pageIds.map(i=>i+' 0 R').join(' ')}] /Count ${pageIds.length} >>`;
+ const cat=add(`<< /Type /Catalog /Pages ${pagesIdx} 0 R >>`);
+ const info=add(`<< /Producer (PlantaCalc Web 4.0) /Title (${pdfText(S.meta.obra).replace(/[^\x20-\x7e]/g,'-').replace(/[()\\]/g,'')}) >>`);
+ let out='%PDF-1.4\n%âãÏÓ\n';const offs=[];
+ objs.forEach((o,i)=>{offs.push(out.length);out+=`${i+1} 0 obj\n${o}\nendobj\n`;});
+ const xref=out.length;out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+offs.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')+`trailer\n<< /Size ${objs.length+1} /Root ${cat} 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+ const u8=new Uint8Array(out.length);for(let i=0;i<out.length;i++)u8[i]=out.charCodeAt(i)&255;return new Blob([u8],{type:'application/pdf'});}
+
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(u){let c=0xFFFFFFFF;for(let i=0;i<u.length;i++)c=CRC[(c^u[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0;}
+function zipBlob(files,type){const enc=new TextEncoder(),parts=[],cd=[];let off=0;const dt=new Date(),dosT=(dt.getHours()<<11)|(dt.getMinutes()<<5),dosD=((dt.getFullYear()-1980)<<9)|((dt.getMonth()+1)<<5)|dt.getDate();
+ for(const f of files){const nm=enc.encode(f.name),d=enc.encode(f.data),crc=crc32(d);
+  const lh=new DataView(new ArrayBuffer(30));lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);lh.setUint16(8,0,true);lh.setUint16(10,dosT,true);lh.setUint16(12,dosD,true);lh.setUint32(14,crc,true);lh.setUint32(18,d.length,true);lh.setUint32(22,d.length,true);lh.setUint16(26,nm.length,true);lh.setUint16(28,0,true);
+  parts.push(new Uint8Array(lh.buffer),nm,d);
+  const ch=new DataView(new ArrayBuffer(46));ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);ch.setUint16(10,0,true);ch.setUint16(12,dosT,true);ch.setUint16(14,dosD,true);ch.setUint32(16,crc,true);ch.setUint32(20,d.length,true);ch.setUint32(24,d.length,true);ch.setUint16(28,nm.length,true);ch.setUint32(42,off,true);
+  cd.push(new Uint8Array(ch.buffer),nm);off+=30+nm.length+d.length;}
+ const cs=cd.reduce((a,b)=>a+b.length,0),e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+ return new Blob([...parts,...cd,new Uint8Array(e.buffer)],{type});}
+const xe=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const colL=i=>{let s='';i++;while(i){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26);}return s;};
+function sheetXML(rows,widths){let x=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"/></sheetViews><cols>${widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>`;
+ rows.forEach((r,ri)=>{x+=`<row r="${ri+1}">`;r.forEach((c,ci)=>{if(c==null)return;const ref=colL(ci)+(ri+1);const o=typeof c==='object'?c:{v:c};const s=o.s!=null?` s="${o.s}"`:'';
+  if(o.f)x+=`<c r="${ref}"${s}><f>${xe(o.f)}</f></c>`;else if(typeof o.v==='number')x+=`<c r="${ref}"${s}><v>${o.v}</v></c>`;else if(o.v!=null&&o.v!=='')x+=`<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${xe(o.v)}</t></is></c>`;else if(o.s!=null)x+=`<c r="${ref}"${s}/>`;});x+='</row>';});
+ return x+'</sheetData></worksheet>';}
+function xlsxBlob(sheets){ // sheets: [{name,rows,widths}]
+ const ns='http://schemas.openxmlformats.org';
+ const files=[
+  {name:'[Content_Types].xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="${ns}/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((s,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`},
+  {name:'_rels/.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${ns}/package/2006/relationships"><Relationship Id="rId1" Type="${ns}/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+  {name:'xl/workbook.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="${ns}/spreadsheetml/2006/main" xmlns:r="${ns}/officeDocument/2006/relationships"><sheets>${sheets.map((s,i)=>`<sheet name="${xe(s.name)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`},
+  {name:'xl/_rels/workbook.xml.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${ns}/package/2006/relationships">${sheets.map((s,i)=>`<Relationship Id="rId${i+1}" Type="${ns}/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId99" Type="${ns}/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+  {name:'xl/styles.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="${ns}/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0.00"/><numFmt numFmtId="165" formatCode="#,##0"/></numFmts><fonts count="4"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Arial"/></font><font><b/><sz val="10"/><color rgb="FF257126"/><name val="Arial"/></font><font><b/><sz val="13"/><color rgb="FF257126"/><name val="Arial"/></font></fonts><fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF257126"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEEF6E0"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFD0D5DA"/></left><right style="thin"><color rgb="FFD0D5DA"/></right><top style="thin"><color rgb="FFD0D5DA"/></top><bottom style="thin"><color rgb="FFD0D5DA"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="8"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="164" fontId="2" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`}];
+ sheets.forEach((s,i)=>files.push({name:`xl/worksheets/sheet${i+1}.xml`,data:sheetXML(s.rows,s.widths)}));
+ return zipBlob(files,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');}
+
+/* ---------- motor do orçamento SINAPI do PlantaCalc (o mesmo da infraestrutura industrial) ---------- */
+const ORC_MAPA=[];
+const ORC_UFS={AC:'Acre',AL:'Alagoas',AM:'Amazonas',AP:'Amapá',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MG:'Minas Gerais',MS:'Mato Grosso do Sul',MT:'Mato Grosso',PA:'Pará',PB:'Paraíba',PE:'Pernambuco',PI:'Piauí',PR:'Paraná',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RO:'Rondônia',RR:'Roraima',RS:'Rio Grande do Sul',SC:'Santa Catarina',SE:'Sergipe',SP:'São Paulo',TO:'Tocantins'};
+/* Acórdão TCU 2.622/2013 — faixas do BDI por tipo de obra (1º quartil, médio, 3º quartil), sem a CPRB */
+const ORC_TIPOS={edif:['Construção de edifícios',20.34,22.12,25.00],rod:['Rodovias e ferrovias',19.60,20.97,24.23],rede:['Redes de água, esgoto e correlatas',20.76,24.18,26.44],ener:['Estações e redes de energia elétrica',24.00,25.84,27.86],port:['Obras portuárias, marítimas e fluviais',22.80,27.48,30.95],forn:['Fornecimento de materiais e equipamentos',11.10,14.02,16.80]};
+/* parcelas para construção de edifícios (mesmo acórdão) */
+const ORC_FAIXA={ac:[3.00,4.00,5.50],sg:[0.80,0.80,1.00],r:[0.97,1.27,1.27],df:[0.59,1.23,1.39],l:[6.16,7.40,8.96]};
+const ORC_BDI0={tipo:'edif',ac:4.00,sg:0.80,r:1.27,df:1.23,l:7.40,pis:0.65,cofins:3.00,iss:2.00,cprb:4.50};
+/* BDI diferenciado para fornecimento de materiais e equipamentos (mesmo acórdão: 11,10% a 16,80%) */
+const ORC_FAIXA_F={ac:[1.50,3.45,4.49],sg:[0.30,0.48,0.82],r:[0.56,0.85,0.89],df:[0.85,0.85,1.11],l:[3.50,5.11,6.22]};
+const ORC_BDIF0={tipo:'forn',ac:3.45,sg:0.48,r:0.85,df:0.85,l:5.11,pis:0.65,cofins:3.00,iss:0,cprb:4.50};
+const orcForn=(St,t)=>!!(St.orc&&St.orc.forn&&St.orc.forn[t.key]);
+const ORC={idx:null,idxErro:null,dados:{},carregando:{},hh:{},busca:null,filtro:'todos',abreBDI:false,edita:null};
+const orcURL=p=>(window.PC_CFG||{}).supabaseUrl+'/storage/v1/object/public/sinapi/'+p;
+const orcMesNome=k=>{if(!k)return'—';const [a,m]=String(k).split('-');return ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][+m-1]+'/'+a;};
+const orcNorm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+const orcR2=v=>Math.round((v+Number.EPSILON)*100)/100;
+/* mesmos arredondamentos da planilha Excel: quantidade com 3 casas, preços e totais com 2 */
+const orcQ=t=>Math.round(t.q*1000)/1000,orcTot=t=>orcR2(orcQ(t)*orcR2(t.p)),orcPB=(t,b)=>orcR2(orcR2(t.p)*(1+b)),orcTotB=(t,b)=>orcR2(orcQ(t)*orcPB(t,b));
+
+async function orcIndice(forcar){if(ORC.idx&&!forcar)return ORC.idx;
+ try{const r=await fetch(orcURL('index.json')+'?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error(r.status===400||r.status===404?'vazio':'HTTP '+r.status);ORC.idx=await r.json();ORC.idxErro=null;}
+ catch(e){ORC.idxErro=String(e.message||e);ORC.idx={atual:null,meses:{}};}
+ try{const r=await fetch(orcURL('vinculos.json')+'?t='+Date.now(),{cache:'no-store'});ORC.glob=r.ok?await r.json():{};}catch(e){ORC.glob={};}orcGlobPrep();
+ return ORC.idx;}
+/* vínculos padrão alterados pelo administrador (versões com data): valem para orçamentos gerados ou atualizados depois da data */
+function orcGlobPrep(){const G=ORC.glob||{};ORC.globExtra=(G.extras||[]).map(r=>({r,k:new RegExp(r.key),d:r.desc?new RegExp(r.desc,'i'):null}));}
+function orcBaseData(St){return (St.orc&&(St.orc.base||St.orc.criado))||'9999';}
+function orcVersao(lista,base){let v=null;for(const x of lista||[])if(x.desde<=base&&(!v||x.desde>v.desde))v=x;return v;}
+/* preços de um estado: a função "sinapi" confere o plano no servidor e devolve um link temporário;
+   o arquivo fica guardado no aparelho (não baixa de novo a cada abertura) */
+async function orcPrecosUF(mes,uf,v){const CK='pc-sinapi-uf',chave=`https://plantacalc.local/sinapi-uf/${mes}/${uf}.json?v=${v}`;
+ try{const c=await caches.open(CK);const h=await c.match(chave);if(h)return await h.json();}catch(e){}
+ let r=null,msg='';
+ try{if(typeof MON!=='undefined'&&MON.sb){const {data,error}=await MON.sb.functions.invoke('sinapi',{body:{mes,uf}});
+   if(data&&data.url){r=await fetch(data.url);ORC.leituraSrv=!!data.leitura;}
+   else if(error){try{const j=await error.context.json();msg=j&&j.erro||'';}catch(x){}}}}catch(e){}
+ if(!r||!r.ok){const r0=await fetch(orcURL(mes+'/'+uf+'.json?v='+v)).catch(()=>null);if(r0&&r0.ok)r=r0;}   /* arquivo antigo (transição) */
+ if(!r||!r.ok)throw new Error(msg||'Não foi possível baixar os preços de '+uf+'. Confira a internet e o seu plano.');
+ const j=await r.json();try{const c=await caches.open(CK);await c.put(chave,new Response(JSON.stringify(j),{headers:{'Content-Type':'application/json'}}));}catch(e){}
+ return j;}
+/* carrega catálogo do mês + preços do estado; devolve null enquanto carrega (e redesenha quando chega) */
+function orcDados(mes,uf){const k=mes+'/'+uf;if(ORC.dados[k])return ORC.dados[k];if(ORC.carregando[k])return null;
+ ORC.carregando[k]=(async()=>{try{const idx=await orcIndice();const m=idx.meses&&idx.meses[mes];if(!m)throw new Error('O mês '+orcMesNome(mes)+' não está mais publicado.');
+   const v='?v='+(m.v||1);const kc=mes+'/cat';
+   if(!ORC.dados[kc]){const r=await fetch(orcURL(mes+'/catalogo.json'+v));if(!r.ok)throw new Error('catálogo HTTP '+r.status);ORC.dados[kc]=await r.json();}
+   if(!m.ufs.includes(uf))throw new Error('Não há preços de '+uf+' em '+orcMesNome(mes)+'.');
+   const u=await orcPrecosUF(mes,uf,m.v||1);
+   ORC.dados[k]={mes,uf,cat:ORC.dados[kc],u};}
+  catch(e){ORC.dados[k]={erro:String(e.message||e)};}
+  delete ORC.carregando[k];try{refresh();}catch(e){}})();
+ return null;}
+
+/* ---------- vínculo item do quantitativo → composição SINAPI ---------- */
+function orcNormKey(k){let p=String(k).split('.');
+ if(p[0]==='imp'&&p.length>2)p=['imp',...p.slice(2)];
+ if(p[0]==='pf'&&p.length>2)p=['pf',...p.slice(2)];
+ if(p[0]==='ref')p=p.slice(0,-1);
+ if(p[0]==='vent')p=p.slice(0,2);
+ if(['esq','piso','rod','forro'].includes(p[0])&&p.length===2&&p[1]!=='ind')p=[p[0],'*'];
+ p=p.filter(s=>!/^S\d+$/.test(s));return p.join('.');}
+function orcRegra(St,t){const v=St.orc.vinc&&St.orc.vinc[t.key];return v?Object.assign({usuario:true},v):orcSugestao(t,St);}
+function orcAreaDesc(d){const m=String(d||'').match(/(\d+(?:[.,]\d+)?)\s*[×x]\s*(\d+(?:[.,]\d+)?)/);return m?(+m[1].replace(',','.'))*(+m[2].replace(',','.')):null;}
+/* preço de um código no estado (composição ou insumo com prefixo I) */
+function orcPreco(D,cod,des){const k=des==='com'?1:0;cod=String(cod);
+ if(cod[0]==='I'){const v=D.u.i[cod.slice(1)];const c=D.cat.i[cod.slice(1)];return{p:v?v[k]:null,sp:!!(v&&v[2]),as:0,desc:c?c[0]:'(insumo inexistente neste mês)',un:c?c[1]:'',existe:!!c};}
+ const v=D.u.c[cod];const c=D.cat.c[cod];return{p:v?v[k]:null,sp:!!(v&&v[4]),as:v?(v[k?3:2]||0):0,desc:c?c[0]:'(composição inexistente neste mês)',un:c?c[1]:'',existe:!!c};}
+/* horas de mão de obra (Hh) por unidade, pelo analítico: soma dos profissionais "COM ENCARGOS COMPLEMENTARES" em todos os níveis
+   (inclui operadores dentro do custo horário produtivo dos equipamentos — CHP; o improdutivo — CHI — não soma horas) */
+const ORC_MO=/COM ENCARGOS COMPLEMENTARES/;
+function orcHh(D,cod,prof){cod=String(cod);if(cod[0]==='I')return 0;const key=D.mes+'/'+cod;if(ORC.hh[key]!=null)return ORC.hh[key];
+ const c=D.cat.c[cod];if(c&&c[1]==='H'&&ORC_MO.test(c[0]))return ORC.hh[key]=1;
+ const it=D.cat.a[cod];if(!it||(prof|0)>8)return ORC.hh[key]=0;let h=0;
+ for(const [t,cc,coef] of it){if(t!=='C'||!coef)continue;const s=D.cat.c[cc];if(!s)continue;if(s[1]==='H'&&ORC_MO.test(s[0]))h+=coef;else if(s[1]!=='CHI')h+=coef*orcHh(D,cc,(prof|0)+1);}
+ return ORC.hh[key]=h;}
+function orcLinha(St,t,D){const des=St.orc.des;const regra=orcRegra(St,t);const man=+((St.orc.preco||{})[t.key])||0;
+ const R={regra,comps:[],p:0,hhUn:0,st:'ok',sp:false,as:0,aviso:''};
+ /* sem preço SINAPI: 1º o preço digitado; 2º (se ligado) o preço de referência do PlantaCalc; senão fica pendente */
+ const fb=av=>{R.aviso=av;if(man>0){R.st='man';R.p=man;}else if(St.orc.ref&&t._p0>0){R.st='ref';R.p=t._p0;R.rcls=t._pcls||null;}else{R.st='pend';R.p=0;}return R;};
+ if(!regra){R.hhUn=t.hh||0;return fb('Sem vínculo SINAPI sugerido.');}
+ if(regra.incl){R.st='incl';return R;}
+ if(regra.sem||!regra.comps||!regra.comps.length){R.hhUn=t.hh||0;return fb(regra.obs||'Sem composição SINAPI equivalente.');}
+ const area=orcAreaDesc(t.desc);let falta=false;
+ for(const c of regra.comps){let fa=1;if(c.fdesc==='area'||regra.fdesc==='area'){if(area)fa=area;else R.aviso='Não achei as dimensões na descrição; usei 1 m² por unidade.';}const f=(+c.f||1)*fa;const P=orcPreco(D,c.cod,des);const hh=orcHh(D,c.cod);R.comps.push({cod:String(c.cod),f,p:P.p,desc:P.desc,un:P.un,sp:P.sp,as:P.as,hh,existe:P.existe});
+  if(P.p==null)falta=true;else R.p+=f*P.p;R.hhUn+=f*hh;if(P.sp)R.sp=true;R.as=Math.max(R.as,P.as);}
+ if(falta)fb(R.comps.some(c=>!c.existe)?'Código não existe neste mês do SINAPI.':'Sem custo publicado pelo SINAPI (nem em São Paulo).');
+ return R;}
+function orcLeitura(){return typeof isPro==='function'&&!isPro()&&typeof MON!=='undefined'&&!!MON.user&&!!MON.validade;}
+function orcAtivo(St){return !!(St&&St.orc&&St.orc.on&&St.orc.uf&&St.orc.mes&&typeof isPro==='function'&&(isPro()||orcLeitura()));}
+function orcD(St){const D=orcDados(St.orc.mes,St.orc.uf);return D&&!D.erro?D:null;}
+
+/* ---------- BDI pela fórmula do TCU ---------- */
+function orcBDI(St,forn){const b=forn?Object.assign({},ORC_BDIF0,St.orc.bdiF||{},{tipo:'forn'}):Object.assign({},ORC_BDI0,St.orc.bdi||{});const f=k=>(+b[k]||0)/100;
+ const cprb=St.orc.des==='com'?f('cprb'):0;const I=f('pis')+f('cofins')+f('iss');
+ const num=(1+f('ac')+f('sg')+f('r'))*(1+f('df'))*(1+f('l'));
+ /* BDI arredondado em 2 casas percentuais (ex.: 22,23%), como se publica no orçamento */
+ const bdi=Math.round((num/(1-I-cprb)-1)*10000)/10000,bdiSem=Math.round((num/(1-I)-1)*10000)/10000;const T=ORC_TIPOS[b.tipo]||ORC_TIPOS.edif;
+ const FX=forn?ORC_FAIXA_F:b.tipo==='edif'?ORC_FAIXA:null;const pre=forn?'Fornecimento: ':'';
+ const av=[];if(bdiSem*100<T[1]-0.005||bdiSem*100>T[3]+0.005)av.push(`${pre}BDI ${nf(bdiSem*100)}% (sem CPRB) fora da faixa do TCU para ${T[0].toLowerCase()}: ${nf(T[1])}% a ${nf(T[3])}%.`);
+ if(FX)for(const [k,nm] of [['ac','Administração central'],['sg','Seguro + garantia'],['r','Risco'],['df','Despesas financeiras'],['l','Lucro']]){const v=+b[k]||0,F=FX[k];if(v<F[0]-1e-9||v>F[2]+1e-9)av.push(`${pre}${nm} ${nf(v)}% fora da faixa ${nf(F[0])}% a ${nf(F[2])}%.`);}
+ return{b,bdi,bdiSem,I,cprb,T,av,FX,forn:!!forn};}
+
+/* ---------- aplica o orçamento sobre o quantitativo (preço e Hh de cada linha) ---------- */
+/* ---------- resumo do orçamento ---------- */
+function orcResumo(St,Qq){const B=orcBDI(St);const L=[];Qq.forEach(g=>g.itens.forEach(t=>{if(t.orc)L.push(t);}));
+ const F=L.filter(t=>orcForn(St,t)&&t.orc.st!=='incl');const BF=F.length?orcBDI(St,true):null;const bi=t=>BF&&orcForn(St,t)?BF.bdi:B.bdi;
+ const cd=sum(L,t=>orcTot(t));const pv=sum(L,t=>orcTotB(t,bi(t)));const so=st=>sum(L.filter(t=>t.orc.st===st),t=>orcTot(t));
+ const cdF=sum(F,t=>orcTot(t)),pvF=sum(F,t=>orcTotB(t,BF.bdi));
+ return{B,BF,bi,F,cdF,pvF,cd,pv,orig:{sinapi:so('ok'),ref:so('ref'),man:so('man')},hh:sum(L,t=>t.Hh),pend:L.filter(t=>t.orc.st==='pend'),man:L.filter(t=>t.orc.st==='man'),ref:L.filter(t=>t.orc.st==='ref'),sp:L.filter(t=>t.orc.sp),as:L.filter(t=>t.orc.as>0&&!t.orc.sp),incl:L.filter(t=>t.orc.st==='incl'),n:L.length};}
+/* banco de preço de cada linha, como nas planilhas de orçamento público */
+const orcBanco=o=>o.st==='ok'||o.st==='incl'?'SINAPI':o.st==='ref'?'Referência':'Próprio';
+const orcCodsTxt=(o,sep)=>o.st==='ok'?o.comps.map(c=>c.cod).join(sep||' + '):'';
+
+/* ---------- tela ---------- */
+(function(){const st=document.createElement('style');st.textContent=`
+.orc{font-size:13px}.orc .ob{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin:4px 0 10px}
+.orc .ob label{display:block;font-size:11px;color:var(--mut,#66707a);margin-bottom:2px}.orc select,.orc input.oi{font:inherit;padding:5px 7px;border:1px solid #cdd5db;border-radius:6px;background:#fff}
+.orc .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:8px 0 10px}.orc .cd{border:1px solid #dfe5e9;border-radius:9px;padding:8px 10px;background:#fff}
+.orc .cd small{display:block;color:#66707a;font-size:11px}.orc .cd b{font-size:16px;font-variant-numeric:tabular-nums}.orc .cd.v b{color:#257126}
+.orc .av{border-radius:8px;padding:8px 10px;margin:6px 0;font-size:12.5px}.orc .av.y{background:#fff7e6;border:1px solid #f1d9a6;color:#6b4300}.orc .av.r{background:#fdeeee;border:1px solid #f2c5c2;color:#7d1a12}.orc .av.g{background:#eef8ef;border:1px solid #cfe8d2;color:#1b5e20}
+.orc .tw{overflow-x:auto}.orc table.q td.cod{white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:12px}
+.orc .chip{display:inline-block;font-size:10.5px;font-weight:700;border-radius:10px;padding:1px 6px;margin-left:4px;vertical-align:1px}
+.orc .chip.sp{background:#fdeeee;color:#a3241a}.orc .chip.as{background:#fff2d9;color:#8a5a00}.orc .chip.pd{background:#a3241a;color:#fff}.orc .chip.mn{background:#e8eefc;color:#1d4ed8}.orc .chip.in{background:#eef1f3;color:#55606a}.orc .chip.us{background:#e8f3e9;color:#1b5e20}
+.orc .sd{display:block;color:#66707a;font-size:11.5px;margin-top:2px}.orc tr.pd td{background:#fff8f7}
+.orc .lk{border:0;background:none;color:#1d4ed8;cursor:pointer;font:inherit;font-size:12px;padding:0;text-decoration:underline}
+.orc .ed{background:#f6f8f9;border:1px solid #dfe5e9;border-radius:8px;padding:10px;margin:4px 0}.orc .ed .res{max-height:260px;overflow:auto;margin-top:6px}
+.orc .ed .res div{padding:5px 6px;border-bottom:1px solid #e6eaed;cursor:pointer}.orc .ed .res div:hover{background:#eef6e0}
+.orc .bdi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0}.orc .bdi .fx{font-size:10.5px;color:#66707a}
+.orc .ini{max-width:560px;border:1px solid #dfe5e9;border-radius:12px;padding:16px 18px;background:#fff;margin:10px 0}
+.orc input.pm{width:92px;text-align:right}
+.orc .chip.rf{background:#efe9fb;color:#5b3aa6}.orc .chip.fo{background:#e3f1fb;color:#0f5a8a}
+.orc .orig{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:#3c464f;margin:-2px 0 8px}.orc .orig b{font-variant-numeric:tabular-nums}.orc .orig i{font-style:normal;color:#66707a}
+.orc .mu{display:none}.orc.ro [disabled]{opacity:.55;cursor:not-allowed}.orc.ro #oDesl{display:none}.orc .oab{border:0;background:none;color:#1d4ed8;font:inherit;font-size:12px;text-decoration:underline;padding:0 0 0 6px;cursor:pointer;white-space:nowrap}
+.orc tr.ab .oab::after,.orc.tudo .oab::after{content:' ▴'}.orc tr:not(.ab) .oab::after{content:' ▾'}.orc.tudo .oab{display:none!important}
+/* 3.2 linhas compactas: composição, observação e memória completas abrem em "detalhes" ou em "Expandir tudo" */
+.orc table.q[data-orctab] td.oi-de .sd{display:none}.orc table.q[data-orctab] tr.ab td.oi-de .sd,.orc.tudo table.q[data-orctab] td.oi-de .sd{display:block}
+.orc table.q[data-orctab] td.oi-mem{max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.orc table.q[data-orctab] tr.ab td.oi-mem,.orc.tudo table.q[data-orctab] td.oi-mem{white-space:normal}
+@media(max-width:700px){
+ #qBody table.q:not([data-orctab]){display:block;overflow-x:auto;max-width:100%}
+ .orc .tw{overflow:visible}.orc table.q[data-orctab],.orc table.q[data-orctab] tbody{display:block;width:100%}.orc table.q[data-orctab] thead{display:none}
+ .orc table.q[data-orctab] tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px 8px;border:1px solid #dfe5e9;border-radius:10px;padding:8px 10px;margin:0 0 8px;background:#fff}
+ .orc table.q[data-orctab] tr.pd{background:#fff8f7;border-color:#f2c5c2}.orc table.q[data-orctab] tr.pd td{background:none}
+ .orc table.q[data-orctab] td{display:block;border:0;padding:0;min-width:0}
+ .orc table.q[data-orctab] tr.g,.orc table.q[data-orctab] tr.t{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;background:#eef6e0;border-color:#cfe3b4}
+ .orc table.q[data-orctab] tr.g td,.orc table.q[data-orctab] tr.t td{background:none}.orc table.q[data-orctab] tr.g td:empty,.orc table.q[data-orctab] tr.t td:empty{display:none}
+ .orc table.q[data-orctab] tr.g td.n:last-of-type,.orc table.q[data-orctab] td.ghh{display:none}
+ .orc table.q[data-orctab] td.oi-it{grid-column:1/-1;font-size:12px;color:#66707a}.orc table.q[data-orctab] td.oi-de{grid-column:1/-1;font-weight:600;margin-bottom:4px}.orc table.q[data-orctab] td.oi-de .sd{font-weight:400}
+ .orc table.q[data-orctab] td.oi-un{display:none!important}.orc .mu{display:inline}
+ .orc table.q[data-orctab] td.oi-q,.orc table.q[data-orctab] td.oi-pu,.orc table.q[data-orctab] td.oi-tot{text-align:left!important;white-space:normal}
+ .orc table.q[data-orctab] td.oi-q::before,.orc table.q[data-orctab] td.oi-pu::before,.orc table.q[data-orctab] td.oi-tot::before,.orc table.q[data-orctab] td.oi-cod::before,.orc table.q[data-orctab] td.oi-hh::before,.orc table.q[data-orctab] td.oi-mem::before{content:attr(data-l);display:block;font-size:11px;font-weight:400;color:#66707a}
+ .orc table.q[data-orctab] td.oi-it{order:1}.orc table.q[data-orctab] td.oi-de{order:2}.orc table.q[data-orctab] td.oi-q{order:3}.orc table.q[data-orctab] td.oi-pu{order:4}.orc table.q[data-orctab] td.oi-tot{order:5}.orc table.q[data-orctab] td.oi-cod{order:6}.orc table.q[data-orctab] td.oi-hh{order:7;text-align:left!important}.orc table.q[data-orctab] td.oi-mem{order:8}
+ .orc table.q[data-orctab] td.oi-tot{font-weight:700}.orc input.pm{width:100%;max-width:120px}
+ .orc table.q[data-orctab] td.oi-cod,.orc table.q[data-orctab] td.oi-hh,.orc table.q[data-orctab] td.oi-mem,.orc table.q[data-orctab] td.oi-de .sd{display:none}
+ .orc table.q[data-orctab] tr.ab td.oi-cod,.orc table.q[data-orctab] tr.ab td.oi-hh,.orc.tudo table.q[data-orctab] td.oi-cod,.orc.tudo table.q[data-orctab] td.oi-hh{display:block;margin-top:6px}.orc table.q[data-orctab] tr.ab td.oi-mem,.orc.tudo table.q[data-orctab] td.oi-mem{display:block;grid-column:1/-1;margin-top:6px;max-width:none}.orc table.q[data-orctab] tr.ab td.oi-de .sd,.orc.tudo table.q[data-orctab] td.oi-de .sd{display:block}
+ .orc .oab{display:block;border:0;background:none;color:#1d4ed8;font:inherit;font-size:12px;font-weight:400;text-decoration:underline;padding:4px 0 0;min-height:32px;cursor:pointer}
+}
+details.qres{margin:6px 0 10px;border:1px solid #dfe5e9;border-radius:10px;padding:6px 12px;background:#fff}details.qres>summary{cursor:pointer;font-weight:600;color:var(--g1,#257126);min-height:32px;line-height:32px}
+#qtabs .qoS{display:none}@media(max-width:700px){#qtabs .qoL{display:none}#qtabs .qoS{display:inline;white-space:nowrap}}
+`;document.head.appendChild(st);})();
+
+/* com orçamento ligado, no celular os cartões de resumo do quantitativo ficam recolhidos para o orçamento aparecer logo */
+function orcHTML(){
+ const RO=!(typeof isPro==='function'&&isPro())&&orcLeitura()&&S.orc&&S.orc.on;
+ if(!RO&&(typeof isPro!=='function'||!isPro()))return `<div class="orc"><div class="av g" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:220px"><b>Orçamento SINAPI</b> — transforme este quantitativo em orçamento com as composições do SINAPI do seu estado, BDI do TCU, curva ABC e composições analíticas. Recurso do plano Pro.</span><button class="btn sm" id="oPro">Conhecer o Pro</button></div></div>`;
+ if(!ORC.idx){orcIndice().then(()=>{try{renderView();}catch(e){}});return '<div class="orc"><p class="note">Carregando a base SINAPI…</p></div>';}
+ const idx=ORC.idx,meses=Object.keys(idx.meses||{}).sort();
+ if(!meses.length)return `<div class="orc"><div class="av y">A base SINAPI ainda não foi publicada${ORC.idxErro&&ORC.idxErro!=='vazio'?' (erro: '+esc(ORC.idxErro)+')':''}. Assim que o mês for publicado, o orçamento fica disponível aqui.</div><button class="btn" id="oRec">Tentar de novo</button></div>`;
+ const O=S.orc;const ufsMes=m=>(idx.meses[m]||{}).ufs||[];
+ if(!O||!O.on){const ufIni=(O&&O.uf)||(MON&&MON.uf)||'MG';
+  return `<div class="orc"><div class="ini" style="max-width:none"><h3 style="margin:0 0 4px">Orçar este quantitativo pelo SINAPI</h3><p class="note">Cada linha abaixo recebe a composição SINAPI sugerida, com custo unitário, total e Hh. Você revisa os vínculos, completa os itens sem equivalente e ajusta o BDI.</p>
+  <div class="ob"><div><label>Estado (preços)</label><select id="oUF0">${ufsMes(idx.atual).map(u=>`<option value="${u}"${u===ufIni?' selected':''}>${u} — ${ORC_UFS[u]}</option>`).join('')}</select></div>
+  <div><label>Encargos sociais</label><select id="oDes0"><option value="sem">Sem desoneração</option><option value="com">Com desoneração</option></select></div>
+  <div><label>Data-base</label><div style="padding:6px 0"><b>${orcMesNome(idx.atual)}</b> (mês atual)</div></div></div>
+  <button class="btn pri" id="oGerar">Gerar orçamento</button></div></div>`;}
+ const D=orcDados(O.mes,O.uf);
+ if(!D)return `<div class="orc"><p class="note">Carregando preços de ${O.uf} — ${orcMesNome(O.mes)}…</p></div>`;
+ if(D.erro)return `<div class="orc"><div class="av r">${esc(D.erro)}</div><button class="btn" id="oTrocaMes">Usar o mês atual (${orcMesNome(idx.atual)})</button></div>`;
+ const R=orcResumo(S,Q),B=R.B,enc=D.u.encargos||{};setTimeout(orcObsPend,2000);
+ const novo=idx.atual&&idx.atual>O.mes;
+ let h=`<div class="orc${ORC.tudo?' tudo':''}${RO?' ro':''}"><h3 class="sec" style="margin:14px 0 4px">Orçamento SINAPI</h3>${RO?`<div class="av y" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:220px"><b>O seu plano Pro venceu.</b> Este orçamento abre só para consulta. Para editar, atualizar o mês ou exportar, renove o Pro.</span><button class="btn sm" id="oRenova">Renovar o Pro</button></div>`:''}<div class="ob">
+  <div><label>Estado (preços)</label><select id="oUF">${ufsMes(O.mes).map(u=>`<option value="${u}"${u===O.uf?' selected':''}>${u} — ${ORC_UFS[u]}</option>`).join('')}</select></div>
+  <div><label>Encargos sociais</label><select id="oDes"><option value="sem"${O.des!=='com'?' selected':''}>Sem desoneração</option><option value="com"${O.des==='com'?' selected':''}>Com desoneração</option></select></div>
+  <div><label>Data-base</label><div style="padding:6px 0"><b>SINAPI ${orcMesNome(O.mes)}</b> · ${esc(D.u.localidade||O.uf)}</div></div>
+  <div><label>BDI</label><button class="btn" id="oBDIb">${nf(B.bdi*100)}%${R.BF?' · '+nf(R.BF.bdi*100)+'%':''} ${ORC.abreBDI?'▴':'▾'}</button></div>
+  <div style="flex:1"></div>
+  <div><label>Exportar o orçamento</label><div class="btns" style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" id="oXls">Excel</button><button class="btn" id="oPdf">PDF</button><button class="btn" id="oAbc">Curva ABC</button><button class="btn" id="oAna">Composições</button></div></div></div>`;
+ if(novo&&!RO)h+=`<div class="av g">Já saiu o SINAPI de <b>${orcMesNome(idx.atual)}</b>. Este orçamento continua em ${orcMesNome(O.mes)} até você atualizar (ao atualizar, também passa a usar os vínculos padrão mais recentes). <button class="btn sm" id="oAtual">Atualizar para o mês atual</button></div>`;
+ if(ORC.abreBDI)h+=orcBDIHTML(B)+orcBDIFHTML(R);
+ const pc=v=>R.cd>0?nf(v/R.cd*100,1)+'%':'—';
+ h+=`<div class="cards"><div class="cd"><small>Custo direto</small><b>R$ ${nf(R.cd)}</b></div><div class="cd"><small>BDI ${R.BF?'serviços ':''}${O.des==='com'?'(com CPRB)':''}</small><b>${nf(B.bdi*100)}%</b></div>${R.BF?`<div class="cd"><small>BDI fornecimento</small><b>${nf(R.BF.bdi*100)}%</b></div>`:''}<div class="cd v"><small>Preço com BDI</small><b>R$ ${nf(R.pv)}</b></div>
+  <div class="cd"><small>Encargos ${O.des==='com'?'com':'sem'} desoneração</small><b>${enc.semH!=null?nf(O.des==='com'?enc.comH:enc.semH)+'% / '+nf(O.des==='com'?enc.comM:enc.semM)+'%':'—'}</b></div></div>`;
+ h+=`<div class="orig"><span><i>Origem do custo direto:</i></span><span>SINAPI <b>R$ ${nf(R.orig.sinapi)}</b> <i>(${pc(R.orig.sinapi)})</i></span>${O.ref||R.orig.ref?`<span>Referência PlantaCalc <b>R$ ${nf(R.orig.ref)}</b> <i>(${pc(R.orig.ref)})</i></span>`:''}<span>Informado por você <b>R$ ${nf(R.orig.man)}</b> <i>(${pc(R.orig.man)})</i></span>${R.BF?`<span><i>Fornecimento (BDI diferenciado):</i> <b>R$ ${nf(R.cdF)}</b></span>`:''}</div>`;
+ if(R.pend.length)h+=`<div class="av r"><b>${R.pend.length} ${R.pend.length>1?'itens sem preço':'item sem preço'}</b> — sem composição SINAPI equivalente ou sem custo publicado. Digite o custo unitário na linha (fica marcado como “informado”)${O.ref?'':' ou troque o vínculo'}${O.ref?' ou troque o vínculo (estes não têm preço de referência)':''}. Enquanto isso, ${R.pend.length>1?'eles entram':'ele entra'} com R$ 0,00.</div>`;
+ if(R.ref.length)h+=`<div class="av y"><b>${R.ref.length} ${R.ref.length>1?'itens usam':'item usa'} o preço de referência do PlantaCalc</b> (<span class="chip rf">ref. PlantaCalc</span>): valor aproximado, sem composição SINAPI. Revise ou digite o seu preço na linha.</div>`;
+ if(R.sp.length)h+=`<div class="av y">${R.sp.length} ${R.sp.length>1?'itens usam':'item usa'} o custo de <b>São Paulo</b> porque ${O.uf} não tem custo publicado (marcado <span class="chip sp">SP</span>). ${R.as.length?R.as.length+' outros têm parte do custo completada pela CAIXA com preços de SP (<span class="chip as">%AS</span>).':''}</div>`;
+ const avB=B.av.concat(R.BF?R.BF.av:[]);if(avB.length)h+=`<div class="av y">${avB.map(esc).join('<br>')}</div>`;
+ h+=`<div class="ob" style="margin:4px 0"><div><label>Mostrar</label><select id="oFil"><option value="todos">Todos os itens</option><option value="pend"${ORC.filtro==='pend'?' selected':''}>Só sem preço (${R.pend.length})</option><option value="sp"${ORC.filtro==='sp'?' selected':''}>Com custo de SP ou %AS (${R.sp.length+R.as.length})</option><option value="fo"${ORC.filtro==='fo'?' selected':''}>Fornecimento – BDI diferenciado (${R.F.length})</option><option value="us"${ORC.filtro==='us'?' selected':''}>Vínculos alterados por você</option></select></div><div><label>Detalhes</label><button class="btn" id="oTudo">${ORC.tudo?'Recolher tudo':'Expandir tudo'}</button></div>
+  <div class="note" style="flex:1;align-self:center">Vínculos sugeridos pelo PlantaCalc — revise: clique no código SINAPI para trocar. Custos sem BDI (custo direto); o preço com BDI está no resumo e nas exportações. Hh pelas horas do SINAPI.</div></div>`;
+ h+=`<div class="tw"><table class="q" data-orctab="1"><thead><tr><th>Item</th><th>Descrição</th><th>Un</th><th class="n">Quant.</th><th>SINAPI</th><th class="n">Custo unit. (R$)</th><th class="n">Total (R$)</th><th class="n">Hh</th><th>Memória de cálculo</th></tr></thead><tbody>`;
+ for(const g of Q){const its=g.itens.filter(t=>t.orc&&(ORC.filtro==='todos'||(ORC.filtro==='pend'&&t.orc.st==='pend')||(ORC.filtro==='sp'&&(t.orc.sp||t.orc.as>0))||(ORC.filtro==='ref'&&t.orc.st==='ref')||(ORC.filtro==='fo'&&orcForn(S,t))||(ORC.filtro==='us'&&t.orc.regra&&t.orc.regra.usuario)));if(!its.length)continue;
+  h+=`<tr class="g"><td>${g.cod}</td><td colspan="5">${esc(g.nome)} <span style="font-weight:400;color:#66707a">· incerteza ±${g.inc}%</span></td><td class="n">${nf(sum(g.itens.filter(t=>t.orc),t=>orcTot(t)))}</td><td class="n ghh">${nf(sum(g.itens,t=>t.Hh),0)}</td><td></td></tr>`;
+  for(const t of its){const o=t.orc,r=o.regra||{};const ch=[];
+   if(o.st==='pend')ch.push('<span class="chip pd">sem preço</span>');if(o.st==='man')ch.push('<span class="chip mn">informado</span>');if(o.st==='incl')ch.push('<span class="chip in">incluso</span>');if(o.st==='ref')ch.push('<span class="chip rf" title="Preço de referência do PlantaCalc: sem composição SINAPI">ref. PlantaCalc</span>');if(orcForn(S,t)&&o.st!=='incl')ch.push('<span class="chip fo" title="Fornecimento de materiais ou equipamentos: usa o BDI diferenciado">fornecimento</span>');
+   if(o.sp)ch.push('<span class="chip sp" title="Custo de São Paulo: o estado não tem custo publicado">SP</span>');else if(o.as>0)ch.push(`<span class="chip as" title="Parte do custo completada pela CAIXA com preços de São Paulo">${nf(o.as,0)}% AS</span>`);
+   if(r.usuario)ch.push('<span class="chip us">alterado</span>');else if(r.padrao)ch.push('<span class="chip in" title="Vínculo padrão revisado pela equipe do PlantaCalc">revisado</span>');
+   const cods=o.st==='incl'?'—':o.comps.length?o.comps.map(c=>esc(c.cod)).join('<br>'):'—';
+   const sd=o.st==='incl'?esc(typeof r.incl==='string'&&!/^[a-z_]+$/.test(r.incl)?r.incl:'Já incluído em outra composição deste orçamento.'):o.comps.length?o.comps.map(c=>`${c.f!==1?nf(c.f,c.f<1?4:2)+' × ':''}${esc(trunc(c.desc,120))} (${esc(c.un)})`).join('<br>'):esc(o.aviso||'');
+   const pu=o.st==='pend'||o.st==='man'||o.st==='ref'?`<input class="oi pm" data-opm="${esc(t.key)}" inputmode="decimal" value="${o.st==='man'?nf(o.p):''}" placeholder="${o.st==='ref'?nf(orcR2(o.p)):'R$'}"${o.st==='ref'?' title="Preço de referência — digite o seu para substituir"':''}>`:nf(orcR2(o.p));
+   h+=`<tr class="${o.st==='pend'?'pd':''}${ORC.abertos&&ORC.abertos.has(t.key)?' ab':''}" data-ok="${esc(t.key)}"><td class="oi-it">${t.cod}</td><td class="oi-de">${esc(t.desc)}${ch.join('')}<span class="sd">${sd}${o.aviso&&o.comps.length?' — '+esc(o.aviso):''}${r.obs&&!r.usuario&&r.obs!==o.aviso?'<br><i>'+esc(r.obs)+'</i>':''}</span><button class="oab" data-oab>detalhes</button>${ORC.edita===t.key?orcEditorHTML(t):''}</td><td class="oi-un">${t.un}</td><td class="n oi-q" data-l="Quant.">${nf(t.q,t.un==='un'?0:2)}<span class="mu"> ${t.un}</span></td><td class="cod oi-cod" data-l="SINAPI (trocar)"><button class="lk" data-oed="${esc(t.key)}" title="Trocar a composição">${cods}</button></td><td class="n oi-pu" data-l="Custo unit.">${pu}</td><td class="n oi-tot" data-l="Total">${o.st==='incl'?'—':nf(orcTot(t))}</td><td class="n oi-hh" data-l="Hh">${nf(t.Hh,1)}</td><td class="m oi-mem" data-l="Memória de cálculo">${esc(t.mem||'')}</td></tr>`;}}
+ h+=`<tr class="t"><td></td><td colspan="5">CUSTO DIRETO</td><td class="n">${nf(R.cd)}</td><td class="n ghh">${nf(R.hh,0)}</td><td></td></tr><tr class="t"><td></td><td colspan="5">PREÇO TOTAL COM BDI (${R.BF?`serviços ${nf(B.bdi*100)}% · fornecimento ${nf(R.BF.bdi*100)}%`:nf(B.bdi*100)+'%'})</td><td class="n">${nf(R.pv)}</td><td></td><td></td></tr></tbody></table></div>
+  <p class="note">Fonte: SINAPI/CAIXA ${orcMesNome(O.mes)}, ${esc(D.u.localidade||O.uf)}, ${O.des==='com'?'com':'sem'} desoneração. Hh pelas horas de mão de obra do relatório analítico. <button class="lk" id="oDesl">Desligar o orçamento SINAPI deste projeto</button></p></div>`;
+ return h;}
+
+function orcBDIHTML(B){const b=B.b,F=ORC_FAIXA,ed=b.tipo==='edif';
+ const fld=(k,nm,fx)=>`<div><label>${nm} (%)</label><input class="oi" data-obdi="${k}" inputmode="decimal" value="${nf(+b[k]||0)}" style="width:100%">${fx?`<div class="fx">${fx}</div>`:''}</div>`;
+ const fxs=k=>ed&&F[k]?`TCU: ${nf(F[k][0])} · ${nf(F[k][1])} · ${nf(F[k][2])}`:'';
+ return `<div class="ed"><b>BDI — fórmula do Acórdão TCU 2.622/2013</b><div class="note">BDI = [(1 + AC + S + R + G) × (1 + DF) × (1 + L) ÷ (1 − I)] − 1, com I = PIS + COFINS + ISS${S.orc.des==='com'?' + CPRB (orçamento com desoneração)':''}.</div>
+  <div class="ob"><div><label>Tipo de obra (faixas do TCU)</label><select id="oTipo">${Object.entries(ORC_TIPOS).map(([k,v])=>`<option value="${k}"${k===b.tipo?' selected':''}>${v[0]} — ${nf(v[1])}% a ${nf(v[3])}%</option>`).join('')}</select></div><div><button class="btn sm" id="oBDImed">Usar valores médios do TCU</button></div></div>
+  <div class="bdi">${fld('ac','Administração central',fxs('ac'))}${fld('sg','Seguro + garantia',fxs('sg'))}${fld('r','Risco',fxs('r'))}${fld('df','Despesas financeiras',fxs('df'))}${fld('l','Lucro',fxs('l'))}
+  ${fld('pis','PIS','')}${fld('cofins','COFINS','')}${fld('iss','ISS','alíquota × base (ex.: 5% × 40% = 2%)')}${S.orc.des==='com'?fld('cprb','CPRB','Lei 12.546/2011 — 4,5% construção'):''}</div>
+  <div>BDI calculado: <b>${nf(B.bdi*100)}%</b>${S.orc.des==='com'?` (sem a CPRB: ${nf(B.bdiSem*100)}%)`:''} · faixa do TCU para ${esc(B.T[0].toLowerCase())}: ${nf(B.T[1])}% (1º quartil) · ${nf(B.T[2])}% (médio) · ${nf(B.T[3])}% (3º quartil)${b.tipo!=='edif'?'. As faixas por parcela acima são de edifícios; para este tipo o PlantaCalc confere só o BDI final.':''}</div></div>`;}
+
+function orcBDIFHTML(R){const n=Object.keys(S.orc.forn||{}).length;
+ if(!R.BF)return `<div class="ed"><b>BDI diferenciado — fornecimento de materiais e equipamentos</b><div class="note">O Acórdão TCU 2.622/2013 prevê um BDI menor (11,10% a 16,80%) para materiais e equipamentos de valor relevante comprados para a obra. Para usar, clique no código SINAPI do item e escolha “Marcar como fornecimento”.${n?' Os itens marcados estão como “incluso” ou fora do orçamento.':''}</div></div>`;
+ const BF=R.BF,b=BF.b,F=ORC_FAIXA_F;const fld=(k,nm,fx)=>`<div><label>${nm} (%)</label><input class="oi" data-obdif="${k}" inputmode="decimal" value="${nf(+b[k]||0)}" style="width:100%">${fx?`<div class="fx">${fx}</div>`:''}</div>`;
+ const fxs=k=>`TCU: ${nf(F[k][0])} · ${nf(F[k][1])} · ${nf(F[k][2])}`;
+ return `<div class="ed"><b>BDI diferenciado — fornecimento de materiais e equipamentos</b> <span class="note">(${R.F.length} ${R.F.length>1?'itens marcados':'item marcado'}, custo direto R$ ${nf(R.cdF)})</span>
+  <div class="ob"><div><button class="btn sm" id="oBDIFmed">Usar valores médios do TCU</button></div></div>
+  <div class="bdi">${fld('ac','Administração central',fxs('ac'))}${fld('sg','Seguro + garantia',fxs('sg'))}${fld('r','Risco',fxs('r'))}${fld('df','Despesas financeiras',fxs('df'))}${fld('l','Lucro',fxs('l'))}
+  ${fld('pis','PIS','')}${fld('cofins','COFINS','')}${fld('iss','ISS','confira a regra do município para venda de materiais')}${S.orc.des==='com'?fld('cprb','CPRB',''):''}</div>
+  <div>BDI de fornecimento: <b>${nf(BF.bdi*100)}%</b>${S.orc.des==='com'?` (sem a CPRB: ${nf(BF.bdiSem*100)}%)`:''} · faixa do TCU: ${nf(BF.T[1])}% (1º quartil) · ${nf(BF.T[2])}% (médio) · ${nf(BF.T[3])}% (3º quartil)</div></div>`;}
+
+function orcEditorHTML(t){const o=t.orc,r=o.regra||{};const D=orcD(S);const res=ORC.busca&&ORC.busca.key===t.key?ORC.busca.res:[];
+ return `<div class="ed" data-oedbox="${esc(t.key)}"><div class="ob" style="margin:0"><div style="flex:1;min-width:200px"><label>Procurar composição SINAPI (palavras ou código)</label><input class="oi" id="oQ" style="width:100%" value="${esc(ORC.busca&&ORC.busca.key===t.key?ORC.busca.q:'')}" placeholder="ex.: alvenaria bloco cerâmico 14"></div>
+  <div><label>Quantidade SINAPI por ${esc(t.un)}</label><input class="oi" id="oF" style="width:90px" inputmode="decimal" value="${nf(o.comps.length===1?o.comps[0].f:1,4)}"></div></div>
+  <div class="res">${res.map(x=>`<div data-oesc="${x.cod}"><b>${x.cod}</b> · ${esc(trunc(x.desc,150))} <span class="note">(${esc(x.un)}) — R$ ${x.p==null?'sem custo':nf(x.p)}</span></div>`).join('')||(ORC.busca&&ORC.busca.key===t.key&&ORC.busca.q?'<div class="note">Nada encontrado.</div>':'')}</div>
+  <div class="btns" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${r.usuario?'<button class="btn sm" data-orest>Voltar à sugestão do PlantaCalc</button>':''}<button class="btn sm" data-oforn>${orcForn(S,t)?'Desmarcar fornecimento':'Marcar como fornecimento (BDI diferenciado)'}</button><button class="btn sm" data-osem>Sem equivalente (digitar preço)</button><button class="btn sm" data-oinc>Já incluído em outro item</button><button class="btn sm" data-ofech>Fechar</button></div></div>`;}
+
+function orcBuscar(q){const D=orcD(S);if(!D)return[];q=orcNorm(q).trim();if(!q)return[];
+ if(!D.cat._lista)D.cat._lista=Object.entries(D.cat.c).map(([cod,v])=>({cod,desc:v[0],un:v[1],n:orcNorm(v[0])}));
+ const ws=q.split(/\s+/).filter(Boolean);const out=[];const des=S.orc.des;
+ if(/^\d{3,7}$/.test(q)&&D.cat.c[q])out.push({cod:q,desc:D.cat.c[q][0],un:D.cat.c[q][1]});
+ for(const x of D.cat._lista){if(out.length>=40)break;if(x.cod===q)continue;if(ws.every(w=>x.n.includes(w)))out.push(x);}
+ return out.map(x=>Object.assign({},x,{p:orcPreco(D,x.cod,des).p}));}
+
+/* observações para o administrador (trocas, sem equivalente, preços digitados, itens sem preço) */
+function orcObs(linhas,apagar){try{if(!MON||!MON.sb||!MON.user||!linhas.length)return;const pj=(typeof PJ!=='undefined'&&PJ.atual)||'';
+ const rows=linhas.map(o=>({user_id:MON.user.id,projeto:pj,chave:String(o.t.key).slice(0,120),norm:orcNormKey(o.t.key).slice(0,120),descr:String(o.t.desc||'').slice(0,300),un:o.t.un,tipo:o.tipo,comps:o.comps||null,regra:o.regra||null,uf:S.orc.uf,mes:S.orc.mes,quando:new Date().toISOString()}));
+ if(apagar)MON.sb.from('sinapi_obs').delete().eq('user_id',MON.user.id).eq('projeto',pj).eq('chave',rows[0].chave).in('tipo',['troca','sem','incl']).then(()=>{},()=>{});
+ else MON.sb.from('sinapi_obs').upsert(rows,{onConflict:'user_id,projeto,chave,tipo'}).then(()=>{},()=>{});}catch(e){}}
+const ORC_PEND_ENV=new Set();
+function orcObsPend(){try{const pj=(typeof PJ!=='undefined'&&PJ.atual)||'';const k=pj+'|'+S.orc.mes+'|'+S.orc.uf;if(ORC_PEND_ENV.has(k))return;const L=Q.flatMap(g=>g.itens).filter(t=>t.orc&&t.orc.st==='pend');ORC_PEND_ENV.add(k);
+ if(L.length)orcObs(L.slice(0,300).map(t=>({t,tipo:'pendente',regra:t.orc.regra&&t.orc.regra.id||null})));}catch(e){}}
+function orcLinhaQ(key){return Q.flatMap(g=>g.itens).find(t=>t.key===key);}
+function orcSet(fn){mark();if(!S.orc.vinc)S.orc.vinc={};if(!S.orc.preco)S.orc.preco={};fn(S.orc);refresh();}
+function orcBind(){const on=(id,f)=>{const e=document.getElementById(id);if(e)e.onclick=f;};
+ if(document.querySelector('#qBody .orc.ro')){on('oRenova',()=>abrirPlanos('Renove o Pro para editar, atualizar e exportar o orçamento SINAPI.'));
+  on('oBDIb',()=>{ORC.abreBDI=!ORC.abreBDI;renderView();});on('oTudo',()=>{ORC.tudo=!ORC.tudo;renderView();});
+  const f=document.getElementById('oFil');if(f)f.onchange=()=>{ORC.filtro=f.value;renderView();};
+  $$('[data-oab]').forEach(e=>e.onclick=()=>{const tr=e.closest('tr');if(!tr)return;const k=tr.dataset.ok;ORC.abertos=ORC.abertos||new Set();tr.classList.toggle('ab');if(tr.classList.contains('ab'))ORC.abertos.add(k);else ORC.abertos.delete(k);});
+  document.querySelectorAll('#qBody .orc.ro select,#qBody .orc.ro input,#qBody .orc.ro button').forEach(e=>{if(!e.matches('#oFil,#oTudo,#oBDIb,#oRenova,[data-oab],.expl'))e.disabled=true;});
+  return;}
+ on('oPro',()=>abrirPlanos('O orçamento SINAPI (composições, BDI, curva ABC e composições analíticas) é do plano Pro.'));
+ on('oRec',async()=>{ORC.idx=null;await orcIndice(true);renderView();});
+ on('oGerar',()=>{const uf=$('#oUF0').value,des=$('#oDes0').value;mark();S.orc=Object.assign({vinc:{},preco:{},bdi:Object.assign({},ORC_BDI0,{tipo:'rod'})},S.orc||{},{on:true,uf,des,mes:ORC.idx.atual,criado:new Date().toISOString(),base:new Date().toISOString()});refresh();toast('Orçamento SINAPI gerado: '+uf+' · '+orcMesNome(ORC.idx.atual)+'.');});
+ on('oTrocaMes',()=>{orcSet(O=>{O.mes=ORC.idx.atual;});});
+ on('oAtual',()=>{const de=S.orc.mes,para=ORC.idx.atual;if(!confirm(`Atualizar os preços de ${orcMesNome(de)} para ${orcMesNome(para)}? (dá para desfazer com Ctrl+Z)`))return;
+  const R=orcResumo(S,Q);orcSet(O=>{O.hist=(O.hist||[]).concat([{mes:de,uf:O.uf,des:O.des,cd:R.cd,pv:R.pv,data:new Date().toISOString()}]).slice(-24);O.mes=para;O.base=new Date().toISOString();});toast('Orçamento atualizado para '+orcMesNome(para)+'.');});
+ on('oDesl',()=>{if(!confirm('Desligar o orçamento SINAPI deste projeto? Os vínculos e preços digitados ficam guardados se você ligar de novo.'))return;orcSet(O=>{O.on=false;});});
+ on('oTudo',()=>{ORC.tudo=!ORC.tudo;renderView();});on('oBDIb',()=>{ORC.abreBDI=!ORC.abreBDI;renderView();});
+ on('oBDIFmed',()=>orcSet(O=>{O.bdiF=Object.assign({},ORC_BDIF0);}));
+ $$('[data-obdif]').forEach(e=>e.onchange=()=>{const v=parseFloat(String(e.value).replace(/\./g,'').replace(',','.'));if(!isFinite(v)||v<0||v>60)return toast('Valor inválido.');orcSet(O=>{O.bdiF=Object.assign({},ORC_BDIF0,O.bdiF||{},{[e.dataset.obdif]:v});});});
+ $$('[data-oab]').forEach(e=>e.onclick=()=>{const tr=e.closest('tr');if(!tr)return;const k=tr.dataset.ok;ORC.abertos=ORC.abertos||new Set();tr.classList.toggle('ab');if(tr.classList.contains('ab'))ORC.abertos.add(k);else ORC.abertos.delete(k);});
+ on('oBDImed',()=>orcSet(O=>{const t=(O.bdi||{}).tipo||'rod';O.bdi=Object.assign({},ORC_BDI0,{tipo:t,iss:(O.bdi||{}).iss!=null?O.bdi.iss:ORC_BDI0.iss});}));
+ on('oXls',orcExcel);on('oPdf',()=>orcBaixarPDF('orc'));on('oAbc',()=>orcBaixarPDF('abc'));on('oAna',()=>orcBaixarPDF('ana'));
+ const sel=(id,f)=>{const e=document.getElementById(id);if(e)e.onchange=()=>f(e.value);};
+ sel('oUF',v=>orcSet(O=>{O.uf=v;}));sel('oRef',v=>orcSet(O=>{O.ref=v==='1';}));sel('oDes',v=>orcSet(O=>{O.des=v;}));sel('oFil',v=>{ORC.filtro=v;renderView();});
+ sel('oTipo',v=>orcSet(O=>{O.bdi=Object.assign({},ORC_BDI0,O.bdi||{},{tipo:v});}));
+ $$('[data-obdi]').forEach(e=>e.onchange=()=>{const v=parseFloat(String(e.value).replace(/\./g,'').replace(',','.'));if(!isFinite(v)||v<0||v>60)return toast('Valor inválido.');orcSet(O=>{O.bdi=Object.assign({},ORC_BDI0,O.bdi||{},{[e.dataset.obdi]:v});});});
+ $$('[data-opm]').forEach(e=>e.onchange=()=>{const s=String(e.value).trim();const v=s?parseFloat(s.replace(/\./g,'').replace(',','.')):0;if(s&&(!isFinite(v)||v<0))return toast('Preço inválido.');orcSet(O=>{if(v>0)O.preco[e.dataset.opm]=v;else delete O.preco[e.dataset.opm];});const t0=orcLinhaQ(e.dataset.opm);if(t0&&v>0)orcObs([{t:t0,tipo:'manual',comps:{p:v},regra:t0.orc&&t0.orc.regra&&t0.orc.regra.id}]);});
+ $$('[data-oed]').forEach(e=>e.onclick=()=>{const k=e.dataset.oed;ORC.edita=ORC.edita===k?null:k;ORC.busca=null;renderView();const q=$('#oQ');if(q)q.focus();});
+ const box=$('[data-oedbox]');if(box){const key=box.dataset.oedbox;const q=$('#oQ');let tm=null;
+  q.oninput=()=>{clearTimeout(tm);tm=setTimeout(()=>{ORC.busca={key,q:q.value,res:orcBuscar(q.value)};const pos=q.selectionStart;renderView();const q2=$('#oQ');if(q2){q2.focus();try{q2.setSelectionRange(pos,pos);}catch(e){}}},250);};
+  const fval=()=>{const v=parseFloat(String($('#oF').value).replace(/\./g,'').replace(',','.'));return isFinite(v)&&v>0?v:1;};
+  box.querySelectorAll('[data-oesc]').forEach(d=>d.onclick=()=>{const cod=d.dataset.oesc,f=fval();ORC.edita=null;ORC.busca=null;const t0=orcLinhaQ(key),sug=t0&&orcSugestao(t0,S);orcSet(O=>{O.vinc[key]={comps:[{cod,f}],obs:'Escolhido por você.'};});if(t0)orcObs([{t:t0,tipo:'troca',comps:[{cod,f}],regra:sug&&sug.id}]);});
+  const b=(sel,f)=>{const x=box.querySelector(sel);if(x)x.onclick=f;};
+  b('[data-orest]',()=>{ORC.edita=null;orcSet(O=>{delete O.vinc[key];});const t0=orcLinhaQ(key);if(t0)orcObs([{t:t0,tipo:'troca'}],true);});
+  b('[data-osem]',()=>{ORC.edita=null;const t0=orcLinhaQ(key),sug=t0&&orcSugestao(t0,S);orcSet(O=>{O.vinc[key]={sem:true,obs:'Marcado por você como sem equivalente SINAPI.'};});if(t0)orcObs([{t:t0,tipo:'sem',regra:sug&&sug.id}]);});
+  b('[data-oinc]',()=>{ORC.edita=null;const t0=orcLinhaQ(key),sug=t0&&orcSugestao(t0,S);orcSet(O=>{O.vinc[key]={incl:'Marcado por você como já incluído em outro item.'};});if(t0)orcObs([{t:t0,tipo:'incl',regra:sug&&sug.id}]);});
+  b('[data-oforn]',()=>{ORC.edita=null;const t0=orcLinhaQ(key);const marcar=!(S.orc.forn&&S.orc.forn[key]);orcSet(O=>{O.forn=Object.assign({},O.forn||{});if(marcar)O.forn[key]=1;else delete O.forn[key];});toast(marcar?'Item marcado como fornecimento: usa o BDI diferenciado.':'Item volta ao BDI de serviços.');});
+  b('[data-ofech]',()=>{ORC.edita=null;ORC.busca=null;renderView();});}}
+
+/* ---------- curva ABC e explosão em insumos ---------- */
+function orcABC(L,val){const a=L.filter(x=>val(x)>0).sort((x,y)=>val(y)-val(x));const T=sum(a,val)||1;let ac=0;
+ return a.map(x=>{ac+=val(x);const pa=ac/T;return{x,v:val(x),pct:val(x)/T,acum:pa,cl:pa-val(x)/T<0.8?'A':pa-val(x)/T<0.95?'B':'C'};});}
+function orcInsumos(St,Qq,D){const acc={};const des=St.orc.des,k=des==='com'?1:0;
+ const ex=(cod,q,d)=>{cod=String(cod);if(cod[0]==='I'){add(cod.slice(1),q);return;}const it=D.cat.a[cod];if(!it||!it.length||d>10){const v=D.u.c[cod];acc['C'+cod]=acc['C'+cod]||{cod,comp:true,q:0,p:v?v[k]:null};acc['C'+cod].q+=q;return;}
+  for(const [t,c,coef] of it){if(!coef)continue;if(t==='C')ex(c,q*coef,d+1);else add(c,q*coef);}};
+ const add=(cod,q)=>{const v=D.u.i[cod];const o=acc[cod]=acc[cod]||{cod,q:0,p:v?v[k]:null,sp:!!(v&&v[2])};o.q+=q;};
+ Qq.forEach(g=>g.itens.forEach(t=>{const o=t.orc;if(!o||o.st!=='ok')return;o.comps.forEach(c=>ex(c.cod,c.f*t.q,0));}));
+ return Object.values(acc).map(o=>{const c=o.comp?D.cat.c[o.cod]:D.cat.i[o.cod];return Object.assign(o,{desc:c?c[0]:'',un:c?c[1]:'',tot:(o.p||0)*o.q});});}
+/* composições usadas diretamente no orçamento (para o relatório analítico) */
+function orcCompsUsadas(Qq){const m=new Map();Qq.forEach(g=>g.itens.forEach(t=>{const o=t.orc;if(!o||o.st!=='ok')return;o.comps.forEach(c=>{if(c.cod[0]!=='I'&&!m.has(c.cod))m.set(c.cod,t);});}));return [...m.keys()];}
+function orcAnalitica(D,cod,des){const k=des==='com'?1:0;const c=D.cat.c[cod]||['',''];const v=D.u.c[cod];
+ const itens=(D.cat.a[cod]||[]).map(([t,cc,coef])=>{const P=t==='C'?D.u.c[cc]:D.u.i[cc];const C2=t==='C'?D.cat.c[cc]:D.cat.i[cc];const p=P?P[k]:null;return{t,cod:cc,desc:C2?C2[0]:'',un:C2?C2[1]:'',coef,p,tot:p!=null&&coef!=null?p*coef:null};});
+ return{cod,desc:c[0],un:c[1],p:v?v[k]:null,itens,hh:orcHh(D,cod)};}
+
+function orcCab(){const O=S.orc,D=orcD(S);return{O,D,R:orcResumo(S,Q),txt:`SINAPI ${orcMesNome(O.mes)} · ${D.u.localidade||O.uf} · ${O.des==='com'?'com':'sem'} desoneração`};}
+function orcPronto(){if(!orcAtivo(S)||!orcD(S)){toast('O orçamento ainda não está carregado.');return false;}return true;}
+
+/* ---------- Excel ---------- */
+function orcExcel(){if(!orcPronto())return;const {O,D,R,txt}=orcCab();const B=R.B,bdi=B.bdi,BF=R.BF;
+ const rows=[[{v:`Orçamento sintético – ${S.meta.obra||''}`,s:6}],[{v:`${S.meta.codigo||''} · Rev. ${S.meta.rev||''} · ${txt} · BDI ${nf(bdi*100)}%${BF?` · BDI fornecimento ${nf(BF.bdi*100)}%`:''}`}],
+  BF?[{v:'BDI (fração)',s:1},{v:bdi,s:3},{v:''},{v:'BDI fornecimento (fração)',s:1},{v:BF.bdi,s:3}]:[{v:'BDI (fração)',s:1},{v:bdi,s:3}],[],
+  [{v:'Item',s:1},{v:'Código',s:1},{v:'Banco',s:1},{v:'Descrição',s:1},{v:'Un',s:1},{v:'Quantidade',s:1},{v:'Custo unit. (R$)',s:1},{v:'Custo total (R$)',s:1},{v:'Preço unit. c/ BDI (R$)',s:1},{v:'Preço total (R$)',s:1},{v:'Hh/un',s:1},{v:'Hh total',s:1},{v:'Observação',s:1}]];
+ const gRefs=[],gRefsP=[],gRefsH=[];
+ for(const g of Q){const its=g.itens.filter(t=>t.orc);if(!its.length)continue;const gr=rows.length+1;rows.push([{v:g.cod,s:4},{v:'',s:4},{v:'',s:4},{v:g.nome,s:4},{v:'',s:4},{v:'',s:4},{v:'',s:4},null,{v:'',s:4},null,{v:'',s:4},null,{v:'',s:4}]);const first=rows.length+1;
+  for(const t of its){const o=t.orc;const r=rows.length+1;const cods=orcCodsTxt(o),fo=!!(BF&&orcForn(S,t)&&o.st!=='incl');
+   const obs=[o.st==='pend'?'SEM PREÇO':'',o.st==='man'?'Preço informado pelo usuário':'',o.st==='ref'?'Preço de referência PlantaCalc':'',fo?'Fornecimento – BDI diferenciado':'',o.st==='incl'?'Incluído em outra composição':'',o.sp?'Custo de São Paulo':'',o.as>0&&!o.sp?`${nf(o.as,0)}% atribuído SP`:'',o.comps.some(c=>c.f!==1)?o.comps.map(c=>c.cod+' × '+nf(c.f,4)).join('; '):''].filter(Boolean).join(' · ');
+   rows.push([{v:t.cod,s:2},{v:cods,s:2},{v:orcBanco(o),s:2},{v:t.desc+(o.comps.length&&o.st==='ok'?' — '+o.comps.map(c=>c.desc).join(' + '):''),s:2},{v:t.un,s:2},{v:Math.round(t.q*1000)/1000,s:3},{v:orcR2(o.p),s:3},{f:`ROUND(F${r}*G${r},2)`,s:3},{f:`ROUND(G${r}*(1+${fo?'$E$3':'$B$3'}),2)`,s:3},{f:`ROUND(F${r}*I${r},2)`,s:3},{v:Math.round(t.orc.hhUn*10000)/10000,s:3},{f:`F${r}*K${r}`,s:3},{v:obs,s:2}]);}
+  const last=rows.length;rows[gr-1][7]={f:`SUM(H${first}:H${last})`,s:5};rows[gr-1][9]={f:`SUM(J${first}:J${last})`,s:5};rows[gr-1][11]={f:`SUM(L${first}:L${last})`,s:5};gRefs.push('H'+gr);gRefsP.push('J'+gr);gRefsH.push('L'+gr);}
+ rows.push([null,null,null,{v:'TOTAL',s:4},{v:'',s:4},{v:'',s:4},{v:'',s:4},{f:gRefs.join('+')||'0',s:5},{v:'',s:4},{f:gRefsP.join('+')||'0',s:5},{v:'',s:4},{f:gRefsH.join('+')||'0',s:5},{v:'',s:4}]);
+ const b=B.b;const bdiRows=[[{v:'Composição do BDI — Acórdão TCU 2.622/2013',s:6}],[{v:txt}],[],[{v:'Parcela',s:1},{v:'%',s:1},{v:'Faixa TCU (1º quartil – médio – 3º quartil)',s:1}],
+  ...[['Administração central (AC)','ac'],['Seguro + garantia (S+G)','sg'],['Risco (R)','r'],['Despesas financeiras (DF)','df'],['Lucro (L)','l'],['PIS','pis'],['COFINS','cofins'],['ISS','iss']].concat(O.des==='com'?[['CPRB','cprb']]:[]).map(([n,k])=>[{v:n,s:2},{v:+b[k]||0,s:3},{v:b.tipo==='edif'&&ORC_FAIXA[k]?ORC_FAIXA[k].map(x=>nf(x)).join(' – '):'',s:2}]),
+  [],[{v:'BDI = [(1+AC+S+R+G)×(1+DF)×(1+L)/(1−I)] − 1',s:2}],[{v:'BDI calculado (%)',s:4},{v:Math.round(bdi*10000)/100,s:5}],[{v:'Faixa do TCU – '+B.T[0],s:2},{v:`${nf(B.T[1])}% – ${nf(B.T[2])}% – ${nf(B.T[3])}%`,s:2}],...B.av.map(a=>[{v:a,s:2}])];
+ if(BF){const bf=BF.b;bdiRows.push([],[],[{v:'BDI diferenciado – fornecimento de materiais e equipamentos',s:6}],[{v:`${R.F.length} itens marcados · custo direto R$ ${nf(R.cdF)}`}],[],[{v:'Parcela',s:1},{v:'%',s:1},{v:'Faixa TCU (1º quartil – médio – 3º quartil)',s:1}],
+  ...[['Administração central (AC)','ac'],['Seguro + garantia (S+G)','sg'],['Risco (R)','r'],['Despesas financeiras (DF)','df'],['Lucro (L)','l'],['PIS','pis'],['COFINS','cofins'],['ISS','iss']].concat(O.des==='com'?[['CPRB','cprb']]:[]).map(([n,k])=>[{v:n,s:2},{v:+bf[k]||0,s:3},{v:ORC_FAIXA_F[k]?ORC_FAIXA_F[k].map(x=>nf(x)).join(' – '):'',s:2}]),
+  [],[{v:'BDI de fornecimento calculado (%)',s:4},{v:Math.round(BF.bdi*10000)/100,s:5}],[{v:'Faixa do TCU – '+BF.T[0],s:2},{v:`${nf(BF.T[1])}% – ${nf(BF.T[2])}% – ${nf(BF.T[3])}%`,s:2}],...BF.av.map(a=>[{v:a,s:2}]));}
+ const abcS=orcABC(Q.flatMap(g=>g.itens.filter(t=>t.orc&&t.orc.st!=='incl')),t=>orcTot(t));
+ const abcRows=[[{v:'Curva ABC de serviços',s:6}],[{v:txt}],[],[{v:'Item',s:1},{v:'Código',s:1},{v:'Descrição',s:1},{v:'Un',s:1},{v:'Quantidade',s:1},{v:'Custo total (R$)',s:1},{v:'%',s:1},{v:'% acumulado',s:1},{v:'Classe',s:1}],
+  ...abcS.map(a=>[{v:a.x.cod,s:2},{v:orcCodsTxt(a.x.orc)||orcBanco(a.x.orc),s:2},{v:a.x.desc,s:2},{v:a.x.un,s:2},{v:Math.round(a.x.q*1000)/1000,s:3},{v:orcR2(a.v),s:3},{v:Math.round(a.pct*10000)/100,s:3},{v:Math.round(a.acum*10000)/100,s:3},{v:a.cl,s:2}])];
+ const ins=orcABC(orcInsumos(S,Q,D),x=>x.tot);
+ const insRows=[[{v:'Curva ABC de insumos (explosão das composições pelo analítico)',s:6}],[{v:txt}],[],[{v:'Código',s:1},{v:'Descrição',s:1},{v:'Un',s:1},{v:'Quantidade',s:1},{v:'Preço unit. (R$)',s:1},{v:'Total (R$)',s:1},{v:'%',s:1},{v:'% acumulado',s:1},{v:'Classe',s:1}],
+  ...ins.map(a=>[{v:a.x.cod,s:2},{v:a.x.desc+(a.x.sp?' (preço de SP)':''),s:2},{v:a.x.un,s:2},{v:Math.round(a.x.q*10000)/10000,s:3},{v:a.x.p||0,s:3},{v:orcR2(a.v),s:3},{v:Math.round(a.pct*10000)/100,s:3},{v:Math.round(a.acum*10000)/100,s:3},{v:a.cl,s:2}])];
+ const anaRows=[[{v:'Composições analíticas utilizadas',s:6}],[{v:txt}],[]];
+ for(const cod of orcCompsUsadas(Q)){const A=orcAnalitica(D,cod,O.des);anaRows.push([{v:A.cod,s:4},{v:A.desc,s:4},{v:A.un,s:4},{v:'',s:4},{v:'Custo unit.',s:4},{v:A.p==null?'sem custo':orcR2(A.p),s:5},{v:'Hh/'+A.un,s:4},{v:Math.round(A.hh*10000)/10000,s:5}]);
+  anaRows.push([{v:'Tipo',s:1},{v:'Descrição',s:1},{v:'Un',s:1},{v:'Coeficiente',s:1},{v:'Preço unit. (R$)',s:1},{v:'Total (R$)',s:1}]);
+  A.itens.forEach(i=>anaRows.push([{v:(i.t==='C'?'Composição ':'Insumo ')+i.cod,s:2},{v:i.desc,s:2},{v:i.un,s:2},{v:i.coef},{v:i.p==null?'—':i.p,s:3},{v:i.tot==null?'—':Math.round(i.tot*100)/100,s:3}]));anaRows.push([]);}
+ download(xlsxBlob([{name:'Orçamento',rows,widths:[8,16,9,70,6,12,14,15,15,15,9,10,40]},{name:'BDI',rows:bdiRows,widths:[34,12,40]},{name:'ABC serviços',rows:abcRows,widths:[8,16,70,6,12,15,8,10,7]},{name:'ABC insumos',rows:insRows,widths:[10,70,6,14,14,15,8,10,7]},{name:'Composições',rows:anaRows,widths:[18,80,8,12,14,14,8,10]}]),fname('orcamento-sinapi.xlsx'));
+ toast('Planilha do orçamento gerada.');}
+
+/* ---------- PDF ---------- */
+function orcPDF(tipo){const {O,D,R,txt}=orcCab();const B=R.B;const W=210,H=297,mL=12,mR=12,top=16,bot=14;const pages=[];let o=null,y=0,pg=0;
+ const titulo={orc:'ORÇAMENTO SINTÉTICO – SINAPI',abc:'CURVA ABC – SERVIÇOS E INSUMOS',ana:'COMPOSIÇÕES ANALÍTICAS – SINAPI'}[tipo];
+ const newPage=()=>{pg++;o=[];pages.push({W,H,ops:o});y=top;o.push({t:'r',x:mL,y:y-8,w:W-mL-mR,h:6,fill:'#257126'});
+  o.push({t:'tx',x:mL+2,y:y-3.8,s:trunc([S.meta.empresa,S.meta.obra].filter(Boolean).join(' · '),80),h:2.6,bold:true,col:'#fff',base:'auto'});
+  o.push({t:'tx',x:W-mR-2,y:y-3.8,s:`${S.meta.codigo||''} · Rev. ${S.meta.rev||''} · ${txt} · pág. ${pg}`,h:2.1,col:'#fff',anc:'end',base:'auto'});y+=2;};
+ const need=h=>{if(y+h>H-bot)newPage();};
+ const tabela=(cols)=>(cells,opt={})=>{const hh=opt.h||4.2;need(hh);let x=mL;if(opt.fill)o.push({t:'r',x:mL,y:y-hh+1,w:W-mL-mR,h:hh,fill:opt.fill});
+  cells.forEach((c,i)=>{const col=cols[i];o.push({t:'tx',x:col.a==='end'?x+col.w-1:x+1,y,s:trunc(c,col.n||Math.floor(col.w*(col.up?0.66:1.1))),h:opt.fs||2.2,anc:col.a,bold:!!opt.bold,col:opt.col||'#000',base:'auto'});x+=col.w;});
+  o.push({t:'l',x1:mL,y1:y+1.2,x2:W-mR,y2:y+1.2,w:0.1,col:'#dddddd'});y+=hh;};
+ const tit=(s,h)=>{need(10);o.push({t:'tx',x:mL,y:y+4,s,h:h||3.6,bold:true,col:'#257126',base:'auto'});y+=9;};
+ const nota=s=>{need(4);o.push({t:'tx',x:mL,y,s:trunc(s,150),h:2.1,col:'#555',base:'auto'});y+=3.8;};
+ newPage();tit(titulo,4);nota(`${txt}. Custos unitários sem BDI; preço com BDI de ${nf(B.bdi*100)}%${R.BF?` (serviços) e ${nf(R.BF.bdi*100)}% (fornecimento de materiais e equipamentos)`:''} (fórmula do Acórdão TCU 2.622/2013).`);
+ nota(`Quantidades do estudo preliminar do PlantaCalc Loteamento (precisão ±15–25%). Vínculos SINAPI sugeridos automaticamente e revisados pelo responsável técnico.`);y+=2;
+ if(tipo==='orc'){const row=tabela([{w:10,a:'start'},{w:15,a:'start'},{w:75,a:'start',n:68},{w:8,a:'start'},{w:16,a:'end'},{w:18,a:'end'},{w:18,a:'end'},{w:26,a:'end'}]);
+  row(['Item','Código','Descrição','Un','Quant.','Custo unit.','Preço c/ BDI','Preço total'],{fill:'#257126',col:'#fff',bold:true,h:5});
+  for(const g of Q){const its=g.itens.filter(t=>t.orc);if(!its.length)continue;row([g.cod,'',g.nome,'','','','',nf(sum(its,t=>orcTotB(t,R.bi(t))))],{fill:'#eef6e0',bold:true,col:'#257126'});
+   for(const t of its){const ob=t.orc;const pu=orcR2(ob.p),pb=orcPB(t,R.bi(t));const cod=(ob.st==='incl'?'incluso':ob.st==='pend'?'SEM PREÇO':ob.st==='man'?'próprio':ob.st==='ref'?'ref.':ob.comps.map(c=>c.cod).join('+')+(ob.sp?' SP':''))+(R.BF&&orcForn(S,t)&&ob.st!=='incl'?' F':'');
+    row([t.cod,cod,t.desc,t.un,nf(t.q,t.un==='un'?0:2),ob.st==='incl'?'—':nf(pu),ob.st==='incl'?'—':nf(pb),ob.st==='incl'?'—':nf(orcTotB(t,R.bi(t)))],{col:ob.st==='pend'?'#b42318':'#000'});}}
+  row(['','','CUSTO DIRETO','','','','',nf(R.cd)],{fill:'#eef6e0',bold:true});if(R.BF){row(['','',`BDI serviços ${nf(B.bdi*100)}%`,'','','','',nf(R.pv-R.pvF-(R.cd-R.cdF))],{fill:'#eef6e0',bold:true});row(['','',`BDI fornecimento ${nf(R.BF.bdi*100)}% (itens marcados com F)`,'','','','',nf(R.pvF-R.cdF)],{fill:'#eef6e0',bold:true});}
+  else row(['','',`BDI ${nf(B.bdi*100)}%`,'','','','',nf(R.pv-R.cd)],{fill:'#eef6e0',bold:true});row(['','','PREÇO TOTAL','','','','',nf(R.pv)],{fill:'#257126',col:'#fff',bold:true,h:5});
+  y+=5;tit('Composição do BDI',3);const b=B.b;const r2=tabela([{w:70,a:'start'},{w:25,a:'end'},{w:91,a:'start'}]);r2(['Parcela','%','Faixa TCU (edifícios)'],{fill:'#257126',col:'#fff',bold:true});
+  [['Administração central','ac'],['Seguro + garantia','sg'],['Risco','r'],['Despesas financeiras','df'],['Lucro','l'],['PIS','pis'],['COFINS','cofins'],['ISS','iss']].concat(O.des==='com'?[['CPRB','cprb']]:[]).forEach(([n,k])=>r2([n,nf(+b[k]||0),b.tipo==='edif'&&ORC_FAIXA[k]?ORC_FAIXA[k].map(x=>nf(x)).join(' / '):'']));
+  r2(['BDI calculado',nf(B.bdi*100),`faixa ${B.T[0]}: ${nf(B.T[1])} / ${nf(B.T[2])} / ${nf(B.T[3])}`],{bold:true,fill:'#eef6e0'});B.av.forEach(a=>nota('! '+a));
+  if(R.BF){const bf=R.BF.b;y+=4;tit('BDI diferenciado – fornecimento de materiais e equipamentos',3);r2(['Parcela','%','Faixa TCU (fornecimento)'],{fill:'#257126',col:'#fff',bold:true});
+   [['Administração central','ac'],['Seguro + garantia','sg'],['Risco','r'],['Despesas financeiras','df'],['Lucro','l'],['PIS','pis'],['COFINS','cofins'],['ISS','iss']].concat(O.des==='com'?[['CPRB','cprb']]:[]).forEach(([n,k])=>r2([n,nf(+bf[k]||0),ORC_FAIXA_F[k]?ORC_FAIXA_F[k].map(x=>nf(x)).join(' / '):'']));
+   r2(['BDI de fornecimento',nf(R.BF.bdi*100),`faixa ${R.BF.T[0]}: ${nf(R.BF.T[1])} / ${nf(R.BF.T[2])} / ${nf(R.BF.T[3])}`],{bold:true,fill:'#eef6e0'});R.BF.av.forEach(a=>nota('! '+a));}
+  if(R.pend.length){y+=3;tit('Itens sem preço SINAPI (entram com R$ 0,00 até o preço ser informado)',3);R.pend.forEach(t=>nota(`${t.cod} ${t.desc} (${t.un})`));}
+  if(R.ref.length){y+=3;tit('Itens com preço de referência do PlantaCalc (sem composição SINAPI)',3);R.ref.forEach(t=>nota(`${t.cod} ${t.desc} (${t.un}) — R$ ${nf(orcR2(t.orc.p))}`));}
+  {const pc=v=>R.cd>0?nf(v/R.cd*100,1)+'%':'—';y+=3;tit('Origem do custo direto',3);nota(`SINAPI R$ ${nf(R.orig.sinapi)} (${pc(R.orig.sinapi)}) · referência PlantaCalc R$ ${nf(R.orig.ref)} (${pc(R.orig.ref)}) · informado pelo usuário R$ ${nf(R.orig.man)} (${pc(R.orig.man)}) · total R$ ${nf(R.cd)}`);}
+  if(R.sp.length){y+=3;tit('Itens com custo de São Paulo (sem custo publicado no estado)',3);R.sp.forEach(t=>nota(`${t.cod} ${t.desc} — ${t.orc.comps.map(c=>c.cod).join(', ')}`));}
+}
+ else if(tipo==='abc'){const abcS=orcABC(Q.flatMap(g=>g.itens.filter(t=>t.orc&&t.orc.st!=='incl')),t=>orcTot(t));
+  const row=tabela([{w:10,a:'start'},{w:16,a:'start',n:13},{w:86,a:'start',n:80},{w:22,a:'end'},{w:16,a:'end'},{w:20,a:'end'},{w:16,a:'start'}]);tit('Serviços',3);
+  row(['Item','Código','Descrição','Custo (R$)','%','% acum.','Classe'],{fill:'#257126',col:'#fff',bold:true,h:5});
+  abcS.forEach(a=>row([a.x.cod,orcCodsTxt(a.x.orc,'+')||orcBanco(a.x.orc).toLowerCase(),a.x.desc,nf(a.v),nf(a.pct*100),nf(a.acum*100),a.cl],{fill:a.cl==='A'?'#f3f8ec':null}));
+  const ins=orcABC(orcInsumos(S,Q,D),x=>x.tot);y+=5;tit(`Insumos (${ins.length}; explosão das composições pelo relatório analítico)`,3);
+  const r2=tabela([{w:14,a:'start'},{w:80,a:'start',up:true},{w:9,a:'start'},{w:22,a:'end'},{w:22,a:'end'},{w:13,a:'end'},{w:14,a:'end'},{w:12,a:'start'}]);
+  r2(['Código','Descrição','Un','Quant.','Total (R$)','%','% acum.','Cl.'],{fill:'#257126',col:'#fff',bold:true,h:5});
+  ins.forEach(a=>r2([a.x.cod,a.x.desc+(a.x.sp?' (SP)':''),a.x.un,nf(a.x.q,2),nf(a.v),nf(a.pct*100),nf(a.acum*100),a.cl],{fill:a.cl==='A'?'#f3f8ec':null}));}
+ else{const cods=orcCompsUsadas(Q);
+  for(const cod of cods){const A=orcAnalitica(D,cod,O.des);need(16);const row=tabela([{w:20,a:'start'},{w:100,a:'start',up:true},{w:10,a:'start'},{w:18,a:'end'},{w:19,a:'end'},{w:19,a:'end'}]);
+   row([A.cod,A.desc,A.un,'',`Hh ${nf(A.hh,3)}`,A.p==null?'sem custo':nf(A.p)],{fill:'#257126',col:'#fff',bold:true,h:5});
+   A.itens.forEach(i=>row([(i.t==='C'?'C ':'I ')+i.cod,i.desc,i.un,i.coef==null?'—':nf(i.coef,4),i.p==null?'—':nf(i.p),i.tot==null?'—':nf(i.tot)]));y+=3;}}
+ return pages;}
+function orcBaixarPDF(tipo){if(!orcPronto())return;try{download(pdfBuild(orcPDF(tipo)),fname({orc:'orcamento-sinapi.pdf',abc:'curva-abc.pdf',ana:'composicoes-analiticas.pdf'}[tipo]));toast('PDF gerado.');}catch(e){console.error(e);toast('Não foi possível gerar o PDF: '+e.message);}}
+
+/* ---------- vínculos SINAPI do Loteamento e do Estacionamento ----------
+   Cada item do quantitativo leva a regra (composições e fator por unidade). Códigos conferidos no catálogo
+   SINAPI; o fator converte a unidade do item na unidade da composição (ex.: m² de calçada → m³ de concreto). */
+const CV=c=>c&&typeof c==='object'&&'v' in c?c.v:c;
+const R_=(id,comps,obs)=>({id:'lt_'+id,comps:comps.map(([cod,f])=>({cod:String(cod),f:f==null?1:f})),obs});
+const SEM=(id,obs)=>({id:'lt_'+id,sem:true,obs});
+const INC=(id,obs)=>({id:'lt_'+id,incl:obs});
+const perto=(tab,v)=>{const ks=Object.keys(tab).map(Number);let b=ks[0];for(const k of ks)if(Math.abs(k-v)<Math.abs(b-v))b=k;return{k:b,cod:tab[b]};};
+const BF_OBS='Carga em caminhão basculante (100978) + transporte (95875) com DMT ASSUMIDA de 10 km (10 m³×km por m³). Ajuste a DMT real; não inclui taxa de destinação.';
+const T_PLUV={300:'95565',400:'92210',500:'92211',600:'92212',700:'92213',800:'92214',900:'92215',1000:'92216',1200:'92816',1500:'92818'};
+const T_ESG={150:'90695',200:'90696',250:'90697',300:'90698'};
+const T_AGUA={50:'106105',75:'106107',100:'106109',200:'105334'};
+const BGS={0.10:'105727',0.15:'96396',0.20:'105730'},SOLOB={0.10:'105585',0.15:'100572',0.20:'105588'};
+const ENER='Rede de distribuição no padrão CEMIG (ND-2.1/ND-2.4): o SINAPI não tem composição equivalente por estrutura. Informe o custo unitário (preço de empreiteira credenciada ou orçamento da concessionária).';
+const espe=d=>{const m=String(d).match(/e\s*=\s*([\d.,]+)/);return m?parseFloat(m[1].replace(',','.')):0.15;};
+function regraTubo(tab,dn,id,nome,obs){const t=tab[dn];return t?R_(id,[[t,1]],obs):SEM(id,`Sem composição SINAPI para ${nome} DN ${dn} nesta tabela; troque o vínculo ou informe o custo.`);}
+function regraVala(id,prof,larg){let cod,txt;
+ if(larg>1.5){cod=prof>1.5?'102281':'90106';txt=prof>1.5?'escavadeira 1,2 m³, largura 1,5–2,5 m, prof. 1,5–3,0 m (102281)':'retroescavadeira, largura 0,8–1,5 m, prof. até 1,5 m (90106) — conferir: vala mais larga que 1,5 m';}
+ else if(prof<=1.5){cod=larg<0.8?'90105':'90106';txt=`retroescavadeira, prof. até 1,5 m, largura ${larg<0.8?'menor que 0,8 m (90105)':'0,8–1,5 m (90106)'}`;}
+ else{cod=larg<0.8?'90107':'90108';txt=`retroescavadeira, prof. 1,5–3,0 m, largura ${larg<0.8?'menor que 0,8 m (90107)':'0,8–1,5 m (90108)'}${prof>3?' — conferir: profundidade média acima de 3 m':''}`;}
+ return R_(id,[[cod,1]],`Escavação mecanizada de vala em solo de 1ª categoria, baixo nível de interferência: ${txt}. Profundidade média ${nf(prof)} m, largura média ${nf(larg)} m.`);}
+
+/* monta os grupos do quantitativo (mesmo formato do PlantaCalc: {cod,nome,inc,itens:[{cod,key,desc,un,q,mem,reg}]}) */
+function lqGrupos(){const G=[],idx={};const lot=st.mode==='lot';
+ const grp=nome=>{if(idx[nome])return idx[nome];const g={nome,inc:20,itens:[]};G.push(g);idx[nome]=g;return g;};
+ const it=(gn,key,desc,un,q,reg,mem)=>{q=+q;if(!(q>0))return;grp(gn).itens.push({key,desc,un,q,reg,mem:mem||''});};
+ const PREL='Serviços preliminares e topografia',TER='Terraplenagem',PAV='Pavimentação',DRE='Drenagem pluvial',AGU='Rede de água',ESG='Rede de esgoto',ENE='Energia e iluminação pública',URB='Urbanização e paisagismo',SIN='Sinalização';
+ grp(PREL);grp(TER);grp(PAV);
+ let qs=[];try{const sh=sheets().find(x=>x.name==='Quantitativos');qs=sh?sh.rows.slice(1):[];}catch(e){}
+ let PR=null,f=null,T=null;
+ if(lot&&st.lot.approved){try{const P=getProject();if(P){f=getInfra();T=infRows(f);const ps=projSheets(P).find(x=>x.name==='Pracas');PR=ps?ps.rows:null;}}catch(e){console.error(e);f=T=null;}}
+ const MQ='Planilha de quantitativos do projeto';
+ for(const r of qs){const d=String(CV(r[1])||''),un=String(CV(r[2])||''),q=+CV(r[3]);if(!d||!isFinite(q))continue;
+  if(/^Limpeza e raspagem/.test(d))it(TER,'ter.limp',d,un,q,R_('ter_limp',[[98525,1]],'Limpeza mecanizada de camada vegetal com trator de esteiras (98525).'),MQ);
+  else if(/^Escavação \(corte\)/.test(d))it(TER,'ter.corte',d,un,q,R_('ter_corte',[[101115,1]],'Escavação horizontal em solo de 1ª categoria com trator de esteiras (101115). Carga e transporte do excedente na linha de bota-fora.'),MQ);
+  else if(/^Aterro compactado/.test(d))it(TER,'ter.aterro',d,un,q,R_('ter_aterro',[[105559,1]],'Execução e compactação de aterro 95% do Proctor normal, solo argiloso, camadas de 20 cm (105559). Material vindo do corte ou do empréstimo.'),MQ);
+  else if(/bota-fora/i.test(d))it(TER,'ter.bf',d,un,q,R_('ter_bf',[[100978,1],[95875,10]],BF_OBS),MQ);
+  else if(/empréstimo/i.test(d))it(TER,'ter.emp',d,un,q,R_('ter_emp',[[101115,1],[100978,1],[95875,10]],'Escavação na jazida (101115) + carga (100978) + transporte (95875) com DMT ASSUMIDA de 10 km. Ajuste a DMT; não inclui indenização da jazida.'),MQ);
+  else if(/^Regularização/.test(d))it(PAV,'pav.reg',d,un,q,R_('pav_reg',[[100576,1]],'Regularização e compactação de subleito, solo predominantemente argiloso (100576).'),MQ);
+  else if(/^Sub-base/.test(d)){const e=espe(d),p=perto(SOLOB,e);it(PAV,'pav.sub',d,un,q,R_('pav_sub',[[p.cod,1]],`Sub-base de solo-brita 40/60, solo argiloso, mistura em pista, e = ${nf(p.k*100,0)} cm (${p.cod}). Exclui carga e transporte.`),MQ);}
+  else if(/^Base/.test(d)){const e=espe(d),p=perto(BGS,e);it(PAV,'pav.base',d,un,q,R_('pav_base',[[p.cod,1]],`Base de brita graduada simples (BGS), e = ${nf(p.k*100,0)} cm (${p.cod}). Exclui carga e transporte.`),MQ);}
+  else if(/^Revestimento/.test(d)){const e=espe(d)||0.05;it(PAV,'pav.rev',d,un,q,R_('pav_rev',[[95995,1],[102470,Math.round(1/e*1000)/1000]],`Concreto asfáltico (CBUQ), camada de rolamento (95995, m³) + imprimação com CM-30 sobre a base (102470) à razão de ${nf(1/e,1)} m² por m³ (e = ${nf(e*100,0)} cm). Exclui carga e transporte da massa.`),MQ);}
+  else if(/^Meio-fio/.test(d))it(PAV,'pav.mf',d,un,q,R_('pav_mf',[[94273,1]],'Guia (meio-fio) de concreto pré-moldado, trecho reto (94273). A sarjeta está na drenagem.'),MQ);
+  else if(/^Calçadas/.test(d))it(URB,'urb.calc',d,un,q,R_('urb_calc',[[94990,0.06]],'Passeio de concreto moldado in loco, não armado (94990, m³), e = 6 cm → 0,06 m³ por m².'),MQ);
+  else if(/^Plantio de grama/.test(d))it(URB,'urb.grama',d,un,q,R_('urb_grama',[[98504,1]],'Plantio de grama em placas (98504).'),MQ);
+  else if(/^Praça \/ área verde/.test(d)&&!PR)it(URB,'urb.verde',d+' (grama em toda a área)',un,q,R_('urb_verde',[[98504,1]],'Plantio de grama em placas (98504) em toda a área verde. Depois de aprovar o loteamento, a praça entra detalhada (passeios, gramado, árvores).'),MQ);
+  else if(/^Pintura de faixas de vagas/.test(d))it(SIN,'sin.vaga',d,un,q,R_('sin_vaga',[[102500,1]],'Pintura de demarcação de vaga com tinta acrílica, e = 10 cm, aplicação manual (102500).'),MQ);
+  else if(/^Vagas PCD/.test(d))it(SIN,'sin.pcd',d,un,q,R_('sin_pcd',[[102514,1],[103698,0.25],[103690,1]],'Símbolo "deficiente físico" 1,20×1,20 m (102514) + placa de alumínio 0,50×0,50 m (103698, 0,25 m²) + suporte metálico galvanizado h = 2,5 m (103690).'),MQ);
+  else if(/^Vagas de idoso/.test(d))it(SIN,'sin.idoso',d,un,q,R_('sin_idoso',[[102515,1],[103698,0.25],[103690,1]],'Símbolo "idoso" 1,20×1,20 m (102515) + placa de alumínio 0,50×0,50 m (103698, 0,25 m²) + suporte metálico galvanizado h = 2,5 m (103690).'),MQ);
+  else if(/^Marcos de divisa/.test(d))it(PREL,'top.marco',d,un,q,SEM('top_marco','Marco de concreto de divisa: sem composição SINAPI equivalente. Informe o custo unitário (fornecimento e cravação).'),MQ);
+  else if(/^Estacas de eixo|^Pontos de locação/.test(d))it(PREL,'top.loc',d,un,q,SEM('top_loc','Locação topográfica por ponto: o SINAPI loca por metro de gabarito, não por ponto. Informe o custo unitário.'),MQ);
+ }
+ if(f&&T){const rows=k=>(T[k]||[]).slice(1),MI='Projeto executivo de infraestrutura';
+  /* drenagem: dispositivos SUDECAP */
+  for(const r of rows('disp')){const d=String(CV(r[0])||''),q=+CV(r[1]),un=String(CV(r[2])||'');let m;
+   if(/^Boca de lobo simples/.test(d))it(DRE,'dre.bl1',d,un,q,R_('dre_bl1',[[97961,1]],'Caixa para boca de lobo simples combinada com grelha, em blocos de concreto, 1,3×1,0×1,2 m (97961). Conferir com o modelo SUDECAP.'),MI);
+   else if(/^Boca de lobo dupla/.test(d))it(DRE,'dre.bl2',d,un,q,R_('dre_bl2',[[97973,1]],'Caixa para boca de lobo dupla combinada com grelha, em blocos de concreto, 1,3×2,2×1,2 m (97973). Conferir com o modelo SUDECAP.'),MI);
+   else if(/^Depressão e passeio/.test(d))it(DRE,'dre.dep',d,un,q,R_('dre_dep',[[94990,0.06]],'Passeio de concreto (94990, m³) com largura ASSUMIDA de 1,0 m e e = 6 cm → 0,06 m³ por metro. Ajuste a largura.'),MI);
+   else if((m=d.match(/^Ramal de ligação.*DN (\d+)/)))it(DRE,'dre.ramal',d,un,q,regraTubo(T_PLUV,+m[1],'dre_ramal','tubo de concreto',`Tubo de concreto para águas pluviais DN ${m[1]}, junta rígida, baixo nível de interferência — fornecimento e assentamento (${T_PLUV[+m[1]]}).`),MI);
+   else if(/^Sarjeta/.test(d)){const w=(m=d.match(/([\d,]+)\s*×\s*([\d,]+)\s*m/))?parseFloat(m[1].replace(',','.')):0.5,fa=Math.round(w/0.30*1000)/1000;
+    it(DRE,'dre.sarj',d,un,q,R_('dre_sarj',[[94287,fa]],`Sarjeta de concreto moldada in loco 30×10 cm (94287) ajustada pela largura: ${nf(w*100,0)} cm ÷ 30 cm = ${nf(fa,3)}. Conferir o modelo SUDECAP tipo B.`),MI);}
+   else if((m=d.match(/^Poço de visita tipo ([A-Z])/)))it(DRE,'dre.pv.'+m[1],d,un,q,R_('dre_pv',[[102457,1]],'Base de poço de visita circular de drenagem em concreto pré-moldado Ø 1,20 m, prof. 1,60 m, sem tampão (102457). Altura extra na linha da chaminé; tampão em linha própria.'),MI);
+   else if(/^Chaminé/.test(d))it(DRE,'dre.chamine',d,un,q,R_('dre_chamine',[[99240,1]],'Acréscimo de altura de poço de visita circular de drenagem em concreto pré-moldado (99240, Ø 1,20 m), por metro. A chaminé do projeto tem Ø 1,00 m: conferir.'),MI);
+   else if(/^Tampão/.test(d))it(DRE,'dre.tampao',d,un,q,R_('dre_tampao',[['I21090',1]],'Insumo tampão de ferro fundido dúctil Ø 600 mm, classe D400 (I21090). Assentamento incluído no poço.'),MI);
+   else if((m=d.match(/^Galeria: tubo de concreto.*DN (\d+)/)))it(DRE,'dre.gal.'+m[1],d,un,q,regraTubo(T_PLUV,+m[1],'dre_gal','tubo de concreto',`Tubo de concreto para águas pluviais DN ${m[1]}, junta rígida, baixo nível de interferência — fornecimento e assentamento (${T_PLUV[+m[1]]}). Classe PA-1.`),MI);
+   else if(/^Berço de concreto/.test(d))it(DRE,'dre.berco',d,un,q,R_('dre_berco',[[96616,1]],'Concreto magro lançado como berço dos tubos (96616, m³). Conferir a resistência exigida pela SUDECAP.'),MI);}
+  /* valas: escavação, escoramento, areia, reaterro e bota-fora por rede */
+  for(const r of rows('vala')){const nm=String(CV(r[0])||''),L=+CV(r[1]),lg=+CV(r[2]),pf=+CV(r[3]);
+   const gn=/drenagem/i.test(nm)?DRE:/esgoto/i.test(nm)?ESG:AGU,k=/drenagem/i.test(nm)?'dre':/esgoto/i.test(nm)?'esg':'agu',mm=`${nm}: ${nf(L)} m de vala`;
+   it(gn,k+'.vala.esc','Escavação mecanizada de vala — '+nm.toLowerCase(),'m³',+CV(r[4]),regraVala(k+'_vala_esc',pf,lg),mm);
+   it(gn,k+'.vala.escor','Escoramento de vala — '+nm.toLowerCase(),'m²',+CV(r[5]),R_(k+'_vala_escor',[[101578,1]],'Escoramento de vala descontínuo, prof. 1,5–3,0 m, largura menor que 1,5 m (101578). Contínuo: 101584.'),mm);
+   it(gn,k+'.vala.areia','Berço e envoltória de areia — '+nm.toLowerCase(),'m³',+CV(r[6]),R_(k+'_vala_areia',[[101625,1]],'Preparo de fundo de vala com camada de areia, lançamento mecanizado (101625), aplicado ao berço e à envoltória.'),mm);
+   it(gn,k+'.vala.reat','Reaterro compactado de vala — '+nm.toLowerCase(),'m³',+CV(r[7]),R_(k+'_vala_reat',[[93379,1]],'Reaterro mecanizado de vala com retroescavadeira e compactador de percussão (93379).'),mm);
+   it(gn,k+'.vala.bf','Bota-fora do material da vala (empolado) — '+nm.toLowerCase(),'m³',+CV(r[8]),R_(k+'_vala_bf',[[100978,1],[95875,10]],BF_OBS),mm);}
+  /* água */
+  const dnA={};for(const r of rows('agua')){const dn=+CV(r[6]),L=+CV(r[2]);if(dn&&L)dnA[dn]=(dnA[dn]||0)+L;}
+  const dnMax=Math.max(0,...Object.keys(dnA).map(Number));
+  for(const dn of Object.keys(dnA).map(Number).sort((a,b)=>a-b))it(AGU,'agu.rede.'+dn,`Rede de distribuição de água, tubo PVC PBA/DEFoFo DN ${dn}`,'m',dnA[dn],regraTubo(T_AGUA,dn,'agu_rede','tubo de PVC para rede de água',`Tubo de PVC ${dn>=150?'DEFoFo':'PBA'} para rede de água DN ${dn}, junta elástica integrada, baixo nível de interferência — fornecimento e assentamento (${T_AGUA[dn]}). Conexões não incluídas.`),'Soma dos trechos DN '+dn+' (COPASA T.104)');
+  const rA=rows('ramA');it(AGU,'agu.ramal','Ramais prediais de água, tubo PEAD DN 20','m',sum(rA,r=>+CV(r[4])||0),R_('agu_ramal',[[103372,1]],'Tubo PEAD liso DN 20 para rede de água, fornecimento e assentamento (103372). Colar de tomada, registro e kit cavalete não incluídos.'),rA.length+' ramais (um por lote)');
+  const cr=dnMax<=50?'103527':dnMax<=80?'103528':'103529';
+  for(const r of rows('aguaD')){const d=String(CV(r[0])||''),q=+CV(r[1]);
+   if(/^Registros de manobra/.test(d))it(AGU,'agu.reg',d,'un',q,R_('agu_reg',[[cr,1]],`Registro de gaveta de ferro fundido, junta flangeada, DN da maior rede (${cr}). Caixa de proteção não incluída.`),'Órgãos acessórios (COPASA T.104)');
+   else if(/^Descargas/.test(d))it(AGU,'agu.desc',d,'un',q,R_('agu_desc',[[103527,1]],'Descarga: registro de gaveta DN 50 (103527). Tubulação até o ponto de lançamento e caixa não incluídas.'),'Órgãos acessórios (COPASA T.104)');
+   else if(/^Ventosas/.test(d))it(AGU,'agu.vent',d,'un',q,SEM('agu_vent','Ventosa: sem composição SINAPI equivalente. Informe o custo unitário.'),'Órgãos acessórios (COPASA T.104)');}
+  /* esgoto */
+  const dnE={},pvs=new Set();for(const r of rows('esg')){const dn=+CV(r[6]),L=+CV(r[2]);if(dn&&L)dnE[dn]=(dnE[dn]||0)+L;String(CV(r[0])||'').split('→').map(x=>x.trim()).filter(x=>/^PV/.test(x)).forEach(x=>pvs.add(x));}
+  for(const dn of Object.keys(dnE).map(Number).sort((a,b)=>a-b))it(ESG,'esg.rede.'+dn,`Rede coletora de esgoto, tubo PVC DN ${dn}`,'m',dnE[dn],regraTubo(T_ESG,dn,'esg_rede','tubo de PVC para esgoto',`Tubo de PVC parede maciça para rede coletora de esgoto DN ${dn}, junta elástica — fornecimento e assentamento (${T_ESG[dn]}).`),'Soma dos trechos DN '+dn);
+  it(ESG,'esg.pv','Poço de visita de esgoto em concreto pré-moldado Ø 0,80 m','un',pvs.size,R_('esg_pv',[[97978,1]],'Base de poço de visita circular para esgoto em concreto pré-moldado Ø 0,80 m, prof. 1,35 m, sem tampão (97978). Poços mais fundos: somar acréscimo.'),'Poços dos trechos da rede coletora');
+  it(ESG,'esg.tampao','Tampão de ferro fundido Ø 600 mm dos poços de esgoto','un',pvs.size,R_('esg_tampao',[['I21090',1]],'Insumo tampão de ferro fundido dúctil Ø 600 mm, classe D400 (I21090).'),'Um por poço de visita');
+  const rE=rows('ramE');it(ESG,'esg.ramal','Ramais prediais de esgoto, tubo PVC DN 100','m',sum(rE,r=>+CV(r[3])||0),R_('esg_ramal',[[89714,1]],'Tubo de PVC série normal para esgoto DN 100, fornecido e instalado em ramal (89714). Conexões e selim não incluídos.'),rE.length+' ramais (um por lote)');
+  it(ESG,'esg.cx','Caixas de inspeção dos ramais de esgoto','un',rE.length,R_('esg_cx',[[97906,1]],'Caixa enterrada para esgoto 0,60×0,60×0,60 m em blocos de concreto (97906).'),'Uma por lote');
+  /* energia (CEMIG) e iluminação pública */
+  for(const r of rows('ener')){const d=String(CV(r[0])||''),q=+CV(r[1]),un=String(CV(r[2])||'');if(!isFinite(q))continue;let m;
+   if(/^Postes de concreto 11/.test(d))it(ENE,'ene.p11',d,un,q,SEM('ene_p11',ENER),'Rede CEMIG');
+   else if(/^Postes de concreto 10/.test(d))it(ENE,'ene.p10',d,un,q,SEM('ene_p10',ENER),'Rede CEMIG');
+   else if(/^Engastamento/.test(d))it(ENE,'ene.cava',d,un,q,INC('ene_cava','Cava e engastamento incluídos na implantação dos postes.'),'Rede CEMIG');
+   else if(/^Estrutura (primária|com derivação)/.test(d))it(ENE,'ene.estp.'+slug(d).toLowerCase(),d,un,q,SEM('ene_estp',ENER),'Rede CEMIG');
+   else if(/^Estrutura secundária/.test(d))it(ENE,'ene.ests.'+slug(d).toLowerCase(),d,un,q,SEM('ene_ests',ENER),'Rede CEMIG');
+   else if(/^Estais/.test(d))it(ENE,'ene.estai',d,un,q,SEM('ene_estai',ENER),'Rede CEMIG');
+   else if(/^Aterramentos/.test(d))it(ENE,'ene.ater',d,un,q,R_('ene_ater',[[96985,1]],'Haste de aterramento 5/8" × 3,00 m (96985) por ponto. Cabo de interligação e conectores não incluídos.'),'Rede CEMIG');
+   else if(/^Ramais de ligação aéreos/.test(d))it(ENE,'ene.ramal',d,un,q,SEM('ene_ramal',ENER),'Rede CEMIG');
+   else if(/^Transformadores/.test(d))it(ENE,'ene.trafo',d,un,q,SEM('ene_trafo',ENER),'Rede CEMIG');
+   else if(/^Rede de média tensão/.test(d))it(ENE,'ene.mt',d,un,q,SEM('ene_mt',ENER),'Rede CEMIG');
+   else if(/^Rede de baixa tensão/.test(d))it(ENE,'ene.bt',d,un,q,SEM('ene_bt',ENER),'Rede CEMIG');
+   else if(/^Luminárias LED/.test(d)){const kw=+CV((rows('ener').find(x=>/^Potência instalada de iluminação/.test(String(CV(x[0]))))||[])[1])||0,w=q>0&&kw>0?kw*1000/q:60;
+    const L=[[50,'101654','33 a 50 W'],[67,'101655','51 a 67 W'],[97,'101656','68 a 97 W'],[137,'101657','98 a 137 W'],[180,'101658','138 a 180 W']];const c=L.find(x=>w<=x[0])||L[4];
+    it(ENE,'ene.lum',d,un,q,R_('ene_lum',[[c[1],1]],`Luminária LED para iluminação pública de ${c[2]} — fornecimento e instalação (${c[1]}); potência média do projeto ${nf(w,0)} W. Braço e relé não incluídos.`),'Vias e praças');}}
+  /* praças */
+  if(PR&&PR.length>1){const H=PR[0].map(x=>String(CV(x)||'')),col=n=>H.findIndex(h=>h.indexOf(n)===0),tot=n=>{const c=col(n);return c<0?0:sum(PR.slice(1),r=>+CV(r[c])||0);};const MP=(PR.length-1)+' praça(s) do projeto';
+   it(URB,'pra.passeio','Praças: passeio perimetral de concreto','m²',tot('Passeio'),R_('pra_passeio',[[94990,0.06]],'Passeio de concreto moldado in loco, não armado (94990, m³), e = 6 cm → 0,06 m³ por m².'),MP);
+   it(URB,'pra.caminho','Praças: caminhos internos de concreto','m²',tot('Caminhos'),R_('pra_caminho',[[94990,0.06]],'Passeio de concreto moldado in loco, não armado (94990, m³), e = 6 cm → 0,06 m³ por m².'),MP);
+   it(URB,'pra.centro','Praças: praça central em piso intertravado','m²',tot('Praça central'),R_('pra_centro',[[92402,1]],'Piso intertravado de concreto 16 faces, e = 6 cm (92402).'),MP);
+   it(URB,'pra.equip','Praças: área de equipamentos (playground e academia)','m²',tot('Equipamentos'),SEM('pra_equip','Equipamentos de playground e academia ao ar livre: sem composição SINAPI. Informe o custo por m² ou troque o vínculo.'),MP);
+   it(URB,'pra.grama','Praças: gramado','m²',tot('Gramado'),R_('pra_grama',[[98504,1]],'Plantio de grama em placas (98504).'),MP);
+   it(URB,'pra.guia','Praças: guia de contorno','m',tot('Guia'),R_('pra_guia',[[94273,1]],'Guia (meio-fio) de concreto pré-moldado, trecho reto (94273).'),MP);
+   it(URB,'pra.arv','Praças: árvores','un',tot('Árvores'),R_('pra_arv',[[98511,1]],'Plantio de árvore ornamental com muda de 2,00 a 4,00 m (98511). Preparo do solo não incluído.'),MP);
+   it(URB,'pra.banco','Praças: bancos','un',tot('Bancos'),SEM('pra_banco','Banco de praça: sem composição SINAPI equivalente. Informe o custo unitário.'),MP);
+   it(URB,'pra.poste','Praças: postes de iluminação','un',tot('Postes'),R_('pra_poste',[[100620,1]],'Poste de aço cônico curvo simples, flangeado, h = 9 m (100620). Para postes de praça mais baixos, troque o vínculo. A luminária está em energia e iluminação.'),MP);
+   it(URB,'pra.lixeira','Praças: lixeiras','un',tot('Lixeiras'),SEM('pra_lixeira','Lixeira de praça: sem composição SINAPI equivalente. Informe o custo unitário.'),MP);
+   it(URB,'pra.rampa','Praças: rampas de acessibilidade','un',tot('Rampas'),SEM('pra_rampa','Rampa de acessibilidade (NBR 9050): sem composição SINAPI por unidade. Informe o custo ou detalhe em m² de passeio.'),MP);}}
+ /* ordem dos grupos e numeração */
+ const ORD=[PREL,TER,PAV,DRE,AGU,ESG,ENE,URB,SIN];const out=ORD.map(n=>idx[n]).filter(g=>g&&g.itens.length);
+ out.forEach((g,i)=>{g.cod=String(i+1);g.itens.forEach((t,j)=>t.cod=g.cod+'.'+(j+1));});
+ return out;}
+
+/* sugestão = regra do item (o administrador pode revisar os vínculos padrão pelo arquivo vinculos.json, por id) */
+function orcSugestao(t,St){const r=t&&t.reg;if(!r)return null;const base=St?orcBaseData(St):'9999';
+ const v=orcVersao(((ORC.glob||{}).regras||{})[r.id],base);
+ return v&&!v.fabrica?Object.assign({id:r.id,padrao:true},{comps:v.comps,sem:v.sem,incl:v.incl,obs:v.obs}):r;}
+function orcAplicar(St,G){if(!orcAtivo(St))return G;const D=orcD(St);if(!D)return G;
+ G.forEach(g=>g.itens.forEach(t=>{const R=orcLinha(St,t,D);t.orc=R;t.p=R.p;t.hhUn=R.hhUn;t.Hh=t.q*t.hhUn;t.tot=orcTot(t);}));return G;}
+
+/* ---------- tela do orçamento (janela sobre o desenho) ---------- */
+(function(){const c=document.createElement('style');c.textContent=`
+#lqOrc{position:fixed;inset:0;z-index:250;background:#f3f5f7;display:flex;flex-direction:column;font-family:var(--font);color:#1d2329}
+#lqOrc[hidden]{display:none}
+#lqOrc .lqo-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#257126;color:#fff;flex-wrap:wrap}
+#lqOrc .lqo-bar b{font-size:16px}#lqOrc .lqo-bar span{opacity:.85;font-size:13px;flex:1;min-width:140px}
+#lqOrc .lqo-bar button{border:1px solid rgba(255,255,255,.6);background:transparent;color:#fff;border-radius:8px;padding:6px 12px;font:600 13px var(--font);cursor:pointer}
+#lqOrc .lqo-body{flex:1;overflow:auto;padding:12px 16px 40px}
+#lqOrc #qBody{max-width:1280px;margin:0 auto}
+#lqOrc .btn{font:inherit;font-size:12px;padding:6px 11px;border:1px solid #d5dbe1;border-radius:6px;background:#fff;cursor:pointer;color:#1d2329;font-weight:600}
+#lqOrc .btn:hover{background:#f2f4f6}#lqOrc .btn.pri{background:#257126;color:#fff;border-color:#257126}#lqOrc .btn.sm{padding:3px 8px;font-size:11px;display:inline-block}
+#lqOrc .note{font-size:12px;color:#5d6b78;margin:4px 0 10px}#lqOrc h3.sec{color:#257126;margin:14px 0 8px;font-size:15px;padding:0;display:block}
+#lqOrc table.q{border-collapse:collapse;width:100%;font-size:12px;background:#fff}
+#lqOrc table.q th{background:#257126;color:#fff;text-align:left;padding:6px;font-weight:600;border:0;font-size:12px}
+#lqOrc table.q td{border:0;border-bottom:1px solid #e8ebee;padding:4px 6px;vertical-align:top;text-align:left;font-size:12px}
+#lqOrc table.q td.n,#lqOrc table.q th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#lqOrc table.q tr.g td{background:#eef6e0;font-weight:700;color:#257126}#lqOrc table.q tr.t td{background:#257126;color:#fff;font-weight:700}
+#lqOrc table.q td.m{color:#5d6b78;font-size:11px}#lqOrc .orc{--mut:#5d6b78}
+#lqOrc .lqo-q{background:#fff;border:1px solid #dfe5e9;border-radius:10px;padding:4px 0;margin-top:12px;overflow-x:auto}
+#lqoToast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:#1d2329;color:#fff;padding:9px 14px;border-radius:9px;font:13px var(--font);opacity:0;pointer-events:none;transition:.2s;z-index:400;max-width:92vw}
+#lqoToast.on{opacity:1;transform:translateX(-50%)}
+`;document.head.appendChild(c);})();
+
+function lqQuantHTML(G,metade){if(!G.length)return '<p class="note">Desenhe o terreno para gerar o quantitativo.</p>';
+ let h='<div class="lqo-q"><table class="q"><thead><tr><th>Item</th><th>Descrição</th><th>Un</th><th class="n">Quant.</th><th>Origem</th></tr></thead><tbody>';
+ for(const g of G){h+=`<tr class="g"><td>${g.cod}</td><td colspan="4">${esc(g.nome)}</td></tr>`;const L=metade?g.itens.slice(0,Math.ceil(g.itens.length/2)):g.itens;
+  for(const t of L)h+=`<tr><td>${t.cod}</td><td>${esc(t.desc)}</td><td>${esc(t.un)}</td><td class="n">${nf(t.q,t.un==='un'?0:2)}</td><td class="m">${esc(t.mem)}</td></tr>`;
+  if(L.length<g.itens.length)h+=`<tr><td></td><td colspan="4" class="m">+ ${g.itens.length-L.length} itens no plano Pro</td></tr>`;}
+ return h+'</tbody></table></div>';}
+function lqAviso(){if(st.mode!=='lot')return '';if(!st.lot.approved)return '<div class="orc"><div class="av y"><b>Loteamento ainda não aprovado.</b> O orçamento traz a terraplenagem e a pavimentação das ruas. Aprove o loteamento no painel para incluir drenagem, água, esgoto, energia, iluminação e praças.</div></div>';return '';}
+function lqRender(){const box=document.getElementById('qBody');const ov=document.getElementById('lqOrc');if(!box||!ov||ov.hidden)return;
+ const y=box.parentNode.scrollTop;S=mkS();
+ try{Q=lqGrupos();orcAplicar(S,Q);}catch(e){console.error(e);Q=[];}
+ const sub=document.getElementById('lqoSub');if(sub)sub.textContent=(st.meta.name||'Projeto')+' · '+(st.mode==='lot'?'Loteamento':'Estacionamento');
+ let h=lqAviso();
+ if(!Q.length)h+='<p class="note" style="margin-top:14px">Desenhe o terreno para gerar o quantitativo e o orçamento.</p>';
+ else{let o='';try{o=orcHTML();}catch(e){console.error(e);o='<div class="orc"><div class="av r">Não foi possível montar o orçamento: '+esc(e.message)+'</div></div>';}
+  h+=o;const ligado=o.indexOf('data-orctab')>=0;
+  if(!ligado){const pro=typeof isPro==='function'&&isPro();h+=`<h3 class="sec">Quantitativo que será orçado</h3><p class="note">${pro?'Cada item recebe a composição SINAPI sugerida assim que você gera o orçamento. Itens sem composição equivalente (rede da concessionária, mobiliário) ficam para você informar o custo.':'Prévia do quantitativo (metade dos itens no plano Gratuito).'}</p>`+lqQuantHTML(Q,!pro);}}
+ box.innerHTML=h;try{orcBind();}catch(e){console.error(e);}
+ box.parentNode.scrollTop=y;}
+function lqAbrir(){let ov=document.getElementById('lqOrc');
+ if(!ov){ov=document.createElement('div');ov.id='lqOrc';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');ov.setAttribute('aria-label','Orçamento SINAPI');
+  ov.innerHTML='<div class="lqo-bar"><b>Orçamento SINAPI</b><span id="lqoSub"></span><button type="button" id="lqoX">Voltar ao desenho</button></div><div class="lqo-body"><div id="qBody"></div></div>';
+  document.body.appendChild(ov);ov.querySelector('#lqoX').onclick=lqFechar;}
+ ov.hidden=false;ORC.edita=null;ORC.busca=null;lqRender();}
+function lqFechar(){const ov=document.getElementById('lqOrc');if(ov)ov.hidden=true;}
+window.pclOrcamento=lqAbrir;
+/* com o orçamento aberto, as teclas não mexem no desenho (Esc fecha; Ctrl+Z/Ctrl+Y desfazem e refazem) */
+document.addEventListener('keydown',e=>{const ov=document.getElementById('lqOrc');if(!ov||ov.hidden)return;const k=(e.key||'').toLowerCase();
+ if(e.key==='Escape'){if(!document.getElementById('pclPro')){lqFechar();e.stopPropagation();}return;}
+ if((e.ctrlKey||e.metaKey)&&(k==='z'||k==='y'))return;e.stopPropagation();});
+if(typeof undo==='function'){const _u=undo;undo=function(){const r=_u.apply(this,arguments);lqRender();return r;};}
+
+/* botão no cabeçalho e seção no painel */
+const hdr=document.querySelector('header');if(hdr&&!document.getElementById('bOrc')){const b=document.createElement('button');b.className='hb';b.id='bOrc';b.type='button';b.title='Orçamento SINAPI do projeto';b.textContent='R$ Orçamento';b.onclick=lqAbrir;
+ const ref=document.getElementById('bWiz')||document.getElementById('bNew');if(ref)ref.parentNode.insertBefore(b,ref);else hdr.appendChild(b);
+ const c=document.createElement('style');c.textContent='@media (max-width:900px){#bOrc{display:none!important}}';document.head.appendChild(c);}
+if(typeof buildPanel==='function'){const _bp=buildPanel;buildPanel=function(){const r=_bp.apply(this,arguments);const pn=document.getElementById('panel');
+  if(pn&&!pn.querySelector('#bOrcP')){const d=document.createElement('details');d.className='keep';d.open=true;
+   d.innerHTML='<summary>Orçamento SINAPI</summary><div class="sec"><p class="note full">Orce este '+(st.mode==='lot'?'loteamento':'estacionamento')+' com as composições do SINAPI do seu estado, BDI do TCU, curva ABC e composições analíticas'+(typeof isPro==='function'&&isPro()?'.':' (plano Pro).')+'</p><div class="full row"><button class="b pri" id="bOrcP" type="button">Abrir o orçamento</button></div></div>';
+   d.querySelector('#bOrcP').onclick=lqAbrir;const ex=[...pn.querySelectorAll('details')].find(x=>/Exportar/.test((x.querySelector('summary')||{}).textContent||''));
+   if(ex)pn.insertBefore(d,ex);else{const cv=pn.querySelector('.pcl-conv');if(cv)pn.insertBefore(d,cv);else pn.appendChild(d);}}
+  return r;};
+ try{buildPanel();}catch(e){}}
+/* abrir direto pelo endereço: loteamento.html?orcamento=1 */
+try{if(new URLSearchParams(location.search).get('orcamento'))setTimeout(lqAbrir,400);}catch(e){}
+})();
+</script>
 </body>
 </html>

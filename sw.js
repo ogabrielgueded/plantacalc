@@ -3,7 +3,7 @@
    - Bibliotecas com versão fixa (CDN) e fontes: guardadas uma vez.
    - version.json, Supabase, Mercado Pago, anúncios e IA: sempre pela internet, nunca guardados.
    - Versão nova: o aviso "Atualizar agora" do programa troca a cópia guardada antes de recarregar. */
-const CACHE = 'pc-site-v2';
+const CACHE = 'pc-site-v3';
 const SITE = ['app.html', 'loteamento.html', 'index.html', 'conta.html', 'config.js', 'manifest.webmanifest', 'site.css', 'sinapi_mapa.json', 'img/icon-192.png', 'img/icon-512.png', 'img/icone.svg'];
 
 self.addEventListener('install', (e) => { self.skipWaiting(); });
