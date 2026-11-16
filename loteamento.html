@@ -134,6 +134,16 @@ main.wide{grid-template-columns:1fr}main.wide #panel{display:none}
 </style>
 <style>
 .pvt.ref td,.pvt.ref th{text-align:left}
+/* tema PlantaCalc (cores) */
+:root{--ink:#1d2329;--chrome:#257126;--chrome-2:#1d5c1e;--paper:#f3f5f7;--panel:#fbfcfb;--line:#d9dee3;--muted:#66707a;--accent:#257126;--ok:#1c7c4a;--warn:#9a5b00;--font:"Segoe UI",Roboto,Arial,system-ui,sans-serif}
+.tabs{background:rgba(0,0,0,.2)}.tabs button{color:#e3efd9}.tabs button[aria-selected="true"]{background:#fff;color:#257126}
+.hb{border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff}.hb:disabled{opacity:.45}
+#sbar{color:#e3efd9}.os{border-color:rgba(255,255,255,.35);color:#e3efd9}.os.on{background:#84BD00;border-color:#84BD00;color:#1d2329}
+.pvh .b.pri,.pvh button.b.pri{background:#fff;border-color:#fff;color:#257126}
+.pvw,.pill.no{background:#fff4e5;color:#9a5b00}.pill.ok{background:#e7f3dd;color:#1c6b1d}
+.pcl-brand small{background:#ffc107;color:#3d2c00}.pcl-brand img{background:transparent}
+body.pcl-pro #bConta{background:#fff;color:#257126;border-color:#fff}
+@media (max-width:800px){#bWiz{font-size:0;padding:6px 10px}#bWiz::before{content:'★';font-size:15px}}
 .pcl-brand{display:flex;align-items:center;gap:7px;color:#fff;text-decoration:none;font:700 16px var(--font);white-space:nowrap;flex:none}
 .pcl-brand img{width:24px;height:24px;border-radius:6px;background:#fff}
 .pcl-brand small{font-weight:600;font-size:11px;letter-spacing:.04em;text-transform:uppercase;background:#f59e0b;color:#14202b;border-radius:5px;padding:2px 6px;margin-left:2px}
@@ -1609,7 +1619,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
   if(b.id==='bConta'){e.preventDefault();location.href='conta.html';return;}
   if(isPro())return;
   if(EXP[b.id]){e.preventDefault();e.stopImmediatePropagation();proModal(EXP[b.id]);return;}
-  if(NOVO[b.id]&&nProj()>=1){e.preventDefault();e.stopImmediatePropagation();proModal('O plano gratuito permite 1 projeto. Exclua o projeto atual em “Projeto” para começar outro, ou assine o Pro para ter quantos quiser.');}},true);
+  if(NOVO[b.id]&&(window.pclNProj?pclNProj():nProj())>=1){e.preventDefault();e.stopImmediatePropagation();proModal('O plano gratuito permite 1 projeto. Exclua o projeto atual em “Projeto” para começar outro, ou assine o Pro para ter quantos quiser.');}},true);
 /* proteção extra: downloads e impressão chamados por outros caminhos */
 const _print=window.print.bind(window);window.print=function(){if(isPro())return _print();document.body.classList.remove('pjp');proModal('Imprimir e salvar em PDF é do plano Pro.');};
 if(typeof dl==='function'){const _dl=dl;dl=function(blob,name){if(isPro()||/modelo/i.test(String(name||'')))return _dl(blob,name);proModal('Baixar arquivos é do plano Pro.');};}
@@ -1625,5 +1635,120 @@ window.addEventListener('pageshow',aplicar);
 iniciar();
 })();
 </script>
+<script>
+/* ===================== PlantaCalc Loteamento — assistentes de criação (loteamento e estacionamento) e abertura pelo PlantaCalc ===================== */
+(function(){
+const TER=(m)=>({k:'ter',t:m==='lot'?'Como é a gleba?':'Como é o terreno?',o:[['ex',m==='lot'?'Usar a gleba de exemplo':'Usar o terreno de exemplo','Com levantamento topográfico, para conhecer o sistema'],['ret','Terreno retangular','Informe a frente e o fundo'],['imp','Importar o levantamento','Arquivo CSV ou TXT: Ponto; E; N; Cota; Descrição'],['des','Vou desenhar o contorno','Ao terminar o assistente, toque nos vértices do terreno']]});
+const WZ={
+ lot:{nome:'Loteamento',ic:'🏘',desc:'Lotes, quadras, ruas interligadas, praças e área institucional a partir da gleba.',perg:[TER('lot'),
+  {k:'lote',t:'Qual o tamanho mínimo dos lotes?',o:[['125','125 m² · testada de 5 m','Mínimo da Lei 6.766/79'],['200','200 m² · testada de 10 m','Lote padrão'],['250','250 m² · testada de 10 m',''],['360','360 m² · testada de 12 m','Médio padrão'],['450','450 m² · testada de 15 m','Alto padrão'],['cus','Outro tamanho','Informe a área e a testada']]},
+  {k:'rua',t:'Qual a largura das ruas locais?',o:[['12','12 m','Pista de 7 m e calçadas de 2,5 m'],['14','14 m','Pista de 8 m e calçadas de 3 m'],['15','15 m','Pista de 9 m e calçadas de 3 m']]},
+  {k:'av',t:'Terá avenida principal com canteiro?',o:[['0','Não','Só ruas locais'],['1','Sim, uma avenida','Atravessando o loteamento'],['2','Sim, em cruz','Avenida longitudinal e transversal']]},
+  {k:'pub',t:'Quanto vai para áreas públicas?',o:[['10-5','Praça 10 % · institucional 5 %',''],['15-5','Praça 15 % · institucional 5 %',''],['20-5','Praça 20 % · institucional 5 %',''],['cus','Outro percentual','Siga a lei de parcelamento do município']]},
+  {k:'per',t:'Contornar a gleba com rua perimetral?',o:[['1','Sim','Todos os lotes com frente para rua e sem ruas sem saída'],['0','Não','Ruas internas, com virador onde precisar']]}]},
+ park:{nome:'Estacionamento',ic:'🚗',desc:'Vagas, corredores, acesso e vagas reservadas a partir do terreno.',perg:[TER('park'),
+  {k:'ang',t:'Qual o ângulo das vagas?',o:[['90','90°','Mais vagas por área'],['60','60°','Entrada e saída mais fáceis'],['45','45°','Corredor mais estreito']]},
+  {k:'vaga',t:'Qual o tamanho das vagas?',o:[['2.5x5','2,50 × 5,00 m','Carro de passeio'],['2.3x4.5','2,30 × 4,50 m','Carro pequeno'],['2.7x5.5','2,70 × 5,50 m','Utilitários e SUVs']]},
+  {k:'cor',t:'Qual a largura dos corredores?',o:[['auto','Usual para o ângulo','90°: 5,50 m · 60°: 4,50 m · 45°: 3,50 m'],['5','5,00 m',''],['6','6,00 m','Mais folga para manobra']]},
+  {k:'res',t:'Quantas vagas reservadas?',o:[['2-5','PcD 2 % · idosos 5 %','Lei 13.146/2015 e Estatuto da Pessoa Idosa'],['3-5','PcD 3 % · idosos 5 %',''],['0-0','Nenhuma','Uso privado sem exigência legal']]},
+  {k:'per',t:'Vagas ao longo do contorno?',o:[['1','Sim','Via perimetral com vagas dos dois lados'],['0','Não','Só as fileiras internas']]}]}};
+const DEFR={lot:{ter:'ex',lote:'200',rua:'12',av:'1',pub:'10-5',per:'1',W:300,D:200,amin:200,testada:10,verde:10,inst:5},park:{ter:'ex',ang:'90',vaga:'2.5x5',cor:'auto',res:'2-5',per:'1',W:80,D:50}};
+let Z=null;
+const $$=id=>document.getElementById(id),pro=()=>typeof isPro==='function'&&isPro();
+const nProj=()=>{try{return lib().filter(x=>x.name!=='Projeto de exemplo'&&x.id!==st.meta.id).length+(st.meta.name!=='Projeto de exemplo'?1:0);}catch(e){return 0;}};
+window.pclNProj=nProj;
+function podeNovo(){if(pro()||nProj()===0)return true;if(typeof pclPro==='function')pclPro('O plano gratuito permite 1 projeto. Exclua o projeto atual em “Projeto” para começar outro, ou assine o Pro para ter quantos quiser.');return false;}
+function novoProjeto(m,nome,ini){save();const s=merge({});s.meta.id=uid();s.meta.name=nome;s.mode=m;s.os=st.os;s.snap=st.snap;
+  if(ini==='branco'){for(const k of['park','lot']){s[k].poly=[];s[k].pts=[];s[k].exemplo=false;}s.lot.strips=[];s.lot.conns=[];}
+  openProject(s);save();}
+/* ---------- aplicar respostas ---------- */
+function aplicar(regenAgora){const m=Z.m,a=Z.r,P=st[m];
+  if(m==='lot'){const L={'125':[125,5,25],'200':[200,10,20],'250':[250,10,25],'360':[360,12,30],'450':[450,15,30]}[a.lote];
+    if(L){P.amin=L[0];P.testada=L[1];P.prof=L[2];}else{P.amin=Math.max(60,+a.amin||200);P.testada=Math.max(4,+a.testada||10);P.prof=Math.max(10,Math.round(P.amin/P.testada*10)/10);}
+    const RU={'12':[7,2.5],'14':[8,3],'15':[9,3]}[a.rua];P.pista=RU[0];P.calc=RU[1];P.av=+a.av;
+    if(a.pub==='cus'){P.verde=Math.max(0,+a.verde||0);P.inst=Math.max(0,+a.inst||0);}else{const q=a.pub.split('-');P.verde=+q[0];P.inst=+q[1];}P.ring=a.per==='1';}
+  else{P.ang=+a.ang;const v=a.vaga.split('x');P.W=+v[0];P.L=+v[1];P.A=a.cor==='auto'?({90:5.5,60:4.5,45:3.5})[P.ang]:+a.cor;const q=a.res.split('-');P.pcd=+q[0];P.idoso=+q[1];P.ring=a.per==='1';}
+  buildPanel();if(regenAgora!==false)regen(true);estimativa();}
+function terreno(){const m=Z.m,a=Z.r,P=st[m],D=merge({})[m];
+  if(a.ter==='ex'){P.poly=D.poly;P.pts=null;P.exemplo=true;P.org=[0,0];P.pv++;if(m==='lot'){P.strips=D.strips;P.conns=D.conns;P.mPraca=D.mPraca;P.mInst=D.mInst;}else P.acc=D.acc;fit();}
+  else if(a.ter==='ret'){const w=Math.max(10,+a.W||0),h=Math.max(10,+a.D||0);P.poly=[[0,0],[w,0],[w,h],[0,h]];P.pts=[];P.exemplo=false;P.org=[0,0];P.pv++;if(m==='lot'){P.strips=[];P.conns=[{name:'Rua de acesso',a:[w/2,0],b:[w/2,-30],z:null}];}afterPoly();if(m==='lot'&&typeof renderConns==='function')renderConns();}
+  else if(a.ter==='des'){P.poly=[];P.pts=[];P.exemplo=false;if(m==='lot'){P.strips=[];P.conns=[];}R=null;}
+  /* 'imp': aplicado quando o arquivo é lido */}
+/* ---------- estimativa e prévia ---------- */
+function estimativa(){const e=$$('wzEst');if(!e)return;const m=Z.m,P=st[m];let rows=[],img='';
+  if(!R||!P.poly||P.poly.length<3){e.innerHTML='<div class="wz-k">Estimativa com as respostas</div><p class="wz-nd">'+(Z.r.ter==='des'?'O terreno será desenhado ao terminar o assistente. A estimativa aparece depois do desenho.':Z.r.ter==='imp'?'Escolha o arquivo do levantamento para ver a estimativa.':'Sem terreno ainda.')+'</p>';return;}
+  const s=R.stats;
+  if(m==='lot'){const pub=s.AG?((s.aP+s.aI)/s.AG*100):0;rows=[['Gleba',fmt(s.AG,0)+' m²'],['Lotes',s.n+' em '+(R.quads?R.quads.length:0)+' quadras'],['Área dos lotes',fmt(s.min,0)+' a '+fmt(s.max,0)+' m²'],['Lotes com frente para rua',s.frente+' de '+s.n],['Áreas públicas (praça + inst.)',fmt(pub,1)+' %'],['Ruas sem saída',String(s.vir||0)]];}
+  else rows=[['Terreno',fmt(area(P.poly),0)+' m²'],['Vagas',String(s.tot)],['PcD · idosos',s.pcd+' · '+s.idoso],['Área por vaga',fmt(s.per,1)+' m²'],['Ângulo · corredor',P.ang+'° · '+fmt(P.A,2)+' m']];
+  try{img=plantaImg(520,330);}catch(x){img='';}
+  e.innerHTML='<div class="wz-k">Estimativa com as respostas</div>'+rows.map(r=>`<div class="wz-r"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('')+(img?`<img class="wz-img" src="${img}" alt="Prévia">`:'');}
+let tE=0;const estSoon=()=>{clearTimeout(tE);tE=setTimeout(()=>aplicar(),220);};
+/* ---------- interface (mesmo padrão do assistente do PlantaCalc) ---------- */
+function caixa(){let o=$$('wzOv');if(!o){o=document.createElement('div');o.id='wzOv';document.body.appendChild(o);o.addEventListener('pointerdown',e=>{if(e.target===o)fechar();});}o.classList.add('on');return o;}
+function fechar(){const o=$$('wzOv');if(o)o.classList.remove('on');if(Z&&Z.fim){const f=Z.fim;Z=null;f();}else Z=null;}
+function escolherTipo(){const o=caixa();o.innerHTML=`<div class="wz-bx"><div class="wz-h"><b>Começar com o assistente</b><button class="wz-x" type="button">Fechar</button></div><p class="wz-hint">Responda a 6 perguntas em linguagem simples e o estudo nasce pronto. Depois ajuste o que quiser no desenho.</p><div class="wz-gr">${['lot','park'].map(k=>`<button type="button" data-wzm="${k}"><span class="wz-ic">${WZ[k].ic}</span><b>${WZ[k].nome}</b>${WZ[k].desc}</button>`).join('')}</div></div>`;
+  o.querySelector('.wz-x').onclick=fechar;o.querySelectorAll('[data-wzm]').forEach(b=>b.onclick=()=>{const k=b.dataset.wzm;if(Z&&Z.criado){st.meta.name=k==='lot'?'Novo loteamento':'Novo estacionamento';abrir(k,{criado:true});return;}if(!podeNovo())return;abrir(k,{novo:true});});}
+function abrir(m,op){op=op||{};if(op.novo)novoProjeto(m,m==='lot'?'Novo loteamento':'Novo estacionamento','exemplo');else if(st.mode!==m)setMode(m);
+  Z={m,i:0,r:Object.assign({},DEFR[m]),aviso:op.aviso||'',criado:!!(op.novo||op.criado)};aplicar();pergunta();}
+function pergunta(){const o=caixa(),W=WZ[Z.m],q=W.perg[Z.i],n=W.perg.length,a=Z.r;
+  const extra=(q.k==='ter'&&a.ter==='ret')?`<div class="wz-in"><label>Frente (m)<input type="number" inputmode="decimal" id="wzW" value="${a.W}"></label><label>Fundo (m)<input type="number" inputmode="decimal" id="wzD" value="${a.D}"></label></div>`
+   :(q.k==='ter'&&a.ter==='imp')?`<div class="wz-in"><label class="wz-f">Arquivo de pontos<input type="file" id="wzFile" accept=".csv,.txt,text/plain,text/csv"></label></div>${Z.impOk?'<p class="wz-ok">✓ '+Z.impOk+'</p>':''}`
+   :(q.k==='lote'&&a.lote==='cus')?`<div class="wz-in"><label>Área mínima (m²)<input type="number" inputmode="decimal" id="wzAmin" value="${a.amin}"></label><label>Testada mínima (m)<input type="number" inputmode="decimal" id="wzTest" value="${a.testada}"></label></div>`
+   :(q.k==='pub'&&a.pub==='cus')?`<div class="wz-in"><label>Praça / área verde (%)<input type="number" inputmode="decimal" id="wzVer" value="${a.verde}"></label><label>Institucional (%)<input type="number" inputmode="decimal" id="wzIns" value="${a.inst}"></label></div>`:'';
+  o.innerHTML=`<div class="wz-bx wz-big"><div class="wz-h"><b>${W.ic} ${W.nome}</b><button class="wz-x" type="button">Fechar</button></div><div class="wz-pg"><i style="width:${(Z.i+1)/n*100}%"></i></div>
+  <div class="wz-cols"><div class="wz-q">${Z.aviso?`<p class="wz-av">${Z.aviso}</p>`:''}<div class="wz-n">Pergunta ${Z.i+1} de ${n}</div><h3>${q.t}</h3>
+   <div class="wz-op">${q.o.map(x=>`<button type="button" class="${a[q.k]===x[0]?'on':''}" data-v="${x[0]}"><b>${x[1]}</b>${x[2]?`<span>${x[2]}</span>`:''}</button>`).join('')}</div>${extra}
+   <div class="wz-nav"><button type="button" class="wz-b" id="wzVolta">◀ ${Z.i?'Voltar':'Outros assistentes'}</button><button type="button" class="wz-b pri" id="wzVai">${Z.i<n-1?'Próximo ▶':'Criar o estudo ✓'}</button></div></div>
+   <div class="wz-est" id="wzEst"></div></div></div>`;
+  o.querySelector('.wz-x').onclick=fechar;
+  o.querySelectorAll('.wz-op [data-v]').forEach(b=>b.onclick=()=>{a[q.k]=b.dataset.v;if(q.k==='ter'){Z.impOk='';terreno();}aplicar();pergunta();});
+  const num=(id,k,tr)=>{const e=$$(id);if(e)e.oninput=()=>{a[k]=+String(e.value).replace(',','.');if(tr)terreno();estSoon();};};
+  num('wzW','W',1);num('wzD','D',1);num('wzAmin','amin');num('wzTest','testada');num('wzVer','verde');num('wzIns','inst');
+  const f=$$('wzFile');if(f)f.onchange=ev=>{const fl=ev.target.files[0];if(!fl)return;fl.text().then(t=>{importSurvey(t);const P=st[Z.m];Z.impOk=P.pts&&P.pts.length?P.pts.length+' pontos importados':'';aplicar();pergunta();});};
+  $$('wzVolta').onclick=()=>{if(Z.i){Z.i--;pergunta();}else escolherTipo();};
+  $$('wzVai').onclick=()=>{if(Z.i<n-1){Z.i++;pergunta();return;}const des=a.ter==='des'||(a.ter==='imp'&&!(st[Z.m].poly&&st[Z.m].poly.length>=3));
+    st.meta.name=st.meta.name||WZ[Z.m].nome;save();updHeader();Z.fim=()=>{fit();regen(true);if(des)startDraft();hint(des?'Toque nos vértices do terreno e depois em Concluir.':'Estudo criado. Ajuste o que quiser no desenho ou no painel.');};fechar();};
+  estimativa();}
+window.pclAssistente=(m,op)=>{if(m)abrir(m,op);else escolherTipo();};
+/* botão Assistente no cabeçalho */
+const hdr=document.querySelector('header');if(hdr){const b=document.createElement('button');b.className='hb';b.id='bWiz';b.type='button';b.title='Começar um estudo com o assistente';b.textContent='★ Assistente';b.onclick=()=>escolherTipo();const ref=document.getElementById('bNew');if(ref)ref.parentNode.insertBefore(b,ref);else hdr.appendChild(b);}
+/* ---------- abertura pelo PlantaCalc: ?novo=branco|exemplo|assistente|ia&modo=lot|park  ou  ?abrir=<id> ---------- */
+function deUrl(){const q=new URLSearchParams(location.search),nv=q.get('novo'),ab=q.get('abrir'),m=q.get('modo')==='park'?'park':'lot';if(!nv&&!ab)return;
+  history.replaceState(null,'',location.pathname);
+  if(ab){try{const s=JSON.parse(localStorage.getItem('tracado-p-'+ab));if(s){save();openProject(s);save();}}catch(e){}return;}
+  if(!podeNovo())return;const nome=m==='lot'?'Novo loteamento':'Novo estacionamento';
+  if(nv==='branco'){novoProjeto(m,nome,'branco');startDraft();hint('Toque nos vértices do terreno e depois em Concluir. Também dá para importar o levantamento no painel.');}
+  else if(nv==='exemplo'){novoProjeto(m,m==='lot'?'Loteamento de exemplo':'Estacionamento de exemplo','exemplo');}
+  else abrir(m,{novo:true,aviso:nv==='ia'?'A descrição por IA ainda não está disponível para loteamentos e estacionamentos. O assistente faz o mesmo com 6 perguntas rápidas.':''});}
+setTimeout(deUrl,60);
+})();
+</script>
+<style>
+#wzOv{position:fixed;inset:0;z-index:240;background:rgba(15,23,15,.45);display:none;align-items:center;justify-content:center;padding:14px;font-family:"Segoe UI",Roboto,Arial,sans-serif}
+#wzOv.on{display:flex}
+.wz-bx{background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:100%;max-width:880px;max-height:94vh;overflow:auto;padding:16px 18px;color:#1d2329}
+.wz-h{display:flex;justify-content:space-between;align-items:center;gap:10px}.wz-h b{font-size:18px}
+.wz-x{border:1px solid #d9dee3;background:#fff;border-radius:8px;padding:6px 11px;font:inherit;font-size:13px;cursor:pointer}
+.wz-hint{color:#5b6670;font-size:13.5px;margin:6px 0 12px}
+.wz-gr{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.wz-gr button{text-align:left;border:1px solid #d9dee3;background:#fff;border-radius:12px;padding:14px;font:inherit;font-size:13px;color:#5b6670;cursor:pointer;display:flex;flex-direction:column;gap:4px;min-height:120px}
+.wz-gr button b{font-size:16px;color:#1d2329}.wz-gr button:hover{border-color:#257126;background:#f5faef}.wz-ic{font-size:26px}
+.wz-pg{height:5px;background:#e6ebe0;border-radius:4px;margin:10px 0 12px;overflow:hidden}.wz-pg i{display:block;height:100%;background:#257126;transition:width .25s}
+.wz-cols{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:16px;align-items:start}
+.wz-n{color:#66707a;font-size:13px}.wz-q h3{font-size:20px;margin:4px 0 12px}
+.wz-op{display:flex;flex-direction:column;gap:8px}
+.wz-op button{text-align:left;border:1.5px solid #d9dee3;background:#fff;border-radius:11px;padding:11px 14px;font:inherit;font-size:15px;color:#1d2329;cursor:pointer}
+.wz-op button span{display:block;font-size:12.5px;color:#66707a;margin-top:2px}.wz-op button b{font-weight:600}
+.wz-op button.on{border-color:#257126;background:#eef6e6;box-shadow:inset 0 0 0 1px #257126}.wz-op button.on b{font-weight:700}
+.wz-in{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.wz-in label{display:flex;flex-direction:column;font-size:12.5px;color:#46515a;gap:4px;flex:1;min-width:130px}
+.wz-in input{font:inherit;font-size:16px;padding:8px 10px;border:1px solid #cfd6dc;border-radius:8px}.wz-f input{font-size:14px;padding:6px}
+.wz-ok{color:#1c7c4a;font-weight:600;margin:8px 0 0}.wz-av{background:#fff8e1;border:1px solid #ffe08a;color:#5d4300;border-radius:9px;padding:8px 10px;font-size:13px;margin:0 0 10px}
+.wz-nav{display:flex;justify-content:space-between;gap:10px;margin-top:16px}
+.wz-b{border:1px solid #d9dee3;background:#fff;border-radius:10px;padding:10px 16px;font:inherit;font-size:15px;cursor:pointer}.wz-b.pri{background:#257126;border-color:#257126;color:#fff;font-weight:700}
+.wz-est{background:#f4f8ee;border-radius:12px;padding:12px}.wz-k{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#257126;margin-bottom:6px}
+.wz-r{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #e1e8d8;font-size:13.5px}.wz-r b{text-align:right}
+.wz-img{display:block;width:100%;margin-top:10px;border-radius:8px;background:#fff;border:1px solid #e1e8d8}.wz-nd{color:#5b6670;font-size:13.5px}
+@media (max-width:760px){.wz-cols{grid-template-columns:1fr}.wz-gr{grid-template-columns:1fr}.wz-bx{padding:14px}.wz-q h3{font-size:18px}.wz-gr button{min-height:0}}
+</style>
 </body>
 </html>

@@ -8945,6 +8945,36 @@ const t="170",e={LEFT:0,MIDDLE:1,RIGHT:2,ROTATE:0,DOLLY:1,PAN:2},n={ROTATE:0,PAN
  /* botão no cabeçalho (computador e tablet deitado); no celular o atalho fica no menu ☰ */
  const ref=document.getElementById('bIA')||document.getElementById('bExp');if(ref&&ref.parentNode){const b=document.createElement('button');b.id='bLote';b.type='button';b.className=ref.className;b.title='Módulo Loteamento: loteamentos e estacionamentos';b.textContent='🏘 Loteamento';b.onclick=()=>{location.href='loteamento.html';};ref.parentNode.insertBefore(b,ref);
   const st=document.createElement('style');st.textContent='@media (max-width:900px){#bLote{display:none!important}}';document.head.appendChild(st);}})();
+
+/* p33b — ao começar um projeto, pergunta primeiro o tipo: infraestrutura industrial (PlantaCalc), loteamento ou estacionamento (módulo Loteamento) */
+(function(){
+ const TIPOS=[['ind','🏭','Infraestrutura industrial','Edificações e áreas industriais: casa de bombas, sala elétrica, bases, galerias, pátios e reformas.'],['lot','🏘','Loteamento','Lotes, quadras, ruas interligadas, praças, greide, perfis e redes de infraestrutura.'],['park','🚗','Estacionamento','Vagas, corredores, acesso, vagas reservadas e terraplenagem.']];
+ const NOME={branco:'Projeto em branco',assistente:'Com o assistente',exemplo:'A partir do exemplo',ia:'Descrever com IA'};
+ const st=document.createElement('style');st.textContent=`#pcTipo{position:fixed;inset:0;z-index:400;background:rgba(15,23,15,.45);display:flex;align-items:center;justify-content:center;padding:14px}
+ #pcTipo .bx{background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:100%;max-width:880px;max-height:94vh;overflow:auto;padding:16px 18px}
+ #pcTipo .h{display:flex;justify-content:space-between;align-items:center;gap:10px}#pcTipo .h b{font-size:18px}#pcTipo .x{border:1px solid #d9dee3;background:#fff;border-radius:8px;padding:6px 11px;font:inherit;font-size:13px;cursor:pointer}
+ #pcTipo .hint{color:#5b6670;font-size:13.5px;margin:6px 0 12px}#pcTipo .gr{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+ #pcTipo .gr button{text-align:left;border:1px solid #d9dee3;background:#fff;border-radius:12px;padding:14px;font:inherit;font-size:13px;color:#5b6670;cursor:pointer;display:flex;flex-direction:column;gap:4px;min-height:130px}
+ #pcTipo .gr button b{font-size:16px;color:#1d2329}#pcTipo .gr button:hover{border-color:#257126;background:#f5faef}#pcTipo .gr .ic{font-size:26px}
+ @media (max-width:700px){#pcTipo .gr{grid-template-columns:1fr}#pcTipo .gr button{min-height:0}}
+ .pcLote{margin:26px 0 8px}.pcLote h3{margin:0 0 10px}.pcLote .g2{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+ .pcLote .c{background:#fff;border:1px solid #d9dee3;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px}
+ .pcLote .c b{font-size:15px}.pcLote .c span{color:#66707a;font-size:12.5px}.pcLote .tg{align-self:flex-start;font-size:11.5px;font-weight:700;border-radius:20px;padding:2px 9px;background:#eef6e6;color:#257126}
+ .pcLote .c a{margin-top:6px;text-align:center;text-decoration:none;background:#eef6e6;color:#257126;font-weight:700;border-radius:10px;padding:9px}`;document.head.appendChild(st);
+ let passe=false;
+ document.addEventListener('click',e=>{if(passe)return;const b=e.target.closest&&e.target.closest('#pjOv [data-pjn]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();escolher(b);},true);
+ function escolher(b){const tp=b.dataset.pjn,o=document.createElement('div');o.id='pcTipo';
+  o.innerHTML=`<div class="bx"><div class="h"><b>O que você vai projetar?</b><button class="x" type="button">Fechar</button></div><p class="hint">${NOME[tp]||'Novo projeto'}: escolha o tipo de projeto.</p><div class="gr">${TIPOS.map(t=>`<button type="button" data-tp="${t[0]}"><span class="ic">${t[1]}</span><b>${t[2]}</b>${t[3]}</button>`).join('')}</div></div>`;
+  document.body.appendChild(o);o.addEventListener('click',ev=>{if(ev.target===o||ev.target.closest('.x')){o.remove();return;}const c=ev.target.closest('[data-tp]');if(!c)return;o.remove();
+   if(c.dataset.tp==='ind'){passe=true;try{b.click();}finally{passe=false;}}else location.href='loteamento.html?novo='+encodeURIComponent(tp)+'&modo='+c.dataset.tp;});}
+ /* loteamentos e estacionamentos guardados neste aparelho, em Meus projetos */
+ function lista(){const ov=document.getElementById('pjOv');if(!ov||ov.querySelector('.pcLote'))return;let L=[];try{L=JSON.parse(localStorage.getItem('tracado-lib'))||[];}catch(e){}
+  L=L.filter(x=>x&&x.id&&x.name!=='Projeto de exemplo');if(!L.length)return;const w=ov.querySelector('.w');if(!w)return;
+  const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const d=document.createElement('div');d.className='pcLote';d.innerHTML=`<h3>Loteamentos e estacionamentos neste aparelho (${L.length})</h3><div class="g2">${L.map(x=>`<div class="c"><span class="tg">${x.mode==='park'?'🚗 Estacionamento':'🏘 Loteamento'}</span><b>${esc(x.name||'Projeto')}</b><span>Editado em ${new Date(x.updated||0).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</span><a href="loteamento.html?abrir=${encodeURIComponent(x.id)}">Continuar editando</a></div>`).join('')}</div>`;
+  const lx=w.querySelector('.lx');if(lx)w.insertBefore(d,lx);else w.appendChild(d);}
+ new MutationObserver(()=>lista()).observe(document.body,{childList:true,subtree:true});
+})();
 </script>
 </body>
 </html>
